@@ -20,6 +20,10 @@ export interface Message {
 	} | {
 		type:"getStringLink";
 		link:string;
+	} | {
+		type:"getEntriesOfTypes";
+		types:string[];
+		parent:string|undefined;
 	};
 }
 
@@ -201,15 +205,38 @@ async function onMessage(msg:Message):Promise<any> {
 		return false;
 	}else if(msg.req.type == "getStringLink"){
 		return strings.get(msg.req.link);
+	}else if(msg.req.type == "getEntriesOfTypes"){
+		let ret:string[] = [];
+		let parent = msg.req.parent;
+		
+		for(let catalog of catalogs){
+			for(let type of msg.req.types){
+				let arr = catalog.data.childrenByTagname[type];
+				if(arr){
+					ret = ret.concat(arr.filter(node => (typeof parent == "undefined" || node.attr["parent"] == parent)).map(node => node.attr["id"]).filter(v => v != undefined));
+				}
+			}
+		}
+		
+		ret.sort();
+		return ret;
 	}else{
 		unreachable(msg.req);
 	}
 }
 
 async function init(){
+	console.time("loadCatalogs");
 	catalogs = await loadCatalogs(await getGameDataFileList());
+	console.timeEnd("loadCatalogs");
+	
+	console.time("importTxtFile");
 	strings = await importTxtFile("enUS");
+	console.timeEnd("importTxtFile");
+	
+	console.time("importHotkeysFile");
 	hotkeys = await importHotkeysFile();
+	console.timeEnd("importHotkeysFile");
 	
 	function receiveMessage(msg:Message){
 		onMessage(msg).then(function(value:any){

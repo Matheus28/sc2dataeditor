@@ -61,5 +61,7 @@ app.on('window-all-closed', function() {
 process.on("unhandledRejection", e => { throw e; });
 
 try {
-	require('electron-reloader')(module);
+	require('electron-reloader')(module, {
+		ignore: 'src',
+	});
 } catch {}

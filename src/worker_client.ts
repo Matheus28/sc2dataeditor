@@ -26,6 +26,14 @@ export function entryExists(entry:CatalogEntry):Promise<boolean> {
 	});
 }
 
+export function getEntriesOfTypes(types:string[], parent?:string):Promise<string[]> {
+	return sendMessage({
+		type: "getEntriesOfTypes",
+		types,
+		parent,
+	});
+}
+
 export function getStringLink(link:string):Promise<string|undefined> {
 	return sendMessage({
 		type: "getStringLink",

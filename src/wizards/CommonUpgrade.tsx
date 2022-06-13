@@ -1,12 +1,11 @@
 import * as React from 'react';
-import * as ReactDOM from 'react-dom/client';
 import { Button, Container, Row, Col, Form, InputGroup, Card, Alert } from 'react-bootstrap';
-import { entryExists, getFieldValue, getStringLink } from '../worker_client';
+import { getFieldValue, getStringLink } from '../worker_client';
 import { CatalogEntry, CatalogField } from '../worker';
+import SelectID from './components/SelectID';
 
 export default function CommonUpgradeWizard(){
 	const [id, setID] = React.useState("");
-	const [idExists, setIDExists] = React.useState<boolean|undefined>(undefined);
 	
 	const [maxLevel, setMaxLevel] = React.useState(1);
 	const [maxLevelDisabled, setMaxLevelDisabled] = React.useState(false);
@@ -31,15 +30,6 @@ export default function CommonUpgradeWizard(){
 		type: "CAbilResearch",
 		parent: "CommonUpgrade",
 	};
-	
-	// idExists
-	React.useEffect(() => {
-		if(id.length == 0){
-			setIDExists(undefined);
-		}else{
-			entryExists(upgradeEntry).then(setIDExists);
-		}
-	}, [id]);
 	
 	// maxLevel
 	React.useEffect(() => {
@@ -115,34 +105,28 @@ export default function CommonUpgradeWizard(){
 		<Card>
 			<Card.Body>
 				<Form>
-					<Form.Group className="mb-3">
-						<InputGroup>
-							<InputGroup.Text>Upgrade ID</InputGroup.Text>
-							<Form.Control required type="text" pattern="^[a-zA-Z][a-zA-Z0-9_@]*$" title="Must be a simple string" placeholder="UnknownUpgrade" value={id} onChange={(e) => {
-								setID(e.target.value);
-								setIDExists(undefined);
-							}} />
-						</InputGroup>
-					</Form.Group>
+					<SelectID type="CUpgrade" parent="CommonUpgrade" onChange={setID}/>
 					
-					{ idExists === undefined && id.length > 0 && <Alert variant="info">Loading...</Alert> }
-					{ idExists === false && <Alert variant="warning">ID does not exist, a new upgrade will be created</Alert> }
-					{ idExists === true && <Alert variant="success">Upgrade data loaded</Alert> }
-					
-					<Form.Group className="mb-3">
-						<Form.Label>Max Level</Form.Label>
-						<Form.Control disabled={maxLevelDisabled} required type="number" min="1" max="5" value={maxLevel} onChange={(e) => e.target.validity.valid && setMaxLevel(parseInt(e.target.value, 10))} />
-					</Form.Group>
-					
-					<Form.Group className="mb-3">
-						<Form.Label>Name</Form.Label>
-						<Form.Control disabled={nameDisabled} required type="text" placeholder="Unknown Upgrade" value={name} onChange={e => setName(e.target.value) } />
-					</Form.Group>
-					
-					<Form.Group className="mb-3">
-						<Form.Label>Tooltip</Form.Label>
-						<Form.Control disabled={tooltipDisabled} as="textarea" rows={5} type="text" placeholder="Does things and all" value={tooltip} onChange={e => setTooltip(e.target.value) } />
-					</Form.Group>
+					{ id.length > 0 && <>
+						<Form.Group className="mb-3">
+							<Form.Label>Max Level</Form.Label>
+							<Form.Control disabled={maxLevelDisabled} required type="number" min="1" max="5" value={maxLevel} onChange={(e) => e.target.validity.valid && setMaxLevel(parseInt(e.target.value, 10))} />
+						</Form.Group>
+						
+						<Form.Group className="mb-3">
+							<Form.Label>Name</Form.Label>
+							<Form.Control disabled={nameDisabled} required type="text" placeholder="Unknown Upgrade" value={name} onChange={e => setName(e.target.value) } />
+						</Form.Group>
+						
+						<Form.Group className="mb-3">
+							<Form.Label>Tooltip</Form.Label>
+							<Form.Control disabled={tooltipDisabled} as="textarea" rows={5} type="text" placeholder="Does things and all" value={tooltip} onChange={e => setTooltip(e.target.value) } />
+						</Form.Group>
+						
+						<Form.Group>
+							<Button variant="primary" className="float-end">Save</Button>
+						</Form.Group>
+					</>}
 				</Form>
 			</Card.Body>
 		</Card>
