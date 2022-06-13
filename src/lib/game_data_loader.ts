@@ -16,8 +16,14 @@ export type XMLNode = ({
 
 type XMLParseResult = Record<string, XMLNode>;
 
+let rootMapDir = "D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map/";
+
 export function getRootMapDir(){
-	return __dirname + "/../../../../Kerrigan_Survival2.SC2Map/";
+	return rootMapDir;
+}
+
+export function setRootMapDir(v:string){
+	rootMapDir = v;
 }
 
 export function getCatalogFilenameBase(){
@@ -43,6 +49,7 @@ export async function getGameDataFileList():Promise<string[]> {
 export interface Catalog {
 	filename:string;
 	
+	entriesByID:Record<string, XMLNode[]>;
 	data:XMLNode;
 };
 
@@ -50,17 +57,36 @@ export async function loadCatalogs(files:string[]):Promise<Catalog[]>{
 	return await Promise.all(files.map(async function(filename):Promise<Catalog> {
 		let str = await fs.readFile(filename, "utf8");
 		
-		let data = await parseXML(str);
+		let data = (await parseXML(str))["Catalog"];
+		
+		let entriesByID:Record<string, XMLNode[]> = {};
+		for(let v of data.children){
+			if("id" in v.attr){
+				const id = v.attr["id"];
+				entriesByID[id] = entriesByID[id] || [];
+				entriesByID[id].push(v);
+			}
+		}
 		
 		return {
 			filename,
-			data: data["Catalog"]
+			entriesByID,
+			data
 		};
 	}));
 }
 
 export async function getCatalogs(){
 	return loadCatalogs(await getGameDataFileList());
+}
+
+export function addCatalogEntry(catalog:Catalog, child:XMLNode){
+	assert("id" in child.attr);
+	
+	const id = child.attr["id"];
+	catalog.entriesByID[id] = catalog.entriesByID[id] || [];
+	catalog.entriesByID[id].push(child);
+	addChild(catalog.data, child);
 }
 
 export function addChild(parent:XMLNode, child:XMLNode){

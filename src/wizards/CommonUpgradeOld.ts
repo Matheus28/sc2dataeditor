@@ -1,4 +1,6 @@
-import { prompt, CatalogEntry, CatalogField, copyField, setToken, setField, hotkeyPositionToLetter } from "../lib/wizard";
+// This file will be deleted soon
+// @ts-nocheck
+import { prompt, CatalogEntry, CatalogField, copyField, setToken, setField, hotkeyPositionToLetter } from "../worker";
 import clc from "cli-color";
 
 console.log("Welcome to the CommonUpgrade wizard! Enjoy your stay");

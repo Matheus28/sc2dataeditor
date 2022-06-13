@@ -1,10 +1,45 @@
 import assert from "assert";
 import * as readline from 'readline';
-import { getGameDataFileList, getCatalogFilenameBase, Catalog, loadCatalogs, XMLNode, accessArray as accessArray, accessStruct as accessStruct, getValue, setValue as setValue, newNode, addChild, getChildrenByTagName, saveCatalogs } from './game_data_loader';
-import { exportHotkeysFile, importHotkeysFile } from "./game_hotkeys_loader";
-import { exportTxtFile, importTxtFile } from "./game_strings_loader";
-import { possiblyBigNumberToString, unreachable } from "./utils";
+import { getGameDataFileList, getCatalogFilenameBase, Catalog, loadCatalogs, XMLNode, accessArray as accessArray, accessStruct as accessStruct, getValue, setValue as setValue, newNode, addChild, getChildrenByTagName, saveCatalogs, addCatalogEntry } from './lib/game_data_loader';
+import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
+import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
+import { possiblyBigNumberToString, unreachable } from "./lib/utils";
 import clc from "cli-color";
+
+
+export interface Message {
+	id:number;
+	req:{
+		type:"save";
+	} | {
+		type:"getFieldValue";
+		field:CatalogField;
+	} | {
+		type:"entryExists";
+		entry:CatalogEntry;
+	} | {
+		type:"getStringLink";
+		link:string;
+	};
+}
+
+export type MessageResponse = {
+	id:number;
+	value:any;
+} | {
+	id:number;
+	error:string;
+}
+
+
+let catalogs:Catalog[];
+let modifiedCatalogs = new Set<Catalog>();
+
+let stringsModified = false;
+let strings:Map<string,string>;
+
+let hotkeysModified = false;
+let hotkeys:Map<string,string>;
 
 export interface CatalogEntry {
 	id:string;
@@ -40,34 +75,11 @@ export interface CatalogField {
 	indexes?:(string|number)[];
 }
 
-{
-	let oldWarn = console.error.bind(console);
-	console.error = function(message?: any, ...optionalParams: any[]){
-		oldWarn(clc.yellow(message), ...optionalParams);
-	}
-	
-	let oldError = console.error.bind(console);
-	console.error = function(message?: any, ...optionalParams: any[]){
-		oldError(clc.yellow(message), ...optionalParams);
-	}
-}
-
-let rl:ReturnType<typeof readline.createInterface>;
-let catalog:Catalog;
-let strings:Map<string,string>;
-let hotkeys:Map<string,string>;
-
-function question(query:string):Promise<string>{
-	return new Promise((resolve) => {
-		rl.question(query + " ", (s) => resolve(s.trim()));
-	});
-}
-
 function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined{
-	let arr = getChildrenByTagName(catalog.data, entry.type);
+	let arr = catalog.entriesByID[entry.id];
 	if(arr){
 		for(let v of arr){
-			if(!v.attr || v.attr["id"] !== entry.id) continue;
+			if(v.tagname != entry.type) continue;
 			return v;
 		}
 	}
@@ -80,7 +92,7 @@ function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExis
 		if(entry.parent) attrs["parent"] = entry.parent;
 		
 		let node = newNode(entry.type, attrs);
-		addChild(catalog.data, node);
+		addCatalogEntry(catalog, node);
 		return node;
 	}else{
 		return undefined;
@@ -141,16 +153,20 @@ function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists
 	return cur;
 }
 
-function getFieldValue(catalog:Catalog, field:CatalogField):string|undefined {
-	let v = accessFieldValue(catalog, field, false);
-	if(!v) return undefined;
-	
-	// We're already at the element we need to retrieve...
-	if(field.indexes && field.indexes.length == field.name.length){
-		return getValue(v, "value");
-	}else{
-		return getValue(v, field.name[field.name.length - 1]);
+function getFieldValue(field:CatalogField):string|undefined {
+	for(let catalog of catalogs){
+		let v = accessFieldValue(catalog, field, false);
+		if(!v) continue;
+		
+		// We're already at the element we need to retrieve...
+		if(field.indexes && field.indexes.length == field.name.length){
+			return getValue(v, "value");
+		}else{
+			return getValue(v, field.name[field.name.length - 1]);
+		}
 	}
+	
+	return undefined;
 }
 
 function setFieldValue(catalog:Catalog, field:CatalogField, value:string|number|null){
@@ -165,6 +181,73 @@ function setFieldValue(catalog:Catalog, field:CatalogField, value:string|number|
 	}
 }
 
+let queuedMessages:Message[] = [];
+onmessage = function(e){
+	queuedMessages.push(e.data);
+}
+
+async function onMessage(msg:Message):Promise<any> {
+	if(msg.req.type == "getFieldValue"){
+		return getFieldValue(msg.req.field);
+	}else if(msg.req.type == "save"){
+		return await save();
+	}else if(msg.req.type == "entryExists"){
+		for(let catalog of catalogs){
+			if(accessCatalogEntry(catalog, msg.req.entry, false)){
+				return true;
+			}
+		}
+		
+		return false;
+	}else if(msg.req.type == "getStringLink"){
+		return strings.get(msg.req.link);
+	}else{
+		unreachable(msg.req);
+	}
+}
+
+async function init(){
+	catalogs = await loadCatalogs(await getGameDataFileList());
+	strings = await importTxtFile("enUS");
+	hotkeys = await importHotkeysFile();
+	
+	function receiveMessage(msg:Message){
+		onMessage(msg).then(function(value:any){
+			postMessage(<MessageResponse>{ id: msg.id, value });
+		}).catch(function(e){
+			postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
+		});
+	}
+	
+	onmessage = function(e){
+		receiveMessage(e.data);
+	}
+	
+	for(let v of queuedMessages){
+		receiveMessage(v);
+	}
+}
+
+async function save(){
+	let arr = Array.from(modifiedCatalogs);
+	modifiedCatalogs.clear();
+	
+	await saveCatalogs(arr);
+	
+	if(stringsModified){
+		stringsModified = false;
+		await exportTxtFile("enUS", strings);
+	}
+	
+	if(hotkeysModified){
+		hotkeysModified = false;
+		await exportHotkeysFile(hotkeys);
+	}
+}
+
+init();
+
+/*
 type WizardInputPromptString = { type:"str"; text:string; default?:string; catalogDefault?:string; };
 type WizardInputPromptHotkey = { type:"hotkey"; text:string; default?:string; };
 type WizardInputPromptInt = {type:"int", text:string; min?:number,max?:number; default?:number; catalogDefault?:number;};
@@ -173,7 +256,7 @@ type WizardInputPrompt = WizardInputPromptString | WizardInputPromptInt;
 
 type WizardInputReturnType<T> = T extends {type:"int"} ? number : string;
 
-export const prompt = {
+const prompt = {
 	async run(cb:()=>Promise<void>){
 		process.on("unhandledRejection", (e) => { throw e; });
 		process.stdout.write(clc.reset);
@@ -193,14 +276,6 @@ export const prompt = {
 		prompt.line(`START`);
 		await cb();
 		prompt.line(`END`);
-		
-		console.log("Applying changes...");
-		await exportHotkeysFile(hotkeys);
-		await exportTxtFile("enUS", strings);
-		await saveCatalogs([catalog]);
-		console.log("All done. Remember to open the map in the editor to double check.");
-		console.log("You should re-save the map to make the editor reorganize the catalog");
-		console.log("This will make your git commit prettier later");
 		
 		rl.close();
 	},
@@ -383,43 +458,4 @@ export const prompt = {
 		return newValue;
 	},
 };
-
-export function copyField(from:CatalogField, to:CatalogField){
-	let v = getFieldValue(catalog, from)
-	if(typeof v == "undefined") throw new Error("copyField from inexistent field");
-	setFieldValue(catalog, to, v);
-	return v;
-}
-
-export function setField(field:CatalogField, v:string|number|null){
-	setFieldValue(catalog, field, v);
-	return v;
-}
-
-export function setToken(entry:CatalogEntry, key:string, value:string){
-	setEntryToken(catalog, entry, key, value);
-}
-
-export function hotkeyPositionToLetter(row:number, column:number):string {
-	if(row-- == 0){
-		if(column-- == 0) return 'Q';
-		if(column-- == 0) return 'W';
-		if(column-- == 0) return 'E';
-		if(column-- == 0) return 'R';
-		if(column-- == 0) return 'T';
-	}else if(row-- == 0){
-		if(column-- == 0) return 'A';
-		if(column-- == 0) return 'S';
-		if(column-- == 0) return 'D';
-		if(column-- == 0) return 'F';
-		if(column-- == 0) return 'G';
-	}else if(row-- == 0){
-		if(column-- == 0) return 'Z';
-		if(column-- == 0) return 'X';
-		if(column-- == 0) return 'C';
-		if(column-- == 0) return 'V';
-		if(column-- == 0) return 'b';
-	}
-	
-	return "";
-}
+*/

@@ -1,14 +1,28 @@
-import assert from 'assert';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-
-console.log("hello");
+import { Button, Container, Row, Col, Form, InputGroup, Card, Alert } from 'react-bootstrap';
+import assert from 'assert';
+import CommonUpgradeWizard from './wizards/CommonUpgrade';
 
 const mainElement = document.getElementById("main");
 assert(mainElement);
 const root = ReactDOM.createRoot(mainElement);
 
-root.render(<h1>Hello, world!</h1>);
+
+root.render(<Container style={{marginTop: 20, marginBottom: 20}}>
+	<Row style={{marginBottom: 20}}>
+		<Col>
+			<Form.Select>
+				<option>Common/Upgrade</option>
+			</Form.Select>
+		</Col>
+	</Row>
+	<Row>
+		<Col>
+			<CommonUpgradeWizard />
+		</Col>
+	</Row>
+</Container>);
 
 
 const saveCallbacks = new Map<()=>void, number>();
