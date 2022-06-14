@@ -1,5 +1,5 @@
 import assert from "assert";
-import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, loadDataspacesFromIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild, getCatalogNameByTagname, changeDataspaceEntryType, CatalogName } from './lib/game_data_loader';
+import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild, getCatalogNameByTagname, changeDataspaceEntryType, CatalogName } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import { possiblyBigNumberToString, unreachable } from "./lib/utils";
@@ -26,7 +26,6 @@ let map:{
 	rootMapDir:string;
 	
 	index:GameDataIndex;
-	dataspaces:Dataspace[];
 	modifiedDataspaces:Set<Dataspace>;
 	mustAddToIndexIfModified:Set<Dataspace>;
 	destinationDataspace:number;
@@ -110,14 +109,20 @@ type NodeWithDataspace = { node:XMLNode, dataspace:Dataspace };
 function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithDataspace;
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined;
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined {
-	for(let dataspace of map.dataspaces){
+	{
+		let dataspace = map.index.implicitDataspaces[getCatalogNameByTagname(entry.type)];
+		let cur = accessDataspaceEntry(dataspace, entry, false);
+		if(cur) return {node: cur, dataspace};
+	}
+	
+	for(let dataspace of map.index.dataspaces){
 		let cur = accessDataspaceEntry(dataspace, entry, false);
 		if(cur) return {node: cur, dataspace};
 	}
 	
 	if(!createIfNotExists) return undefined;
 	
-	let dataspace = getDestinationDataspace();
+	let dataspace = getDestinationDataspace(getCatalogNameByTagname(entry.type));
 	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
 }
 
@@ -273,7 +278,6 @@ const messageHandlers:{
 		map = {
 			rootMapDir,
 			index,
-			dataspaces: await loadDataspacesFromIndex(index),
 			modifiedDataspaces: new Set(),
 			mustAddToIndexIfModified: new Set(),
 			destinationDataspace: 0,
@@ -324,7 +328,7 @@ const messageHandlers:{
 	},
 	
 	async getDataspaceList(){
-		let arr = map.dataspaces.map(v => v.name);
+		let arr = map.index.dataspaces.map(v => v.name);
 		
 		arr.sort(function(a, b){
 			let aDepth = 0;
@@ -345,17 +349,22 @@ const messageHandlers:{
 		return arr;
 	},
 	
-	async setDestinationDataspace(value:string){
-		for(let i = 0; i < map.dataspaces.length; ++i){
-			if(map.dataspaces[i].name == value){
+	async setDestinationDataspace(value:string|null){
+		if(value == null){
+			map.destinationDataspace = -1;
+			return;
+		}
+		
+		for(let i = 0; i < map.index.dataspaces.length; ++i){
+			if(map.index.dataspaces[i].name == value){
 				map.destinationDataspace = i;
 				return;
 			}
 		}
 		
-		map.destinationDataspace = map.dataspaces.length;
+		map.destinationDataspace = map.index.dataspaces.length;
 		let dataspace = newDataspace(value);
-		map.dataspaces.push(dataspace);
+		map.index.dataspaces.push(dataspace);
 		map.mustAddToIndexIfModified.add(dataspace);
 	},
 	
@@ -375,7 +384,7 @@ const messageHandlers:{
 	async getEntriesOfCatalog(catalogName:CatalogName, parent?:string){
 		let ret:(CatalogEntry & {dataspace:string})[] = [];
 		
-		for(let dataspace of map.dataspaces){
+		const iterateDataspace = (dataspace:Dataspace) => {
 			let catalog = dataspace.catalogs[catalogName];
 			
 			for(let entry of catalog.entries){
@@ -391,7 +400,10 @@ const messageHandlers:{
 					dataspace: dataspace.name,
 				});
 			}
-		}
+		};
+		
+		iterateDataspace(map.index.implicitDataspaces[catalogName]);
+		map.index.dataspaces.forEach(iterateDataspace);
 		
 		ret.sort(function(a, b){
 			if(a.id != b.id) return a.id < b.id ? -1 : 1;
@@ -454,9 +466,13 @@ async function onMessage(msg:Message){
 	throw new Error("Empty message? " + JSON.stringify(msg));
 }
 
-function getDestinationDataspace(){
-	assert(map.destinationDataspace < map.dataspaces.length);
-	return map.dataspaces[map.destinationDataspace];
+function getDestinationDataspace(catalog:CatalogName){
+	assert(map.destinationDataspace < map.index.dataspaces.length);
+	if(map.destinationDataspace < 0){
+		return map.index.implicitDataspaces[catalog];
+	}
+	
+	return map.index.dataspaces[map.destinationDataspace];
 }
 
 onmessage = function(e){

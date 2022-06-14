@@ -27,7 +27,7 @@ export function getDataspaceList():Promise<string[]> {
 	return sendMessage("getDataspaceList", arguments);
 }
 
-export function setDestinationDataspace(_value:string):Promise<void> {
+export function setDestinationDataspace(_value:string|null):Promise<void> {
 	return sendMessage("setDestinationDataspace", arguments);
 }
 

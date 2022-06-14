@@ -40,7 +40,7 @@ export default function(){
 							{changedData !== undefined && hasChanges && <>
 								{changedData.strings && <><Badge bg="success">Strings</Badge>{' '}</>}
 								{changedData.hotkeys && <><Badge bg="info">Hotkeys</Badge>{' '}</>}
-								{changedData.dataspaces.map(v => <><Badge bg="warning" text="dark">{v}</Badge>{' '}</>)}
+								{changedData.dataspaces.map(v => <><Badge key={v} bg="warning" text="dark">{v}</Badge>{' '}</>)}
 							</>}
 							
 							{!hasChanges && <>

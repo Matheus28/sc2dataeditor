@@ -24,11 +24,46 @@ export function getGameDataFilenameBase(rootMapDir:string){
 export type GameDataIndex = {
 	rootMapDir:string;
 	includes:XMLNode;
+	
+	implicitDataspaces:Record<CatalogName, Dataspace>;
+	dataspaces:Dataspace[];
 };
 
 export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex> {
 	let v = await parseXML(await fs.readFile(getGameDataIndexFilename(rootMapDir), "utf8"));
-	return { rootMapDir, includes: v["Includes"] };
+	let index:GameDataIndex = {
+		rootMapDir,
+		includes: v["Includes"],
+		implicitDataspaces: {} as any,
+		dataspaces: [],
+	};
+	
+	const base = getGameDataFilenameBase(rootMapDir);
+	
+	await Promise.all([
+		(async function(){
+			let implicits = await Promise.all((Object.keys(CatalogTypesInstance) as CatalogName[]).map(async function(catalog){
+				const filename = base + catalog + "Data.xml";
+				let v = await loadDataspace(rootMapDir, filename);
+				if(!v){
+					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename));
+				}
+				
+				return { dataspace: v, catalog };
+			}));
+			
+			for(let {dataspace, catalog} of implicits){
+				index.implicitDataspaces[catalog] = dataspace;
+			}
+		})(),
+		
+		(async function(){
+			index.dataspaces = await loadIndexIncludes(index);
+		})(),
+	]);
+	
+	
+	return index;
 }
 
 function getGameDataIndexFilename(rootMapDir:string):string {
@@ -39,11 +74,11 @@ export async function saveGameDataIndex(v:GameDataIndex):Promise<void> {
 	await fs.writeFile(v.rootMapDir, await encodeXML(v.includes), "utf8");
 }
 
-export async function loadDataspacesFromIndex(v:GameDataIndex):Promise<Dataspace[]>{
+async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 	const prefixToRemove = "GameData/";
 	
-	const base = getGameDataFilenameBase(v.rootMapDir);
-	const arr = getChildrenByTagName(v.includes, "Catalog");
+	const base = getGameDataFilenameBase(index.rootMapDir);
+	const arr = getChildrenByTagName(index.includes, "Catalog");
 	assert(arr);
 	
 	let filenames:string[] = arr.map(v => {
@@ -53,7 +88,11 @@ export async function loadDataspacesFromIndex(v:GameDataIndex):Promise<Dataspace
 		return base + v.attr["path"].slice(prefixToRemove.length)
 	});
 	
-	return await loadDataspaces(v, filenames);
+	return await Promise.all(filenames.map(async filename => {
+		let v = await loadDataspace(index.rootMapDir, filename);
+		if(!v) throw new Error(`Couldn't open file for dataspace ${filename}`);
+		return v;
+	}));
 }
 
 export interface Dataspace {
@@ -100,44 +139,48 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 }
 
 
-export async function loadDataspaces(index:GameDataIndex, files:string[]):Promise<Dataspace[]>{
-	return await Promise.all(files.map(async function(filename):Promise<Dataspace> {
-		let str = await fs.readFile(filename, "utf8");
+async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspace|null>{
+	let str:string;
+	
+	try {
+		str = await fs.readFile(filename, "utf8");
+	}catch(e){
+		return null;
+	}
+	
+	let data = (await parseXML(str))["Catalog"];
+	let catalogs = createEmptyDataspaceCatalogs();
+	
+	for(let v of data.children){
+		// Ideally these should be attached to the closest child, so we can stop using data_
+		if(v.tagname == "#text") continue;
+		if(v.tagname == "#comment") continue;
 		
-		let data = (await parseXML(str))["Catalog"];
-		let catalogs = createEmptyDataspaceCatalogs();
-		
-		for(let v of data.children){
-			// Ideally these should be attached to the closest child, so we can stop using data_
-			if(v.tagname == "#text") continue;
-			if(v.tagname == "#comment") continue;
-			
-			if(!(v.tagname in tagnameToCatalog)){
-				console.log("Unknown catalog entry tagname: " + v.tagname);
-				continue;
-			}
-			
-			let catalogName = getCatalogNameByTagname(v.tagname);
-			let catalog = catalogs[catalogName];
-			
-			let id = v.attr["id"];
-			if(id !== undefined){
-				if(id in catalog.entryByID){
-					throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
-				}
-				
-				catalog.entryByID[id] = v as any;
-			}
-			
-			catalog.entries.push(v);
+		if(!(v.tagname in tagnameToCatalog)){
+			console.log("Unknown catalog entry tagname: " + v.tagname);
+			continue;
 		}
 		
-		return {
-			name: dataspaceFilenameToName(index.rootMapDir, filename),
-			data_: data,
-			catalogs,
-		};
-	}));
+		let catalogName = getCatalogNameByTagname(v.tagname);
+		let catalog = catalogs[catalogName];
+		
+		let id = v.attr["id"];
+		if(id !== undefined){
+			if(id in catalog.entryByID){
+				throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
+			}
+			
+			catalog.entryByID[id] = v as any;
+		}
+		
+		catalog.entries.push(v);
+	}
+	
+	return {
+		name: dataspaceFilenameToName(rootMapDir, filename),
+		data_: data,
+		catalogs,
+	};
 }
 
 export function addDataspaceEntry(dataspace:Dataspace, child:XMLNode){
