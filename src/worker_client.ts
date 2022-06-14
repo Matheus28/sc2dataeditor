@@ -35,12 +35,16 @@ export function entryExists(_entry:CatalogEntry):Promise<boolean> {
 	return sendMessage("entryExists", arguments);
 }
 
-export function getEntriesOfCatalog(_catalogName:CatalogName, _parent?:string):Promise<string[]> {
+export function getEntriesOfCatalog(_catalogName:CatalogName, _parent?:string):Promise<(CatalogEntry & {dataspace:string})[]> {
 	return sendMessage("getEntriesOfCatalog", arguments);
 }
 
 export function getStringLink(_link:string):Promise<string|undefined> {
 	return sendMessage("getStringLink", arguments);
+}
+
+export function setStringLink(_link:string, _value:string):Promise<void> {
+	return sendMessage("setStringLink", arguments);
 }
 
 export function getEntryParent(_entry:CatalogEntry):Promise<string|undefined> {
@@ -49,6 +53,14 @@ export function getEntryParent(_entry:CatalogEntry):Promise<string|undefined> {
 
 export function setEntryParent(_entry:CatalogEntry, _value:string):Promise<void> {
 	return sendMessage("setEntryParent", arguments);
+}
+
+export function setFieldValue(_field:CatalogField, _value:string):Promise<void> {
+	return sendMessage("setFieldValue", arguments);
+}
+
+export function getPendingChangesList():Promise<{ dataspaces:string[]; hotkeys:boolean; strings:boolean; }> {
+	return sendMessage("getPendingChangesList", arguments);
 }
 
 function sendMessage<K extends keyof Message["data"]>(key:K, params:Message["data"][K]|IArguments){
@@ -68,6 +80,7 @@ worker.onmessage = function(e){
 	const msg:MessageResponse = e.data;
 	const res = pendingRequests.get(msg.id);
 	assert(res);
+	pendingRequests.delete(msg.id);
 	
 	const [resolve, reject] = res;
 	

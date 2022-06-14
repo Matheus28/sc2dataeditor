@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { getStringLink } from '../../worker_client';
+import { getStringLink, setStringLink } from '../../worker_client';
 
 type Props = {
 	link:string;
@@ -48,6 +48,7 @@ export default function(props:Props){
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){
 			if(e.target.validity.valid){
 				setValue(e.target.value)
+				setStringLink(props.link, e.target.value);
 			}
 		},
 	};

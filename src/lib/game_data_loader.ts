@@ -53,11 +53,11 @@ export async function loadDataspacesFromIndex(v:GameDataIndex):Promise<Dataspace
 		return base + v.attr["path"].slice(prefixToRemove.length)
 	});
 	
-	return await loadDataspaces(filenames);
+	return await loadDataspaces(v, filenames);
 }
 
 export interface Dataspace {
-	filename:string;
+	name:string;
 	
 	data_:XMLNode;
 	
@@ -100,7 +100,7 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 }
 
 
-export async function loadDataspaces(files:string[]):Promise<Dataspace[]>{
+export async function loadDataspaces(index:GameDataIndex, files:string[]):Promise<Dataspace[]>{
 	return await Promise.all(files.map(async function(filename):Promise<Dataspace> {
 		let str = await fs.readFile(filename, "utf8");
 		
@@ -133,7 +133,7 @@ export async function loadDataspaces(files:string[]):Promise<Dataspace[]>{
 		}
 		
 		return {
-			filename,
+			name: dataspaceFilenameToName(index.rootMapDir, filename),
 			data_: data,
 			catalogs,
 		};
@@ -190,9 +190,21 @@ export function addChild(parent:XMLNode, child:XMLNode){
 	parent.children.push(child);
 }
 
-export function newDataspace(filename:string):Dataspace {
+function dataspaceFilenameToName(rootMapDir:string, filename:string):string {
+	const base = getGameDataFilenameBase(rootMapDir);
+	assert(filename.startsWith(base));
+	return filename.slice(base.length, -4).replace(/\\/g, '/');
+}
+
+function dataspaceNameToFilename(rootMapDir:string, name:string):string {
+	const base = getGameDataFilenameBase(rootMapDir);
+	
+	return base + name + ".xml";
+}
+
+export function newDataspace(name:string):Dataspace {
 	return {
-		filename,
+		name,
 		catalogs: createEmptyDataspaceCatalogs(),
 		data_: newNode("Catalog"),
 	};
@@ -200,9 +212,9 @@ export function newDataspace(filename:string):Dataspace {
 
 export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
 	const base = getGameDataFilenameBase(index.rootMapDir);
-	assert(dataspace.filename.startsWith(base));
+	let filename = dataspaceNameToFilename(index.rootMapDir, dataspace.name);
 	
-	const includesFilename = "GameData/" + dataspace.filename.slice(base.length);
+	const includesFilename = "GameData/" + filename.slice(base.length);
 	addChild(index.includes, newNode("Catalog", { path: includesFilename }));
 }
 
@@ -346,9 +358,9 @@ function encodeXML(root:XMLNode){
 	return '<?xml version="1.0" encoding="utf-8"?>' + builder.build([encodeNode(root)]).replace(/\r?\n/g, '\r\n') + '\r\n';
 }
 
-export async function saveDataspaces(datas:Dataspace[]){
+export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
-		await fs.writeFile(data.filename, encodeXML(data.data_), "utf8");
+		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(data.data_), "utf8");
 	}));
 }
 

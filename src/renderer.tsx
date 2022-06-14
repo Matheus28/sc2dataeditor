@@ -5,6 +5,7 @@ import assert from 'assert';
 import CommonUpgradeWizard from './wizards/CommonUpgrade';
 import SelectDestinationDataspace from './components/SelectDestinationDataSpace';
 import { loadMap } from './worker_client';
+import ChangedList from './components/ChangedList';
 
 const mainElement = document.getElementById("main");
 assert(mainElement);
@@ -39,7 +40,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 	
 	return <React.StrictMode>
 		<Container style={{marginTop: 20, marginBottom: 20}}>
-			<Row style={{marginBottom: 20}}>
+			<Row className="mb-3">
 				<Col>
 					<Form.Select>
 						<option>Common/Upgrade</option>
@@ -49,7 +50,10 @@ const CatalogBrowser = function(props:{rootDir:string}){
 					<SelectDestinationDataspace />
 				</Col>
 			</Row>
-			<Row>
+			
+			<ChangedList />
+			
+			<Row className="mb-3">
 				<Col>
 					<CommonUpgradeWizard />
 				</Col>

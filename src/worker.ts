@@ -29,7 +29,7 @@ let map:{
 	dataspaces:Dataspace[];
 	modifiedDataspaces:Set<Dataspace>;
 	mustAddToIndexIfModified:Set<Dataspace>;
-	destinationDataspaceIndex:number;
+	destinationDataspace:number;
 	
 	stringsModified:boolean;
 	strings:Map<string,string>;
@@ -276,7 +276,7 @@ const messageHandlers:{
 			dataspaces: await loadDataspacesFromIndex(index),
 			modifiedDataspaces: new Set(),
 			mustAddToIndexIfModified: new Set(),
-			destinationDataspaceIndex: 0,
+			destinationDataspace: 0,
 			
 			stringsModified: false,
 			strings: await importTxtFile(rootMapDir, "enUS"),
@@ -294,7 +294,7 @@ const messageHandlers:{
 		let arr = Array.from(map.modifiedDataspaces);
 		map.modifiedDataspaces.clear();
 		
-		await saveDataspaces(arr);
+		await saveDataspaces(map.index, arr);
 		
 		let addDataspacesToIndex:Dataspace[] = [];
 		for(let dataspace of arr){
@@ -324,8 +324,7 @@ const messageHandlers:{
 	},
 	
 	async getDataspaceList(){
-		const base = getGameDataFilenameBase(map.index.rootMapDir);
-		let arr = map.dataspaces.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
+		let arr = map.dataspaces.map(v => v.name);
 		
 		arr.sort(function(a, b){
 			let aDepth = 0;
@@ -347,17 +346,14 @@ const messageHandlers:{
 	},
 	
 	async setDestinationDataspace(value:string){
-		const base = getGameDataFilenameBase(map.index.rootMapDir);
-		value = base + value + ".xml";
-		
 		for(let i = 0; i < map.dataspaces.length; ++i){
-			if(map.dataspaces[i].filename == value){
-				map.destinationDataspaceIndex = i;
+			if(map.dataspaces[i].name == value){
+				map.destinationDataspace = i;
 				return;
 			}
 		}
 		
-		map.destinationDataspaceIndex = map.dataspaces.length;
+		map.destinationDataspace = map.dataspaces.length;
 		let dataspace = newDataspace(value);
 		map.dataspaces.push(dataspace);
 		map.mustAddToIndexIfModified.add(dataspace);
@@ -371,8 +367,13 @@ const messageHandlers:{
 		return map.strings.get(link);
 	},
 	
+	async setStringLink(link:string, value:string){
+		map.stringsModified = true;
+		map.strings.set(link, value);
+	},
+	
 	async getEntriesOfCatalog(catalogName:CatalogName, parent?:string){
-		let ret:string[] = [];
+		let ret:(CatalogEntry & {dataspace:string})[] = [];
 		
 		for(let dataspace of map.dataspaces){
 			let catalog = dataspace.catalogs[catalogName];
@@ -384,11 +385,19 @@ const messageHandlers:{
 				
 				if(!("id" in entry.attr)) continue;
 				
-				ret.push(entry.attr["id"]);
+				ret.push({
+					id: entry.attr["id"],
+					type: entry.tagname,
+					dataspace: dataspace.name,
+				});
 			}
 		}
 		
-		ret.sort();
+		ret.sort(function(a, b){
+			if(a.id != b.id) return a.id < b.id ? -1 : 1;
+			return 0;
+		});
+		
 		return ret;
 	},
 	
@@ -405,6 +414,18 @@ const messageHandlers:{
 		node.attr["parent"] = value;
 		
 		map.modifiedDataspaces.add(dataspace);
+	},
+	
+	async setFieldValue(field:CatalogField, value:string){
+		setFieldValue(field, value);
+	},
+	
+	async getPendingChangesList(){
+		return {
+			dataspaces: Array.from(map.modifiedDataspaces).map(v => v.name),
+			hotkeys: map.hotkeysModified,
+			strings: map.stringsModified,
+		};
 	},
 };
 
@@ -434,8 +455,8 @@ async function onMessage(msg:Message){
 }
 
 function getDestinationDataspace(){
-	assert(map.destinationDataspaceIndex < map.dataspaces.length);
-	return map.dataspaces[map.destinationDataspaceIndex];
+	assert(map.destinationDataspace < map.dataspaces.length);
+	return map.dataspaces[map.destinationDataspace];
 }
 
 onmessage = function(e){

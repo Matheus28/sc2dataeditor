@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { CatalogEntry, CatalogField } from '../../worker';
-import { getFieldValue } from '../../worker_client';
+import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 
 interface Props {
@@ -49,7 +49,14 @@ export default function(props:Props){
 			min={props.min}
 			max={props.max}
 			value={value}
-			onChange={(e) => e.target.validity.valid && setValue(parseInt(e.target.value, 10))}
+			onChange={(e) => {
+				if(!e.target.validity.valid) return;
+				let v = parseInt(e.target.value, 10);
+				if(isNaN(v)) return;
+				
+				setValue(v);
+				setFieldValue(props.field, v.toString());
+			}}
 		/>
 	</>;
 };
