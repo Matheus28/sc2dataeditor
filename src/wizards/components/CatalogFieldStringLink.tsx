@@ -15,7 +15,7 @@ type Props = {
 })
 
 export default function(props:Props){
-	const [value, setValue] = React.useState(props.default || "");
+	const [value, setValue] = React.useState(() => (props.default || "").replace(/<n\s*\/>/gi, '\n'));
 	const [isDisabled, setDisabled] = React.useState(false);
 	
 	// Try to load field from dataspace
@@ -28,11 +28,11 @@ export default function(props:Props){
 			if(abort) return;
 			
 			setDisabled(false);
-			if(typeof v != "undefined"){
-				setValue(v);
-			}else{
-				setValue(props.default || "");
+			if(typeof v == "undefined"){
+				v = props.default || "";
 			}
+			
+			setValue(v.replace(/<n\s*\/>/gi, '\n'));
 		});
 		
 		return function(){
@@ -48,7 +48,7 @@ export default function(props:Props){
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){
 			if(e.target.validity.valid){
 				setValue(e.target.value)
-				setStringLink(props.link, e.target.value);
+				setStringLink(props.link, e.target.value.replace(/\r?\n/g, "<n/>"));
 			}
 		},
 	};

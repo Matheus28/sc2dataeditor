@@ -71,7 +71,7 @@ function getGameDataIndexFilename(rootMapDir:string):string {
 }
 
 export async function saveGameDataIndex(v:GameDataIndex):Promise<void> {
-	await fs.writeFile(v.rootMapDir, await encodeXML(v.includes), "utf8");
+	await fs.writeFile(getGameDataIndexFilename(v.rootMapDir), await encodeXML(v.includes), "utf8");
 }
 
 async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
@@ -257,6 +257,7 @@ export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
 	const base = getGameDataFilenameBase(index.rootMapDir);
 	let filename = dataspaceNameToFilename(index.rootMapDir, dataspace.name);
 	
+	index.dataspaces.push(dataspace);
 	const includesFilename = "GameData/" + filename.slice(base.length);
 	addChild(index.includes, newNode("Catalog", { path: includesFilename }));
 }

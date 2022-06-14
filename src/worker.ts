@@ -26,8 +26,8 @@ let map:{
 	rootMapDir:string;
 	
 	index:GameDataIndex;
+	hasIndexChanges:boolean;
 	modifiedDataspaces:Set<Dataspace>;
-	mustAddToIndexIfModified:Set<Dataspace>;
 	destinationDataspace:number;
 	
 	stringsModified:boolean;
@@ -278,8 +278,8 @@ const messageHandlers:{
 			rootMapDir,
 			index,
 			modifiedDataspaces: new Set(),
-			mustAddToIndexIfModified: new Set(),
 			destinationDataspace: 0,
+			hasIndexChanges: false,
 			
 			stringsModified: false,
 			strings: await importTxtFile(rootMapDir, "enUS"),
@@ -299,20 +299,9 @@ const messageHandlers:{
 		
 		await saveDataspaces(map.index, arr);
 		
-		let addDataspacesToIndex:Dataspace[] = [];
-		for(let dataspace of arr){
-			if(map.mustAddToIndexIfModified.has(dataspace)){
-				addDataspacesToIndex.push(dataspace);
-			}
-		}
-		
-		for(let dataspace of addDataspacesToIndex){
-			addDataspaceToIndex(map.index, dataspace);
-			map.mustAddToIndexIfModified.delete(dataspace);
-		}
-		
-		if(addDataspacesToIndex.length > 0){
-			saveGameDataIndex(map.index);
+		if(map.hasIndexChanges){
+			map.hasIndexChanges = false;
+			await saveGameDataIndex(map.index);
 		}
 		
 		if(map.stringsModified){
@@ -363,10 +352,11 @@ const messageHandlers:{
 			}
 		}
 		
+		map.hasIndexChanges = true;
 		map.destinationDataspace = map.index.dataspaces.length;
 		let dataspace = newDataspace(value);
-		map.index.dataspaces.push(dataspace);
-		map.mustAddToIndexIfModified.add(dataspace);
+		addDataspaceToIndex(map.index, dataspace);
+		modifiedDataspace(dataspace);
 	},
 	
 	async entryExists(entry:CatalogEntry){
@@ -516,5 +506,6 @@ onmessage = function(e){
 		postMessage(<MessageResponse>{ id: msg.id, value });
 	}).catch(function(e){
 		postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
+		throw e;
 	});
 }

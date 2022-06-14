@@ -36,8 +36,8 @@ export default function(){
 		<Row className="mb-3">
 			<Col>
 				<Card>
-					<Card.Body className="d-flex align-items-center">
-						<div className="flex-fill">
+					<Card.Body className="d-flex align-items-center" style={{padding: 8}}>
+						<div className="flex-fill" style={{marginLeft: 10}}>
 							{changedData !== undefined && hasChanges && <>
 								{changedData.strings && <><Badge bg="success">Strings</Badge>{' '}</>}
 								{changedData.hotkeys && <><Badge bg="info">Hotkeys</Badge>{' '}</>}
