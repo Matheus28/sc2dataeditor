@@ -16,32 +16,32 @@ export type XMLNode = ({
 
 type XMLParseResult = Record<string, XMLNode>;
 
-export function getCatalogFilenameBase(rootMapDir:string){
+export function getGameDataFilenameBase(rootMapDir:string){
 	return rootMapDir + "/Base.SC2Data/GameData/";
 }
 
-export type CatalogIndex = {
+export type GameDataIndex = {
 	rootMapDir:string;
 	includes:XMLNode;
 };
 
-export async function loadCatalogIndex(rootMapDir:string):Promise<CatalogIndex> {
-	let v = await parseXML(await fs.readFile(getIndexFilename(rootMapDir), "utf8"));
+export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex> {
+	let v = await parseXML(await fs.readFile(getGameDataIndexFilename(rootMapDir), "utf8"));
 	return { rootMapDir, includes: v["Includes"] };
 }
 
-function getIndexFilename(rootMapDir:string):string {
+function getGameDataIndexFilename(rootMapDir:string):string {
 	return rootMapDir + "/Base.SC2Data/GameData.xml";
 }
 
-export async function saveCatalogIndex(v:CatalogIndex):Promise<void> {
+export async function saveGameDataIndex(v:GameDataIndex):Promise<void> {
 	await fs.writeFile(v.rootMapDir, await encodeXML(v.includes), "utf8");
 }
 
-export async function loadCatalogsFromIndex(v:CatalogIndex):Promise<Catalog[]>{
+export async function loadDataspacesFromIndex(v:GameDataIndex):Promise<Dataspace[]>{
 	const prefixToRemove = "GameData/";
 	
-	const base = getCatalogFilenameBase(v.rootMapDir);
+	const base = getGameDataFilenameBase(v.rootMapDir);
 	const arr = getChildrenByTagName(v.includes, "Catalog");
 	assert(arr);
 	
@@ -52,18 +52,18 @@ export async function loadCatalogsFromIndex(v:CatalogIndex):Promise<Catalog[]>{
 		return base + v.attr["path"].slice(prefixToRemove.length)
 	});
 	
-	return await loadCatalogs(filenames);
+	return await loadDataspaces(filenames);
 }
 
-export interface Catalog {
+export interface Dataspace {
 	filename:string;
 	
 	entriesByID:Record<string, XMLNode[]>;
 	data:XMLNode;
 };
 
-export async function loadCatalogs(files:string[]):Promise<Catalog[]>{
-	return await Promise.all(files.map(async function(filename):Promise<Catalog> {
+export async function loadDataspaces(files:string[]):Promise<Dataspace[]>{
+	return await Promise.all(files.map(async function(filename):Promise<Dataspace> {
 		let str = await fs.readFile(filename, "utf8");
 		
 		let data = (await parseXML(str))["Catalog"];
@@ -85,13 +85,13 @@ export async function loadCatalogs(files:string[]):Promise<Catalog[]>{
 	}));
 }
 
-export function addCatalogEntry(catalog:Catalog, child:XMLNode){
+export function addDataspaceEntry(dataspace:Dataspace, child:XMLNode){
 	assert("id" in child.attr);
 	
 	const id = child.attr["id"];
-	catalog.entriesByID[id] = catalog.entriesByID[id] || [];
-	catalog.entriesByID[id].push(child);
-	addChild(catalog.data, child);
+	dataspace.entriesByID[id] = dataspace.entriesByID[id] || [];
+	dataspace.entriesByID[id].push(child);
+	addChild(dataspace.data, child);
 }
 
 export function addChild(parent:XMLNode, child:XMLNode){
@@ -113,7 +113,7 @@ export function addChild(parent:XMLNode, child:XMLNode){
 	parent.children.push(child);
 }
 
-export function newCatalog(filename:string):Catalog {
+export function newDataspace(filename:string):Dataspace {
 	return {
 		filename,
 		entriesByID: {},
@@ -121,11 +121,11 @@ export function newCatalog(filename:string):Catalog {
 	};
 }
 
-export function addCatalogToIndex(index:CatalogIndex, catalog:Catalog){
-	const base = getCatalogFilenameBase(index.rootMapDir);
-	assert(catalog.filename.startsWith(base));
+export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
+	const base = getGameDataFilenameBase(index.rootMapDir);
+	assert(dataspace.filename.startsWith(base));
 	
-	const includesFilename = "GameData/" + catalog.filename.slice(base.length);
+	const includesFilename = "GameData/" + dataspace.filename.slice(base.length);
 	addChild(index.includes, newNode("Catalog", { path: includesFilename }));
 }
 
@@ -269,7 +269,7 @@ function encodeXML(root:XMLNode){
 	return '<?xml version="1.0" encoding="utf-8"?>' + builder.build([encodeNode(root)]).replace(/\r?\n/g, '\r\n') + '\r\n';
 }
 
-export async function saveCatalogs(datas:Catalog[]){
+export async function saveDataspaces(datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
 		await fs.writeFile(data.filename, encodeXML(data.data), "utf8");
 	}));
@@ -278,7 +278,7 @@ export async function saveCatalogs(datas:Catalog[]){
 // Some arrays can be accessed through constants, which map simply to a number (Research3 -> 2, Minerals -> 0)
 // Not sure if those constants are per-array or global
 // Editor will prefer constants for the ones that have it (such as Research<N>), but we can write integers and it'll convert it
-// next time it saves that catalog
+// next time it saves that data space
 export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:true):XMLNode;
 export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean):XMLNode|undefined;
 export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean = false):XMLNode|undefined {

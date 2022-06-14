@@ -49,10 +49,6 @@ export default function CommonUpgradeWizard(){
 							<Form.Label>Tooltip</Form.Label>
 							<CatalogFieldStringLink link={`Tooltip/${id}`} placeholder="Does things and all" />
 						</Form.Group>
-						
-						<Form.Group>
-							<Button variant="primary" className="float-end">Save</Button>
-						</Form.Group>
 					</>}
 				</Form>
 			</Card.Body>

@@ -18,7 +18,7 @@ export default function(props:Props){
 	const [value, setValue] = React.useState(props.default || "");
 	const [isDisabled, setDisabled] = React.useState(false);
 	
-	// Try to load field from catalog
+	// Try to load field from dataspace
 	React.useEffect(() => {
 		setDisabled(true);
 		

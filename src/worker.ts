@@ -1,5 +1,5 @@
 import assert from "assert";
-import { getCatalogFilenameBase, Catalog, XMLNode, accessArray, accessStruct, newNode, saveCatalogs, addCatalogEntry, newCatalog, CatalogIndex, loadCatalogIndex, loadCatalogsFromIndex, addCatalogToIndex, saveCatalogIndex, getChildrenByTagName, addChild } from './lib/game_data_loader';
+import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, loadDataspacesFromIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import { possiblyBigNumberToString, unreachable } from "./lib/utils";
@@ -25,11 +25,11 @@ export type MessageResponse = {
 let map:{
 	rootMapDir:string;
 	
-	index:CatalogIndex;
-	catalogs:Catalog[];
-	modifiedCatalogs:Set<Catalog>;
-	mustAddToIndexIfModified:Set<Catalog>;
-	destinationCatalogIndex:number;
+	index:GameDataIndex;
+	dataspaces:Dataspace[];
+	modifiedDataspaces:Set<Dataspace>;
+	mustAddToIndexIfModified:Set<Dataspace>;
+	destinationDataspaceIndex:number;
 	
 	stringsModified:boolean;
 	strings:Map<string,string>;
@@ -69,10 +69,11 @@ export interface CatalogField {
 	name:(string|[string, string|number])[];
 }
 
-function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:true):XMLNode;
-function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
-function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
-	let arr = catalog.entriesByID[entry.id];
+// Refactor: remove and inline into accessEntry
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
+	let arr = dataspace.entriesByID[entry.id];
 	if(arr){
 		for(let node of arr){
 			if(node.tagname != entry.type) continue;
@@ -86,40 +87,29 @@ function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExis
 		};
 		
 		let node = newNode(entry.type, attrs);
-		addCatalogEntry(catalog, node);
-		map.modifiedCatalogs.add(catalog);
+		addDataspaceEntry(dataspace, node);
+		map.modifiedDataspaces.add(dataspace);
 		return node;
 	}else{
 		return undefined;
 	}
 }
 
-type NodeWithCatalog = { node:XMLNode, catalog:Catalog };
+type NodeWithDataspace = { node:XMLNode, dataspace:Dataspace };
 
-function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithCatalog;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithCatalog|undefined;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithCatalog|undefined {
-	for(let catalog of map.catalogs){
-		let cur = accessCatalogEntry(catalog, entry, false);
-		if(cur) return {node: cur, catalog};
+function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithDataspace;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined {
+	for(let dataspace of map.dataspaces){
+		let cur = accessDataspaceEntry(dataspace, entry, false);
+		if(cur) return {node: cur, dataspace};
 	}
 	
 	if(!createIfNotExists) return undefined;
 	
-	let catalog = getDestinationCatalog();
-	return {node:accessCatalogEntry(catalog, entry, true), catalog};
+	let dataspace = getDestinationDataspace();
+	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
 }
-
-function getCatalogForPossiblyNewEntry(entry:CatalogEntry):Catalog {
-	for(let catalog of map.catalogs){
-		if(accessCatalogEntry(catalog, entry, false)){
-			return catalog;
-		}
-	}
-	
-	return getDestinationCatalog();
-}
-
 
 function getEntryToken(entry:CatalogEntry, key:string):string|undefined {
 	let cur = accessEntry(entry, false);
@@ -133,7 +123,7 @@ function setEntryToken(entry:CatalogEntry, key:string, value:string) {
 	
 	if(cur.node.attr[key] === value) return;
 	
-	map.modifiedCatalogs.add(cur.catalog);
+	map.modifiedDataspaces.add(cur.dataspace);
 	cur.node.attr[key] = value;
 }
 
@@ -215,7 +205,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 		if(name in cur.attr){
 			if(cur.attr[name] === newValue) return; // Not changed
 			cur.attr[name] = newValue;
-			map.modifiedCatalogs.add(vv.catalog);
+			map.modifiedDataspaces.add(vv.dataspace);
 			return;
 		}
 		
@@ -230,7 +220,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 			if(sub.attr["value"] === newValue) return; // Not changed
 			
 			sub.attr["value"] = newValue;
-			map.modifiedCatalogs.add(vv.catalog);
+			map.modifiedDataspaces.add(vv.dataspace);
 			return;
 		}
 		
@@ -241,10 +231,10 @@ function setFieldValue(field:CatalogField, newValue:string){
 			
 			// Create a <name value="newValue"/> inside it
 			addChild(cur, newNode(name, {value:newValue}));
-			map.modifiedCatalogs.add(vv.catalog);
+			map.modifiedDataspaces.add(vv.dataspace);
 		}else{
 			cur.attr[name] = newValue;
-			map.modifiedCatalogs.add(vv.catalog);
+			map.modifiedDataspaces.add(vv.dataspace);
 		}
 	}else{
 		// This is an array of simple values, such as
@@ -256,7 +246,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 		if(v.attr["value"] === newValue) return; // Not changed
 		
 		v.attr["value"] = newValue;
-		map.modifiedCatalogs.add(vv.catalog);
+		map.modifiedDataspaces.add(vv.dataspace);
 	}
 }
 
@@ -268,15 +258,15 @@ const messageHandlers:{
 	},
 	
 	async loadMap(rootMapDir:string){
-		let index = await loadCatalogIndex(rootMapDir);
+		let index = await loadGameDataIndex(rootMapDir);
 		
 		map = {
 			rootMapDir,
 			index,
-			catalogs: await loadCatalogsFromIndex(index),
-			modifiedCatalogs: new Set(),
+			dataspaces: await loadDataspacesFromIndex(index),
+			modifiedDataspaces: new Set(),
 			mustAddToIndexIfModified: new Set(),
-			destinationCatalogIndex: 0,
+			destinationDataspaceIndex: 0,
 			
 			stringsModified: false,
 			strings: await importTxtFile(rootMapDir, "enUS"),
@@ -291,25 +281,25 @@ const messageHandlers:{
 	},
 	
 	async save(){
-		let arr = Array.from(map.modifiedCatalogs);
-		map.modifiedCatalogs.clear();
+		let arr = Array.from(map.modifiedDataspaces);
+		map.modifiedDataspaces.clear();
 		
-		await saveCatalogs(arr);
+		await saveDataspaces(arr);
 		
-		let addCatalogsToIndex:Catalog[] = [];
-		for(let catalog of arr){
-			if(map.mustAddToIndexIfModified.has(catalog)){
-				addCatalogsToIndex.push(catalog);
+		let addDataspacesToIndex:Dataspace[] = [];
+		for(let dataspace of arr){
+			if(map.mustAddToIndexIfModified.has(dataspace)){
+				addDataspacesToIndex.push(dataspace);
 			}
 		}
 		
-		for(let catalog of addCatalogsToIndex){
-			addCatalogToIndex(map.index, catalog);
-			map.mustAddToIndexIfModified.delete(catalog);
+		for(let dataspace of addDataspacesToIndex){
+			addDataspaceToIndex(map.index, dataspace);
+			map.mustAddToIndexIfModified.delete(dataspace);
 		}
 		
-		if(addCatalogsToIndex.length > 0){
-			saveCatalogIndex(map.index);
+		if(addDataspacesToIndex.length > 0){
+			saveGameDataIndex(map.index);
 		}
 		
 		if(map.stringsModified){
@@ -323,9 +313,9 @@ const messageHandlers:{
 		}
 	},
 	
-	async getCatalogList(){
-		const base = getCatalogFilenameBase(map.index.rootMapDir);
-		let arr = map.catalogs.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
+	async getDataspaceList(){
+		const base = getGameDataFilenameBase(map.index.rootMapDir);
+		let arr = map.dataspaces.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
 		
 		arr.sort(function(a, b){
 			let aDepth = 0;
@@ -346,21 +336,21 @@ const messageHandlers:{
 		return arr;
 	},
 	
-	async setDestinationCatalog(value:string){
-		const base = getCatalogFilenameBase(map.index.rootMapDir);
+	async setDestinationDataspace(value:string){
+		const base = getGameDataFilenameBase(map.index.rootMapDir);
 		value = base + value + ".xml";
 		
-		for(let i = 0; i < map.catalogs.length; ++i){
-			if(map.catalogs[i].filename == value){
-				map.destinationCatalogIndex = i;
+		for(let i = 0; i < map.dataspaces.length; ++i){
+			if(map.dataspaces[i].filename == value){
+				map.destinationDataspaceIndex = i;
 				return;
 			}
 		}
 		
-		map.destinationCatalogIndex = map.catalogs.length;
-		let catalog = newCatalog(value);
-		map.catalogs.push(catalog);
-		map.mustAddToIndexIfModified.add(catalog);
+		map.destinationDataspaceIndex = map.dataspaces.length;
+		let dataspace = newDataspace(value);
+		map.dataspaces.push(dataspace);
+		map.mustAddToIndexIfModified.add(dataspace);
 	},
 	
 	async entryExists(entry:CatalogEntry){
@@ -374,9 +364,9 @@ const messageHandlers:{
 	async getEntriesOfTypes(types:string[], parent?:string){
 		let ret:string[] = [];
 		
-		for(let catalog of map.catalogs){
+		for(let dataspace of map.dataspaces){
 			for(let type of types){
-				let arr = catalog.data.childrenByTagname[type];
+				let arr = dataspace.data.childrenByTagname[type];
 				if(arr){
 					ret = ret.concat(arr.filter(node => (typeof parent == "undefined" || node.attr["parent"] == parent)).map(node => node.attr["id"]).filter(v => v != undefined));
 				}
@@ -394,12 +384,12 @@ const messageHandlers:{
 	},
 	
 	async setEntryParent(entry:CatalogEntry, value:string){
-		let {node, catalog} = accessEntry(entry, true);
+		let {node, dataspace} = accessEntry(entry, true);
 		
 		if(node.attr["parent"] === value) return;
 		node.attr["parent"] = value;
 		
-		map.modifiedCatalogs.add(catalog);
+		map.modifiedDataspaces.add(dataspace);
 	},
 };
 
@@ -428,9 +418,9 @@ async function onMessage(msg:Message){
 	throw new Error("Empty message? " + JSON.stringify(msg));
 }
 
-function getDestinationCatalog(){
-	assert(map.destinationCatalogIndex < map.catalogs.length);
-	return map.catalogs[map.destinationCatalogIndex];
+function getDestinationDataspace(){
+	assert(map.destinationDataspaceIndex < map.dataspaces.length);
+	return map.dataspaces[map.destinationDataspaceIndex];
 }
 
 onmessage = function(e){
@@ -441,194 +431,3 @@ onmessage = function(e){
 		postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
 	});
 }
-
-
-/*
-type WizardInputPromptString = { type:"str"; text:string; default?:string; catalogDefault?:string; };
-type WizardInputPromptHotkey = { type:"hotkey"; text:string; default?:string; };
-type WizardInputPromptInt = {type:"int", text:string; min?:number,max?:number; default?:number; catalogDefault?:number;};
-
-type WizardInputPrompt = WizardInputPromptString | WizardInputPromptInt;
-
-type WizardInputReturnType<T> = T extends {type:"int"} ? number : string;
-
-const prompt = {
-	line(title?:string, ch:string = "="){
-		let v = process.stdout.columns;
-		if(!v) v = 80;
-		v = Math.floor(v / ch.length);
-		
-		let str = "";
-		
-		if(title){
-			v -= 2 + title.length;
-			if(v < 0) v = 0;
-			
-			let vExtra = v % 2;
-			v = Math.floor(v / 2);
-			str = ch.repeat(v) + " " + clc.yellow.bold(title) + " " + ch.repeat(vExtra + v)
-		}else{
-			str = ch.repeat(v);
-		}
-		
-		console.log(clc.blackBright(str));
-	},
-	
-	async id(query:string){
-		return prompt.regex(clc.green.bold(query), /^[a-z][a-z0-9_@]*$/i);
-	},
-	
-	async int(query:string, min?:number, max?:number, acceptBlank:boolean = false):Promise<number>{
-		for(;;){
-			let r = acceptBlank ? /^\s*(-?\s*[0-9]+\s*)?$/i : /^\s*-?\s*[0-9]+\s*$/i;
-			
-			let str = await prompt.regex(query, r, "Invalid value, must be integer");
-			if(acceptBlank && str.length == 0) return NaN;
-			
-			let v = parseInt(str.replace(/\s+/g, ''), 10);
-			if(isNaN(v)){
-				console.error("Invalid value, must be integer");
-				continue;
-			}
-			
-			if(((typeof min != "undefined") && (v < min))
-			|| ((typeof max != "undefined") && (v > max))){
-				if(typeof min != "undefined" && typeof max != "undefined"){
-					console.error(`Invalid value ${v}, must be ${min}-${max}`);
-				}else if(typeof min != "undefined"){
-					console.error(`Invalid value ${v}, must be >= ${min}`);
-				}else{
-					assert(typeof max != "undefined");
-					console.error(`Invalid value ${v}, must be <= ${max}`);
-				}
-				
-				continue;
-			}
-			
-			return v;
-		}
-	},
-	
-	async listIndex(query:string, list:string[]):Promise<number> {
-		const w = Math.floor(1+Math.log10(list.length));
-		
-		for(let i = 0; i < list.length; ++i){
-			console.log(`- ${clc.magenta(`[${i.toString().padStart(w)}]`)} ${list[i]}`);
-		}
-		
-		let v = await prompt.int(query, 0, list.length-1);
-		console.log("* " + list[v]);
-		return v;
-	},
-	
-	async list(query:string, list:string[]):Promise<string> {
-		return list[await prompt.listIndex(query, list)];
-	},
-	
-	async listPretty(query:string, list:string[], map:(x:string)=>string):Promise<string> {
-		return list[await prompt.listIndex(query, list.map(map))];
-	},
-	
-	async str(query:string){
-		return await question(clc.green.bold(query));
-	},
-	
-	async regex(query:string, regex:RegExp, error?:string){
-		assert(!regex.global);
-		for(;;){
-			let v = await question(clc.green.bold(query));
-			if(!regex.test(v)){
-				console.error(error ? error : "Invalid value, must match regex " + regex.toString());
-				continue;
-			}
-			
-			return v;
-		}
-	},
-	
-	async wizardInput<T extends WizardInputPrompt>(p:T, linkedField:CatalogField) : Promise<WizardInputReturnType<T>>{
-		let valueIfBlank = getFieldValue(catalog, linkedField);
-		if(typeof valueIfBlank == "undefined" && typeof p.default != "undefined"){
-			valueIfBlank = typeof p.default == "string" ? p.default : possiblyBigNumberToString(p.default);
-		}
-		
-		let text = clc.green.bold(p.text) + clc.magenta(typeof valueIfBlank != "undefined" ? ` [${valueIfBlank}]` : "") + clc.green.bold(":");
-		let newValue:string|number;
-		
-		if(p.type == "str"){
-			newValue = await prompt.str(text);
-			if(newValue.length == 0 && typeof valueIfBlank != "undefined"){
-				newValue = valueIfBlank;
-			}
-		}else if(p.type == "int"){
-			newValue = await prompt.int(text, p.min, p.max, typeof valueIfBlank != "undefined");
-			if(isNaN(newValue) && valueIfBlank){
-				newValue = parseInt(valueIfBlank, 10);
-				assert(!isNaN(newValue));
-			}
-		}else{
-			unreachable(p);
-		}
-		
-		if(typeof p.catalogDefault != "undefined" && newValue == p.catalogDefault){
-			setFieldValue(catalog, linkedField, null);
-		}else{
-			setFieldValue(catalog, linkedField, newValue);
-		}
-		
-		// unfortunately can't typecheck that...
-		return newValue as any;
-	},
-	
-	async wizardInputStringLink(p:WizardInputPromptString, link:string) : Promise<string>{
-		let valueIfBlank = strings.get(link);
-		if(typeof valueIfBlank != "string" && typeof p.default != "undefined"){
-			valueIfBlank = p.default;
-		}
-		
-		let text = clc.green.bold(p.text) + clc.magenta(typeof valueIfBlank != "undefined" ? ` [${valueIfBlank}]` : "") + clc.green.bold(":");
-		
-		let newValue:string = await prompt.str(text);
-		if(newValue.length == 0 && typeof valueIfBlank != "undefined"){
-			newValue = valueIfBlank;
-		}
-		
-		strings.set(link, newValue);
-		return newValue;
-	},
-	
-	async wizardInputHotkey(p:WizardInputPromptHotkey, link:string) : Promise<string>{
-		let valueIfBlank = hotkeys.get(link);
-		if(typeof valueIfBlank != "string" && typeof p.default != "undefined"){
-			valueIfBlank = p.default;
-		}
-		
-		let text = clc.green.bold(p.text) + clc.magenta(typeof valueIfBlank != "undefined" ? ` [${valueIfBlank}]` : "") + clc.green.bold(":");
-		
-		let newValue:string = (await prompt.regex(text, /^[a-z]?$/i)).toUpperCase();
-		if(newValue.length == 0 && typeof valueIfBlank != "undefined"){
-			newValue = valueIfBlank;
-		}
-		
-		hotkeys.set(link, newValue);
-		return newValue;
-	},
-	
-	async wizardInputToken(p:WizardInputPromptString, entry:CatalogEntry, key:string) : Promise<string>{
-		let valueIfBlank = getEntryToken(catalog, entry, key);
-		if(typeof valueIfBlank != "string" && typeof p.default != "undefined"){
-			valueIfBlank = p.default;
-		}
-		
-		let text = clc.green.bold(p.text) + clc.magenta(typeof valueIfBlank != "undefined" ? ` [${valueIfBlank}]` : "") + clc.green.bold(":");
-		
-		let newValue:string = await prompt.str(text);
-		if(newValue.length == 0 && typeof valueIfBlank != "undefined"){
-			newValue = valueIfBlank;
-		}
-		
-		setEntryToken(catalog, entry, key, newValue);
-		return newValue;
-	},
-};
-*/

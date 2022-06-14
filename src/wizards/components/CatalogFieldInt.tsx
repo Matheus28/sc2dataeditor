@@ -14,9 +14,9 @@ interface Props {
 
 export default function(props:Props){
 	const [value, setValue] = React.useState(props.default);
-	const [isDisabled, setDisabled] = React.useState(false);
+	const [isDisabled, setDisabled] = React.useState(true);
 	
-	// Try to load field from catalog
+	// Try to load field from dataspace
 	useDeepCompareEffect(() => {
 		setDisabled(true);
 		

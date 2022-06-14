@@ -12,7 +12,7 @@ interface Props {
 export default function(props:Props){
 	const [value, setValue] = React.useState<string|undefined>(undefined);
 	
-	// Try to load field from catalog
+	// Try to load field from dataspace
 	useDeepCompareEffect(() => {
 		if(props.entry.id.length == 0){
 			setValue(undefined);

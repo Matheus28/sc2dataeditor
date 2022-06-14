@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom/client';
 import { Container, Row, Col, Form } from 'react-bootstrap';
 import assert from 'assert';
 import CommonUpgradeWizard from './wizards/CommonUpgrade';
-import SelectDestinationCatalog from './components/SelectDestinationCatalog';
+import SelectDestinationDataspace from './components/SelectDestinationDataSpace';
 import { loadMap } from './worker_client';
 
 const mainElement = document.getElementById("main");
@@ -46,7 +46,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 					</Form.Select>
 				</Col>
 				<Col>
-					<SelectDestinationCatalog />
+					<SelectDestinationDataspace />
 				</Col>
 			</Row>
 			<Row>
@@ -61,29 +61,3 @@ const CatalogBrowser = function(props:{rootDir:string}){
 root.render(
 	<CatalogBrowser rootDir="D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map/"/>
 );
-
-
-const saveCallbacks = new Map<()=>void, number>();
-function useSaveCallback(cb:()=>void){
-	React.useEffect(() => {
-		saveCallbacks.set(cb, (saveCallbacks.get(cb) || 0) + 1);
-		return () => {
-			let refCount = saveCallbacks.get(cb);
-			assert(refCount !== undefined);
-			
-			--refCount;
-			
-			if(refCount == 0){
-				saveCallbacks.delete(cb);
-			}else{
-				saveCallbacks.set(cb, refCount);
-			}
-		};
-	});
-}
-
-function runSave(){
-	for(let [k, _] of saveCallbacks){
-		k();
-	}
-}

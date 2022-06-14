@@ -22,12 +22,12 @@ export function save():Promise<void> {
 	return sendMessage("save", arguments);
 }
 
-export function getCatalogList():Promise<string[]> {
-	return sendMessage("getCatalogList", arguments);
+export function getDataspaceList():Promise<string[]> {
+	return sendMessage("getDataspaceList", arguments);
 }
 
-export function setDestinationCatalog(_value:string):Promise<void> {
-	return sendMessage("setDestinationCatalog", arguments);
+export function setDestinationDataspace(_value:string):Promise<void> {
+	return sendMessage("setDestinationDataspace", arguments);
 }
 
 export function entryExists(_entry:CatalogEntry):Promise<boolean> {
