@@ -1,21 +1,48 @@
 import path from "path";
 import { app, BrowserWindow } from "electron";
+import { readFileSync, writeFileSync } from "fs";
 
 let mainWindow:BrowserWindow;
 
 function createWindow() {
-	// Create the browser window.
-	mainWindow = new BrowserWindow({
-		width: 800,
-		height: 600,
+	const windowFilename = path.join(app.getPath('userData'), "window.json");
+	let x:number|undefined;
+	let y:number|undefined;
+	let width = 800;
+	let height = 600;
+	
+	try {
+		let obj = JSON.parse(readFileSync(windowFilename, "utf8"));
+		if(!isFinite(obj.width) || !isFinite(obj.height)) throw new Error("Bad window dimensions");
+		width = obj.width;
+		height = obj.height;
+		
+		if(isFinite(obj.x)) x = obj.x;
+		if(isFinite(obj.y)) y = obj.y;
+	}catch(e){}
+	
+	const options:Electron.BrowserWindowConstructorOptions = {
+		width,
+		height,
 		webPreferences: {
 			nodeIntegration: true,
 			nodeIntegrationInWorker: true,
 			contextIsolation: false,
 		}
+	}
+	
+	if(typeof x != "undefined") options.x = x;
+	if(typeof y != "undefined") options.y = y;
+	
+	// Create the browser window.
+	mainWindow = new BrowserWindow(options);
+	
+	mainWindow.on("close", function(){
+		let bounds = mainWindow.getBounds();
+		writeFileSync(windowFilename, JSON.stringify(<{x:number|undefined, y:number|undefined, width:number, height:number}> bounds), "utf8");
 	});
 	
-	mainWindow.setTitle("Wizard");
+	mainWindow.setTitle("SC2 Data Editor");
 	mainWindow.removeMenu();
 	
 	// and load the index.html of the app.
