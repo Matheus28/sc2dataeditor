@@ -30,20 +30,38 @@ export function getCatalogFilenameBase(){
 	return getRootMapDir() + "/Base.SC2Data/GameData/";
 }
 
-export async function getGameDataFileList():Promise<string[]> {
-	let v = await parseXML(await fs.readFile(getRootMapDir() + "/Base.SC2Data/GameData.xml", "utf8"));
-	
+export type CatalogIndex = {
+	includes:XMLNode;
+};
+
+export async function loadCatalogIndex():Promise<CatalogIndex> {
+	let v = await parseXML(await fs.readFile(getIndexFilename(), "utf8"));
+	return { includes: v["Includes"] };
+}
+
+function getIndexFilename():string {
+	return getRootMapDir() + "/Base.SC2Data/GameData.xml";
+}
+
+export async function saveCatalogIndex(v:CatalogIndex):Promise<void> {
+	await fs.writeFile(getIndexFilename(), await encodeXML(v.includes), "utf8");
+}
+
+export async function loadCatalogsFromIndex(v:CatalogIndex):Promise<Catalog[]>{
 	const prefixToRemove = "GameData/";
 	
 	const base = getCatalogFilenameBase();
-	const arr = getChildrenByTagName(v["Includes"], "Catalog");
+	const arr = getChildrenByTagName(v.includes, "Catalog");
 	assert(arr);
-	return arr.map(v => {
+	
+	let filenames:string[] = arr.map(v => {
 		assert(v.attr);
 		assert(v.attr["path"]);
 		assert(v.attr["path"].startsWith(prefixToRemove));
 		return base + v.attr["path"].slice(prefixToRemove.length)
 	});
+	
+	return await loadCatalogs(filenames);
 }
 
 export interface Catalog {
@@ -76,10 +94,6 @@ export async function loadCatalogs(files:string[]):Promise<Catalog[]>{
 	}));
 }
 
-export async function getCatalogs(){
-	return loadCatalogs(await getGameDataFileList());
-}
-
 export function addCatalogEntry(catalog:Catalog, child:XMLNode){
 	assert("id" in child.attr);
 	
@@ -106,6 +120,22 @@ export function addChild(parent:XMLNode, child:XMLNode){
 	
 	// Couldn't find one, so just add it at the bottom
 	parent.children.push(child);
+}
+
+export function newCatalog(filename:string):Catalog {
+	return {
+		filename,
+		entriesByID: {},
+		data: newNode("Catalog"),
+	};
+}
+
+export function addCatalogToIndex(index:CatalogIndex, catalog:Catalog){
+	const base = getCatalogFilenameBase();
+	assert(catalog.filename.startsWith(base));
+	
+	const includesFilename = "GameData/" + catalog.filename.slice(base.length);
+	addChild(index.includes, newNode("Catalog", { path: includesFilename }));
 }
 
 type RawNode = {
@@ -202,52 +232,55 @@ async function parseXML(str:string):Promise<XMLParseResult> {
 	return ret;
 }
 
-export async function saveCatalogs(datas:Catalog[]){
-	await Promise.all(datas.map(async function(data){
-		let builder = new xmlparser.XMLBuilder({
-			preserveOrder: true,
-			ignoreAttributes: false,
-			attributeNamePrefix: "",
-			commentPropName: "$comment",
-			textNodeName: "#text",
-			processEntities: true,
-			
-			format: true,
-			indentBy: '    ',
-			suppressEmptyNode: true,
-		});
+function encodeXML(root:XMLNode){
+	let builder = new xmlparser.XMLBuilder({
+		preserveOrder: true,
+		ignoreAttributes: false,
+		attributeNamePrefix: "",
+		commentPropName: "$comment",
+		textNodeName: "#text",
+		processEntities: true,
 		
-		function encodeNode(node:XMLNode):RawNode {
-			if(node.tagname == "#comment"){
-				assert('text' in node);
-				return { $comment: [{"#text": node.text}] };
-			}
-			
-			if(node.tagname == "#text"){
-				assert('text' in node);
-				return { "#text": node.text };
-			}
-			
-			let r:RawNode = {};
-			
-			if(node.attr){
-				r[":@"] = node.attr;
-			}
-			
-			let tmp = r as Record<string, RawNode[]>;
-			tmp[node.tagname] = node.children.map(v => encodeNode(v));
-			
-			// Shitty library needs me to fill this in
-			if(node.tagname[0] == '?'){
-				assert(node.children.length == 0);
-				tmp[node.tagname] = [{"#text":""}];
-			}
-			
-			return r;
+		format: true,
+		indentBy: '    ',
+		suppressEmptyNode: true,
+	});
+	
+	function encodeNode(node:XMLNode):RawNode {
+		if(node.tagname == "#comment"){
+			assert('text' in node);
+			return { $comment: [{"#text": node.text}] };
 		}
 		
-		let str = '<?xml version="1.0" encoding="utf-8"?>' + builder.build([encodeNode(data.data)]).replace(/\r?\n/g, '\r\n') + '\r\n';
-		await fs.writeFile(data.filename, str, "utf8");
+		if(node.tagname == "#text"){
+			assert('text' in node);
+			return { "#text": node.text };
+		}
+		
+		let r:RawNode = {};
+		
+		if(node.attr){
+			r[":@"] = node.attr;
+		}
+		
+		let tmp = r as Record<string, RawNode[]>;
+		tmp[node.tagname] = node.children.map(v => encodeNode(v));
+		
+		// Shitty library needs me to fill this in
+		if(node.tagname[0] == '?'){
+			assert(node.children.length == 0);
+			tmp[node.tagname] = [{"#text":""}];
+		}
+		
+		return r;
+	}
+	
+	return '<?xml version="1.0" encoding="utf-8"?>' + builder.build([encodeNode(root)]).replace(/\r?\n/g, '\r\n') + '\r\n';
+}
+
+export async function saveCatalogs(datas:Catalog[]){
+	await Promise.all(datas.map(async function(data){
+		await fs.writeFile(data.filename, encodeXML(data.data), "utf8");
 	}));
 }
 
@@ -255,6 +288,8 @@ export async function saveCatalogs(datas:Catalog[]){
 // Not sure if those constants are per-array or global
 // Editor will prefer constants for the ones that have it (such as Research<N>), but we can write integers and it'll convert it
 // next time it saves that catalog
+export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:true):XMLNode;
+export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean):XMLNode|undefined;
 export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean = false):XMLNode|undefined {
 	if(index == null){
 		if(createIfNotExists){
@@ -349,6 +384,8 @@ export function accessArray(node:XMLNode, name:string, index:string|number|null,
 	return bailWithIndex();
 }
 
+export function accessStruct(node:XMLNode, name:string, createIfNotExists:true):XMLNode;
+export function accessStruct(node:XMLNode, name:string, createIfNotExists:boolean):XMLNode|undefined;
 export function accessStruct(node:XMLNode, name:string, createIfNotExists:boolean = false):XMLNode|undefined {
 	let subnodes = getChildrenByTagName(node, name);
 	if(!subnodes || subnodes.length == 0){
@@ -479,4 +516,4 @@ export function clearChildren(x:XMLNode){
 }
 
 // Debugging line to re-save all catalogs to make sure we can be idempotent
-if(require.main === module) getGameDataFileList().then(loadCatalogs).then(saveCatalogs);
+if(require.main === module) loadCatalogIndex().then(loadCatalogsFromIndex).then(saveCatalogs);

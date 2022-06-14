@@ -22,15 +22,17 @@ interface SelectID_State {
 }
 
 export default class SelectID extends React.Component<SelectID_Props, SelectID_State> {
-	private abortSelectLoad = false;
+	private getEntriesOfTypesToken?:{};
 	
 	override state:SelectID_State = {
 		id: "",
 	};
 	
 	override componentDidMount(){
+		let token = {};
+		this.getEntriesOfTypesToken = token;
 		getEntriesOfTypes(["CUpgrade"], "CommonUpgrade").then(arr => arr.map(v => ({ value: v, label: v }))).then((arr) => {
-			if(this.abortSelectLoad) return;
+			if(this.getEntriesOfTypesToken !== token) return;
 			this.setState((state) => ({
 				existingIDs: arr,
 				idExists: state.id.length > 0 ? arr.filter(vv => vv.value == state.id).length > 0 : undefined,
@@ -39,13 +41,13 @@ export default class SelectID extends React.Component<SelectID_Props, SelectID_S
 	}
 	
 	override componentWillUnmount(){
-		this.abortSelectLoad = true;
+		delete this.getEntriesOfTypesToken;
 	}
 	
 	override render(): React.ReactNode {
 		return <>
 			<Form.Group className="mb-3">
-				<Select isLoading={this.state.existingIDs === undefined} placeholder="ID" options={this.state.existingIDs ? this.state.existingIDs : undefined} onChange={(newValue) => {
+				<Select isLoading={this.state.existingIDs === undefined} placeholder="ID" options={this.state.existingIDs} onChange={(newValue) => {
 					let v = (newValue ? newValue.value : "");
 					this.setState({
 						id: v,

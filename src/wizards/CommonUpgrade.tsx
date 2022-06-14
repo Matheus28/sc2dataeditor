@@ -19,16 +19,16 @@ export default function CommonUpgradeWizard(){
 	const nameStringLink = `Name/${id}`;
 	const tooltipStringLink = `Tooltip/${id}`;
 	
+	//FIXME: parent CommonUpgrade
 	const upgradeEntry:CatalogEntry = {
 		id,
 		type: "CUpgrade",
-		parent: "CommonUpgrade",
 	};
 	
+	//FIXME: parent CommonUpgrade
 	const abilResearchEntry:CatalogEntry = {
 		id,
 		type: "CAbilResearch",
-		parent: "CommonUpgrade",
 	};
 	
 	// maxLevel

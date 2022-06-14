@@ -3,18 +3,22 @@ import * as ReactDOM from 'react-dom/client';
 import { Button, Container, Row, Col, Form, InputGroup, Card, Alert } from 'react-bootstrap';
 import assert from 'assert';
 import CommonUpgradeWizard from './wizards/CommonUpgrade';
+import SelectDestinationCatalog from './components/SelectDestinationCatalog';
 
 const mainElement = document.getElementById("main");
 assert(mainElement);
 const root = ReactDOM.createRoot(mainElement);
 
 
-root.render(<Container style={{marginTop: 20, marginBottom: 20}}>
+root.render(<React.StrictMode><Container style={{marginTop: 20, marginBottom: 20}}>
 	<Row style={{marginBottom: 20}}>
 		<Col>
 			<Form.Select>
 				<option>Common/Upgrade</option>
 			</Form.Select>
+		</Col>
+		<Col>
+			<SelectDestinationCatalog />
 		</Col>
 	</Row>
 	<Row>
@@ -22,7 +26,7 @@ root.render(<Container style={{marginTop: 20, marginBottom: 20}}>
 			<CommonUpgradeWizard />
 		</Col>
 	</Row>
-</Container>);
+</Container></React.StrictMode>);
 
 
 const saveCallbacks = new Map<()=>void, number>();

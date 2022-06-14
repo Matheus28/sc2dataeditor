@@ -6,50 +6,51 @@ const worker = new Worker("./out/worker_wrapper.js");
 let nextMessageID:number = 0;
 const pendingRequests = new Map<number, [(v:any)=>void, (v:any)=>void]>();
 
-export function getFieldValue(field:CatalogField):Promise<string|undefined>{
-	return sendMessage({
-		type: "getFieldValue",
-		field,
-	});
+export function ping():Promise<void> {
+	return sendMessage("ping", arguments);
 }
 
-export function save():Promise<undefined> {
-	return sendMessage({
-		type: "save",
-	});
+export function getFieldValue(_field:CatalogField):Promise<string|undefined>{
+	return sendMessage("getFieldValue", arguments);
 }
 
-export function entryExists(entry:CatalogEntry):Promise<boolean> {
-	return sendMessage({
-		type: "entryExists",
-		entry,
-	});
+export function save():Promise<void> {
+	return sendMessage("save", arguments);
 }
 
-export function getEntriesOfTypes(types:string[], parent?:string):Promise<string[]> {
-	return sendMessage({
-		type: "getEntriesOfTypes",
-		types,
-		parent,
-	});
+export function getCatalogList():Promise<string[]> {
+	return sendMessage("getCatalogList", arguments);
 }
 
-export function getStringLink(link:string):Promise<string|undefined> {
-	return sendMessage({
-		type: "getStringLink",
-		link,
-	});
+export function setDestinationCatalog(_value:string):Promise<void> {
+	return sendMessage("setDestinationCatalog", arguments);
 }
 
-function sendMessage(req:Message["req"]):Promise<any> {
-	return new Promise((resolve, reject) => {
+export function entryExists(_entry:CatalogEntry):Promise<boolean> {
+	return sendMessage("entryExists", arguments);
+}
+
+export function getEntriesOfTypes(_types:string[], _parent?:string):Promise<string[]> {
+	return sendMessage("getEntriesOfTypes", arguments);
+}
+
+export function getStringLink(_link:string):Promise<string|undefined> {
+	return sendMessage("getStringLink", arguments);
+}
+
+export function setEntryParent(_entry:CatalogEntry, _value:string):Promise<void> {
+	return sendMessage("setEntryParent", arguments);
+}
+
+function sendMessage<K extends keyof Message["data"]>(key:K, params:Message["data"][K]|IArguments){
+	return new Promise<any>((resolve, reject) => {
 		const id = nextMessageID++;
 		
 		pendingRequests.set(id, [resolve, reject]);
 		
 		worker.postMessage(<Message>{
 			id,
-			req
+			data: { [key]: [...params] } as any // this part is unchecked... but it'll work, trust :)
 		});
 	});
 }

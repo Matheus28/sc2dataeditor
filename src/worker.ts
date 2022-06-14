@@ -1,29 +1,17 @@
 import assert from "assert";
 import * as readline from 'readline';
-import { getGameDataFileList, getCatalogFilenameBase, Catalog, loadCatalogs, XMLNode, accessArray as accessArray, accessStruct as accessStruct, getValue, setValue as setValue, newNode, addChild, getChildrenByTagName, saveCatalogs, addCatalogEntry } from './lib/game_data_loader';
+import { getCatalogFilenameBase, Catalog, XMLNode, accessArray as accessArray, accessStruct as accessStruct, getValue, setValue as setValue, newNode, saveCatalogs, addCatalogEntry, newCatalog, CatalogIndex, loadCatalogIndex, loadCatalogsFromIndex, addCatalogToIndex, saveCatalogIndex } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import { possiblyBigNumberToString, unreachable } from "./lib/utils";
-import clc from "cli-color";
+import * as worker_client from "./worker_client";
 
+type WorkerClient = typeof worker_client;
 
 export interface Message {
 	id:number;
-	req:{
-		type:"save";
-	} | {
-		type:"getFieldValue";
-		field:CatalogField;
-	} | {
-		type:"entryExists";
-		entry:CatalogEntry;
-	} | {
-		type:"getStringLink";
-		link:string;
-	} | {
-		type:"getEntriesOfTypes";
-		types:string[];
-		parent:string|undefined;
+	data:{
+		[Key in keyof WorkerClient]:Parameters<WorkerClient[Key]>;
 	};
 }
 
@@ -36,8 +24,11 @@ export type MessageResponse = {
 }
 
 
+let index:CatalogIndex;
 let catalogs:Catalog[];
 let modifiedCatalogs = new Set<Catalog>();
+let mustAddToIndexIfModified = new Set<Catalog>();
+let destinationCatalogIndex:number = 0;
 
 let stringsModified = false;
 let strings:Map<string,string>;
@@ -48,7 +39,6 @@ let hotkeys:Map<string,string>;
 export interface CatalogEntry {
 	id:string;
 	type:string; // Like CAbilResearch. The xml tag for this
-	parent?:string; // The parent tag
 }
 
 export interface CatalogField {
@@ -79,7 +69,9 @@ export interface CatalogField {
 	indexes?:(string|number)[];
 }
 
-function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined{
+function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:true):XMLNode;
+function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
+function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
 	let arr = catalog.entriesByID[entry.id];
 	if(arr){
 		for(let v of arr){
@@ -92,8 +84,6 @@ function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExis
 		let attrs:Record<string,string> = {
 			"id": entry.id,
 		};
-		
-		if(entry.parent) attrs["parent"] = entry.parent;
 		
 		let node = newNode(entry.type, attrs);
 		addCatalogEntry(catalog, node);
@@ -113,24 +103,25 @@ function getEntryToken(catalog:Catalog, entry:CatalogEntry, key:string):string|u
 function setEntryToken(catalog:Catalog, entry:CatalogEntry, key:string, value:string) {
 	let cur = accessCatalogEntry(catalog, entry, true);
 	assert(cur);
-	if(!cur.attr) cur.attr = {};
 	cur.attr[key] = value;
 }
 
-function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:boolean):XMLNode|undefined{
+function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:true):XMLNode;
+function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:boolean):XMLNode|undefined;
+function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:boolean):XMLNode|undefined {
 	if(field.indexes) assert(field.name.length >= field.indexes.length);
 	assert(field.name.length >= 1);
 	
-	let cur = accessCatalogEntry(catalog, field.entry, createIfNotExists);
-	if(!cur){
-		assert(!createIfNotExists);
+	let cur_ = accessCatalogEntry(catalog, field.entry, createIfNotExists);
+	if(!cur_){
 		return undefined;
 	}
+	
+	let cur:XMLNode = cur_; // typescript workaround
 	
 	let i = 0;
 	
 	assert(cur.attr);
-	assert(cur.attr["parent"] == field.entry.parent);
 	
 	if(field.indexes){
 		for(; i < field.indexes.length; ++i){
@@ -185,32 +176,109 @@ function setFieldValue(catalog:Catalog, field:CatalogField, value:string|number|
 	}
 }
 
-let queuedMessages:Message[] = [];
-onmessage = function(e){
-	queuedMessages.push(e.data);
-}
-
-async function onMessage(msg:Message):Promise<any> {
-	if(msg.req.type == "getFieldValue"){
-		return getFieldValue(msg.req.field);
-	}else if(msg.req.type == "save"){
-		return await save();
-	}else if(msg.req.type == "entryExists"){
+const messageHandlers:{
+	[Key in keyof WorkerClient]:WorkerClient[Key];
+} = {
+	async ping(){
+		
+	},
+	
+	async getFieldValue(field){
+		return getFieldValue(field);
+	},
+	
+	async save(){
+		let arr = Array.from(modifiedCatalogs);
+		modifiedCatalogs.clear();
+		
+		await saveCatalogs(arr);
+		
+		let addCatalogsToIndex:Catalog[] = [];
+		for(let catalog of arr){
+			if(mustAddToIndexIfModified.has(catalog)){
+				addCatalogsToIndex.push(catalog);
+			}
+		}
+		
+		for(let catalog of addCatalogsToIndex){
+			addCatalogToIndex(index, catalog);
+			mustAddToIndexIfModified.delete(catalog);
+		}
+		
+		if(addCatalogsToIndex.length > 0){
+			saveCatalogIndex(index);
+		}
+		
+		if(stringsModified){
+			stringsModified = false;
+			await exportTxtFile("enUS", strings);
+		}
+		
+		if(hotkeysModified){
+			hotkeysModified = false;
+			await exportHotkeysFile(hotkeys);
+		}
+	},
+	
+	async getCatalogList(){
+		const base = getCatalogFilenameBase();
+		let arr = catalogs.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
+		
+		arr.sort(function(a, b){
+			let aDepth = 0;
+			for(let ch of a) if(ch == '/') ++aDepth;
+			
+			let bDepth = 0;
+			for(let ch of b) if(ch == '/') ++bDepth;
+			
+			if(aDepth != bDepth) return aDepth - bDepth;
+			
+			let al = a.toLowerCase();
+			let bl = b.toLowerCase();
+			if(al != bl) return al < bl ? -1 : 1;
+			
+			return 0;
+		});
+		
+		return arr;
+	},
+	
+	async setDestinationCatalog(value:string){
+		const base = getCatalogFilenameBase();
+		value = base + value + ".xml";
+		
+		for(let i = 0; i < catalogs.length; ++i){
+			if(catalogs[i].filename == value){
+				destinationCatalogIndex = i;
+				return;
+			}
+		}
+		
+		destinationCatalogIndex = catalogs.length;
+		let catalog = newCatalog(value);
+		catalogs.push(catalog);
+		mustAddToIndexIfModified.add(catalog);
+	},
+	
+	async entryExists(entry:CatalogEntry){
 		for(let catalog of catalogs){
-			if(accessCatalogEntry(catalog, msg.req.entry, false)){
+			if(accessCatalogEntry(catalog, entry, false)){
 				return true;
 			}
 		}
 		
 		return false;
-	}else if(msg.req.type == "getStringLink"){
-		return strings.get(msg.req.link);
-	}else if(msg.req.type == "getEntriesOfTypes"){
+	},
+	
+	async getStringLink(link:string){
+		return strings.get(link);
+	},
+	
+	async getEntriesOfTypes(types:string[], parent?:string){
 		let ret:string[] = [];
-		let parent = msg.req.parent;
 		
 		for(let catalog of catalogs){
-			for(let type of msg.req.types){
+			for(let type of types){
 				let arr = catalog.data.childrenByTagname[type];
 				if(arr){
 					ret = ret.concat(arr.filter(node => (typeof parent == "undefined" || node.attr["parent"] == parent)).map(node => node.attr["id"]).filter(v => v != undefined));
@@ -220,14 +288,58 @@ async function onMessage(msg:Message):Promise<any> {
 		
 		ret.sort();
 		return ret;
-	}else{
-		unreachable(msg.req);
+	},
+	
+	async setEntryParent(entry:CatalogEntry, value:string){
+		for(let catalog of catalogs){
+			let node = accessCatalogEntry(catalog, entry, false);
+			if(!node) continue;
+			
+			node.attr["parent"] = value;
+			return;
+		}
+		
+		let node = accessCatalogEntry(getDestinationCatalog(), entry, true);
+		node.attr["parent"] = value;
+	},
+};
+
+function hasMemoryHandler(i:string):i is keyof typeof messageHandlers {
+	return i in messageHandlers;
+}
+
+async function onMessage(msg:Message){
+	for(let i in msg.data){
+		if(hasMemoryHandler(i)){
+			const label = `[${msg.id}] ${i}`;
+			
+			console.time(label);
+			
+			let r = (messageHandlers[i] as any).apply(messageHandlers, msg.data[i]);
+			try { await r; } catch(e){}
+			
+			console.timeEnd(label);
+			
+			return r;
+		}else{
+			throw new Error("Bad message type: " + i);
+		}
 	}
+	
+	throw new Error("Empty message? " + JSON.stringify(msg));
+}
+
+let queuedMessages:Message[] = [];
+
+// For now, until init is done, we just queue up the messages
+onmessage = function(e){
+	queuedMessages.push(e.data);
 }
 
 async function init(){
 	console.time("loadCatalogs");
-	catalogs = await loadCatalogs(await getGameDataFileList());
+	index = await loadCatalogIndex();
+	catalogs = await loadCatalogsFromIndex(index);
 	console.timeEnd("loadCatalogs");
 	
 	console.time("importTxtFile");
@@ -253,23 +365,14 @@ async function init(){
 	for(let v of queuedMessages){
 		receiveMessage(v);
 	}
+	
+	queuedMessages.length = 0;
 }
 
-async function save(){
-	let arr = Array.from(modifiedCatalogs);
-	modifiedCatalogs.clear();
-	
-	await saveCatalogs(arr);
-	
-	if(stringsModified){
-		stringsModified = false;
-		await exportTxtFile("enUS", strings);
-	}
-	
-	if(hotkeysModified){
-		hotkeysModified = false;
-		await exportHotkeysFile(hotkeys);
-	}
+function getDestinationCatalog(){
+	assert(destinationCatalogIndex < catalogs.length);
+	modifiedCatalogs.add(catalogs[destinationCatalogIndex]);
+	return catalogs[destinationCatalogIndex];
 }
 
 init();
@@ -284,29 +387,6 @@ type WizardInputPrompt = WizardInputPromptString | WizardInputPromptInt;
 type WizardInputReturnType<T> = T extends {type:"int"} ? number : string;
 
 const prompt = {
-	async run(cb:()=>Promise<void>){
-		process.on("unhandledRejection", (e) => { throw e; });
-		process.stdout.write(clc.reset);
-		
-		rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-		
-		strings = await importTxtFile("enUS");
-		hotkeys = await importHotkeysFile();
-		
-		let catalogs = await getGameDataFileList();
-		const base = getCatalogFilenameBase();
-		
-		prompt.line();
-		let catalogFilename = await prompt.listPretty("What catalog are we working on?", catalogs, s => s.slice(base.length));
-		catalog = (await loadCatalogs([catalogFilename]))[0];
-		
-		prompt.line(`START`);
-		await cb();
-		prompt.line(`END`);
-		
-		rl.close();
-	},
-	
 	line(title?:string, ch:string = "="){
 		let v = process.stdout.columns;
 		if(!v) v = 80;
