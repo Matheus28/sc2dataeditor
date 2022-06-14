@@ -63,6 +63,10 @@ export function getPendingChangesList():Promise<{ dataspaces:string[]; hotkeys:b
 	return sendMessage("getPendingChangesList", arguments);
 }
 
+export function waitPendingChangesList():Promise<{ dataspaces:string[]; hotkeys:boolean; strings:boolean; }> {
+	return sendMessage("waitPendingChangesList", arguments);
+}
+
 function sendMessage<K extends keyof Message["data"]>(key:K, params:Message["data"][K]|IArguments){
 	return new Promise<any>((resolve, reject) => {
 		const id = nextMessageID++;

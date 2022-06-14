@@ -37,7 +37,6 @@ let map:{
 	hotkeys:Map<string,string>;
 };
 
-
 export interface CatalogEntry {
 	id:string;
 	type:string; // Like CAbilResearch. The xml tag for this
@@ -97,7 +96,7 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 		
 		let node = newNode(entry.type, attrs);
 		addDataspaceEntry(dataspace, node);
-		map.modifiedDataspaces.add(dataspace);
+		modifiedDataspace(dataspace);
 		return node;
 	}else{
 		return undefined;
@@ -138,7 +137,7 @@ function setEntryToken(entry:CatalogEntry, key:string, value:string) {
 	
 	if(cur.node.attr[key] === value) return;
 	
-	map.modifiedDataspaces.add(cur.dataspace);
+	modifiedDataspace(cur.dataspace);
 	cur.node.attr[key] = value;
 }
 
@@ -220,7 +219,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 		if(name in cur.attr){
 			if(cur.attr[name] === newValue) return; // Not changed
 			cur.attr[name] = newValue;
-			map.modifiedDataspaces.add(vv.dataspace);
+			modifiedDataspace(vv.dataspace);
 			return;
 		}
 		
@@ -235,7 +234,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 			if(sub.attr["value"] === newValue) return; // Not changed
 			
 			sub.attr["value"] = newValue;
-			map.modifiedDataspaces.add(vv.dataspace);
+			modifiedDataspace(vv.dataspace);
 			return;
 		}
 		
@@ -246,10 +245,10 @@ function setFieldValue(field:CatalogField, newValue:string){
 			
 			// Create a <name value="newValue"/> inside it
 			addChild(cur, newNode(name, {value:newValue}));
-			map.modifiedDataspaces.add(vv.dataspace);
+			modifiedDataspace(vv.dataspace);
 		}else{
 			cur.attr[name] = newValue;
-			map.modifiedDataspaces.add(vv.dataspace);
+			modifiedDataspace(vv.dataspace);
 		}
 	}else{
 		// This is an array of simple values, such as
@@ -261,7 +260,7 @@ function setFieldValue(field:CatalogField, newValue:string){
 		if(v.attr["value"] === newValue) return; // Not changed
 		
 		v.attr["value"] = newValue;
-		map.modifiedDataspaces.add(vv.dataspace);
+		modifiedDataspace(vv.dataspace);
 	}
 }
 
@@ -325,6 +324,8 @@ const messageHandlers:{
 			map.hotkeysModified = false;
 			await exportHotkeysFile(map.rootMapDir, map.hotkeys);
 		}
+		
+		notifyChanges();
 	},
 	
 	async getDataspaceList(){
@@ -377,7 +378,11 @@ const messageHandlers:{
 	},
 	
 	async setStringLink(link:string, value:string){
-		map.stringsModified = true;
+		if(!map.stringsModified){
+			map.stringsModified = true;
+			notifyChanges();
+		}
+		
 		map.strings.set(link, value);
 	},
 	
@@ -425,7 +430,7 @@ const messageHandlers:{
 		if(node.attr["parent"] === value) return;
 		node.attr["parent"] = value;
 		
-		map.modifiedDataspaces.add(dataspace);
+		modifiedDataspace(dataspace);
 	},
 	
 	async setFieldValue(field:CatalogField, value:string){
@@ -438,6 +443,10 @@ const messageHandlers:{
 			hotkeys: map.hotkeysModified,
 			strings: map.stringsModified,
 		};
+	},
+	
+	async waitPendingChangesList(){
+		return notifyChangesPromise;
 	},
 };
 
@@ -474,6 +483,32 @@ function getDestinationDataspace(catalog:CatalogName){
 	
 	return map.index.dataspaces[map.destinationDataspace];
 }
+
+type NotifyChangesType = Awaited<ReturnType<(typeof messageHandlers)["getPendingChangesList"]>>;
+let notifyChangesPromise:Promise<NotifyChangesType>;
+let notifyChangesCallbacks:null|[(x:NotifyChangesType) => void, (x:any)=>void] = null;
+function notifyChanges(){
+	if(notifyChangesCallbacks){
+		messageHandlers.getPendingChangesList().then(notifyChangesCallbacks[0]).catch(notifyChangesCallbacks[1]);
+	}
+	resetNotifyChanges();
+}
+
+function modifiedDataspace(x:Dataspace){
+	if(map.modifiedDataspaces.has(x)) return;
+	
+	map.modifiedDataspaces.add(x);
+	notifyChanges();
+}
+
+function resetNotifyChanges(){
+	notifyChangesCallbacks = null
+	notifyChangesPromise = new Promise<NotifyChangesType>((resolve, reject) => {
+		notifyChangesCallbacks = [resolve, reject];
+	});
+}
+
+resetNotifyChanges();
 
 onmessage = function(e){
 	const msg:Message = e.data;

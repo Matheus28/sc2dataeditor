@@ -2,31 +2,32 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
 import { Container, Row, Col, Form, Badge, Card, Button } from 'react-bootstrap';
 import assert from 'assert';
-import { getPendingChangesList, save } from '../worker_client';
+import { getPendingChangesList, save, waitPendingChangesList } from '../worker_client';
 
 export default function(){
 	let [changedData, setChangedData] = React.useState<undefined|Awaited<ReturnType<typeof getPendingChangesList>>>(undefined);
-	let [forceRefetch, setForceRefetch] = React.useState(0);
 	
 	React.useEffect(() => {
 		let abort = false;
-		let cb = () => {
-			if(abort) return;
-			getPendingChangesList().then((v) => {
+		
+		let doWait = () => {
+			waitPendingChangesList().then((v) => {
 				if(abort) return;
 				setChangedData(v);
+				doWait();
 			});
 		};
 		
-		cb();
+		getPendingChangesList().then((v) => {
+			if(abort) return;
+			setChangedData(v);
+			doWait();
+		});
 		
-		//FIXME: we should've be polling for this...
-		const timer = setInterval(cb, 250);
 		return () => {
 			abort = true;
-			clearInterval(timer);
 		}
-	}, [forceRefetch]);
+	}, []);
 	
 	
 	const hasChanges = changedData !== undefined && (changedData.dataspaces.length > 0 || changedData.hotkeys || changedData.strings);
@@ -40,7 +41,7 @@ export default function(){
 							{changedData !== undefined && hasChanges && <>
 								{changedData.strings && <><Badge bg="success">Strings</Badge>{' '}</>}
 								{changedData.hotkeys && <><Badge bg="info">Hotkeys</Badge>{' '}</>}
-								{changedData.dataspaces.map(v => <><Badge key={v} bg="warning" text="dark">{v}</Badge>{' '}</>)}
+								{changedData.dataspaces.map(v => <React.Fragment key={v}><Badge bg="warning" text="dark">{v}</Badge>{' '}</React.Fragment>)}
 							</>}
 							
 							{!hasChanges && <>
@@ -49,7 +50,7 @@ export default function(){
 						</div>
 						
 						<Button disabled={!hasChanges} variant={hasChanges ? "success" : "secondary"} onClick={() => {
-							save().then(() => setForceRefetch(forceRefetch + 1));
+							save();
 						}}>Save</Button>
 					</Card.Body>
 				</Card>
