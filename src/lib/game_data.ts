@@ -83,7 +83,6 @@ export const CatalogTypesInstance = {
 	"DataCollection":{
 		"CDataCollection": null,
 		"CDataCollectionAbil": null,
-		"CDataCollectionPattern": null,
 		"CDataCollectionUnit": null,
 		"CDataCollectionUpgrade": null,
 	},
@@ -147,8 +146,6 @@ export const CatalogTypesInstance = {
 		"CItem": null,
 		"CItemAbil": null,
 		"CItemAbilPowerUp": null,
-		"CItemClass": null,
-		"CItemContainer": null,
 		"CItemEffect": null,
 		"CItemEffectInstant": null,
 		"CItemEffectTarget": null,
@@ -346,7 +343,6 @@ export const CatalogTypesInstance = {
 	
 	"Conversation":{
 		"CConversation": null,
-		"CConversationState": null,
 	},
 	
 	"ConversationState":{
@@ -562,9 +558,6 @@ export const CatalogTypesInstance = {
 	
 	"Sound":{
 		"CSound": null,
-		"CSoundExclusivity": null,
-		"CSoundMixSnapshot": null,
-		"CSoundtrack": null,
 	},
 	
 	"SoundExclusivity":{
@@ -581,13 +574,10 @@ export const CatalogTypesInstance = {
 	
 	"Texture":{
 		"CTexture": null,
-		"CTextureSheet": null,
 	},
 	
 	"Cliff":{
 		"CCliff": null,
-		"CCliffDoodad": null,
-		"CCliffMesh": null,
 	},
 	
 	"CliffMesh":{
@@ -604,12 +594,11 @@ export const CatalogTypesInstance = {
 	
 	"Terrain":{
 		"CTerrain": null,
-		"CTerrainObject": null,
-		"CTerrainTex": null,
 	},
 	
 	"TerrainObject":{
 		"CTerrainObject": null,
+		"CCliffDoodad": null, // I know, it's weird... but it's here
 	},
 	
 	"TerrainTex":{
@@ -626,7 +615,6 @@ export const CatalogTypesInstance = {
 	
 	"Artifact":{
 		"CArtifact": null,
-		"CArtifactSlot": null,
 	},
 	
 	"ArtifactSlot":{
@@ -639,9 +627,7 @@ export const CatalogTypesInstance = {
 	
 	"Hero":{
 		"CHero": null,
-		"CHeroAbil": null,
 		"CHeroRole": null,
-		"CHeroStat": null,
 	},
 	
 	"HeroAbil":{
@@ -658,12 +644,10 @@ export const CatalogTypesInstance = {
 	
 	"Skin":{
 		"CSkin": null,
-		"CSkinPack": null,
 	},
 	
 	"Talent":{
 		"CTalent": null,
-		"CTalentProfile": null,
 	},
 	
 	"TalentProfile":{
@@ -712,30 +696,6 @@ export const CatalogTypesInstance = {
 	
 	"Achievement":{
 		"CAchievement": null,
-		"CAchievementTerm": null,
-		"CAchievementTermAbilInteract": null,
-		"CAchievementTermAbilLoad": null,
-		"CAchievementTermAbilUse": null,
-		"CAchievementTermAchievement": null,
-		"CAchievementTermBehaviorCount": null,
-		"CAchievementTermBehaviorElapsed": null,
-		"CAchievementTermBehaviorState": null,
-		"CAchievementTermCombine": null,
-		"CAchievementTermEffectAbsorbed": null,
-		"CAchievementTermEffectDamaged": null,
-		"CAchievementTermEffectDodged": null,
-		"CAchievementTermEffectHealed": null,
-		"CAchievementTermEffectKilled": null,
-		"CAchievementTermEffectUse": null,
-		"CAchievementTermGeneric": null,
-		"CAchievementTermReplay": null,
-		"CAchievementTermScoreValue": null,
-		"CAchievementTermTime": null,
-		"CAchievementTermUnitBirth": null,
-		"CAchievementTermUnitDeath": null,
-		"CAchievementTermUnitKills": null,
-		"CAchievementTermUnitRegen": null,
-		"CAchievementTermUnitSupplyLoss": null,
 	},
 	
 	"AchievementTerm":{
@@ -775,7 +735,6 @@ export const CatalogTypesInstance = {
 	
 	"Emoticon":{
 		"CEmoticon": null,
-		"CEmoticonPack": null,
 	},
 	
 	"EmoticonPack":{
@@ -788,12 +747,10 @@ export const CatalogTypesInstance = {
 	"Game":{
 		"CGame": null,
 		"CGameQuestUI": null,
-		"CGameUI": null,
 	},
 	
 	"Herd":{
 		"CHerd": null,
-		"CHerdNode": null,
 	},
 	
 	"HerdNode":{
@@ -828,7 +785,6 @@ export const CatalogTypesInstance = {
 	
 	"Race":{
 		"CRace": null,
-		"CRaceBannerPack": null,
 	},
 	
 	"RequirementNode":{
@@ -909,7 +865,6 @@ export const CatalogTypesInstance = {
 	
 	"Spray":{
 		"CSpray": null,
-		"CSprayPack": null,
 	},
 	
 	"SprayPack":{
@@ -979,7 +934,6 @@ export const CatalogTypesInstance = {
 	
 	"WarChest":{
 		"CWarChest": null,
-		"CWarChestSeason": null,
 	},
 	
 	"WarChestSeason":{

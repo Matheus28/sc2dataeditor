@@ -74,6 +74,9 @@ export type CatalogName = keyof CatalogTypes;
 const tagnameToCatalog:Record<string, CatalogName> = {};
 for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
 	for(let type of Object.keys(CatalogTypesInstance[catalog])){
+		if(type in tagnameToCatalog){
+			throw new Error(`Duplicate entry for ${type} found. In ${catalog} and ${tagnameToCatalog[type]}`);
+		}
 		tagnameToCatalog[type] = catalog;
 	}
 }
