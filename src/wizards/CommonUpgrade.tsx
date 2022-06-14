@@ -3,103 +3,23 @@ import { Button, Container, Row, Col, Form, InputGroup, Card, Alert } from 'reac
 import { getFieldValue, getStringLink } from '../worker_client';
 import { CatalogEntry, CatalogField } from '../worker';
 import SelectID from './components/SelectID';
+import CatalogFieldInt from './components/CatalogFieldInt';
+import EntryParent from './components/EntryParent';
+import CatalogFieldStringLink from './components/CatalogFieldStringLink';
 
 export default function CommonUpgradeWizard(){
 	const [id, setID] = React.useState("");
 	
-	const [maxLevel, setMaxLevel] = React.useState(1);
-	const [maxLevelDisabled, setMaxLevelDisabled] = React.useState(false);
-	
-	const [name, setName] = React.useState("");
-	const [nameDisabled, setNameDisabled] = React.useState(false);
-	
-	const [tooltip, setTooltip] = React.useState("");
-	const [tooltipDisabled, setTooltipDisabled] = React.useState(false);
-	
-	const nameStringLink = `Name/${id}`;
-	const tooltipStringLink = `Tooltip/${id}`;
-	
 	//FIXME: parent CommonUpgrade
-	const upgradeEntry:CatalogEntry = {
+	const upgradeEntry = React.useMemo(():CatalogEntry => ({
 		id,
 		type: "CUpgrade",
-	};
+	}), [id]);
 	
-	//FIXME: parent CommonUpgrade
-	const abilResearchEntry:CatalogEntry = {
+	const abilEntry = React.useMemo(():CatalogEntry => ({
 		id,
 		type: "CAbilResearch",
-	};
-	
-	// maxLevel
-	React.useEffect(() => {
-		if(id.length == 0) return;
-		
-		let abort = false;
-		
-		setMaxLevelDisabled(true);
-		getFieldValue({
-			entry: upgradeEntry,
-			name: ["MaxLevel"],
-		}).then((v) => {
-			if(abort) return;
-			
-			setMaxLevelDisabled(false);
-			if(typeof v != "undefined"){
-				setMaxLevel(parseInt(v, 10));
-			}
-		});
-		
-		return function(){
-			setMaxLevelDisabled(false);
-			abort = true;
-		}
-	}, [id]);
-	
-	// name
-	React.useEffect(() => {
-		if(id.length == 0) return;
-		
-		let abort = false;
-		
-		setNameDisabled(true);
-		getStringLink(nameStringLink).then((v) => {
-			if(abort) return;
-			
-			setNameDisabled(false);
-			if(typeof v != "undefined"){
-				setName(v);
-			}
-		});
-		
-		return function(){
-			setNameDisabled(false);
-			abort = true;
-		}
-	}, [id]);
-	
-	// tooltop
-	React.useEffect(() => {
-		if(id.length == 0) return;
-		
-		let abort = false;
-		
-		setTooltipDisabled(true);
-		getStringLink(tooltipStringLink).then((v) => {
-			if(abort) return;
-			
-			setTooltipDisabled(false);
-			if(typeof v != "undefined"){
-				setTooltip(v);
-			}
-		});
-		
-		return function(){
-			setTooltipDisabled(false);
-			abort = true;
-		}
-	}, [id]);
-	
+	}), [id]);
 	
 	return <>
 		<Card>
@@ -108,19 +28,26 @@ export default function CommonUpgradeWizard(){
 					<SelectID type="CUpgrade" parent="CommonUpgrade" onChange={setID}/>
 					
 					{ id.length > 0 && <>
+						<EntryParent entry={upgradeEntry} parent="CommonUpgrade"/>
+						<EntryParent entry={abilEntry} parent="CommonUpgrade"/>
+						
 						<Form.Group className="mb-3">
 							<Form.Label>Max Level</Form.Label>
-							<Form.Control disabled={maxLevelDisabled} required type="number" min="1" max="5" value={maxLevel} onChange={(e) => e.target.validity.valid && setMaxLevel(parseInt(e.target.value, 10))} />
+							<CatalogFieldInt field={{
+								entry: upgradeEntry,
+								name: ["MaxLevel"]
+							}} default={1} min={1} max={5}/>
 						</Form.Group>
 						
 						<Form.Group className="mb-3">
 							<Form.Label>Name</Form.Label>
-							<Form.Control disabled={nameDisabled} required type="text" placeholder="Unknown Upgrade" value={name} onChange={e => setName(e.target.value) } />
+							
+							<CatalogFieldStringLink link={`Name/${id}`} placeholder="Unknown Upgrade" oneLine />
 						</Form.Group>
 						
 						<Form.Group className="mb-3">
 							<Form.Label>Tooltip</Form.Label>
-							<Form.Control disabled={tooltipDisabled} as="textarea" rows={5} type="text" placeholder="Does things and all" value={tooltip} onChange={e => setTooltip(e.target.value) } />
+							<CatalogFieldStringLink link={`Tooltip/${id}`} placeholder="Does things and all" />
 						</Form.Group>
 						
 						<Form.Group>

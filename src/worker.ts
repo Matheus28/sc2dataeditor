@@ -1,6 +1,5 @@
 import assert from "assert";
-import * as readline from 'readline';
-import { getCatalogFilenameBase, Catalog, XMLNode, accessArray as accessArray, accessStruct as accessStruct, getValue, setValue as setValue, newNode, saveCatalogs, addCatalogEntry, newCatalog, CatalogIndex, loadCatalogIndex, loadCatalogsFromIndex, addCatalogToIndex, saveCatalogIndex } from './lib/game_data_loader';
+import { getCatalogFilenameBase, Catalog, XMLNode, accessArray, accessStruct, newNode, saveCatalogs, addCatalogEntry, newCatalog, CatalogIndex, loadCatalogIndex, loadCatalogsFromIndex, addCatalogToIndex, saveCatalogIndex, getChildrenByTagName, addChild } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import { possiblyBigNumberToString, unreachable } from "./lib/utils";
@@ -23,18 +22,22 @@ export type MessageResponse = {
 	error:string;
 }
 
+let map:{
+	rootMapDir:string;
+	
+	index:CatalogIndex;
+	catalogs:Catalog[];
+	modifiedCatalogs:Set<Catalog>;
+	mustAddToIndexIfModified:Set<Catalog>;
+	destinationCatalogIndex:number;
+	
+	stringsModified:boolean;
+	strings:Map<string,string>;
+	
+	hotkeysModified:boolean;
+	hotkeys:Map<string,string>;
+};
 
-let index:CatalogIndex;
-let catalogs:Catalog[];
-let modifiedCatalogs = new Set<Catalog>();
-let mustAddToIndexIfModified = new Set<Catalog>();
-let destinationCatalogIndex:number = 0;
-
-let stringsModified = false;
-let strings:Map<string,string>;
-
-let hotkeysModified = false;
-let hotkeys:Map<string,string>;
 
 export interface CatalogEntry {
 	id:string;
@@ -54,19 +57,16 @@ export interface CatalogField {
     //  </InfoArray>
 	//
 	// To access Minerals there, you'd have:
-	//   name = ["InfoArray", "Resource"]
-	//   indexes = ["Research1", "Minerals"]
+	//   name = [["InfoArray", "Research1"], ["Resource", "Minerals"]]
 	// Because InfoArray is an array, and Resource is an array inside an item in that array
 	//
 	// To access Time there, you'd have:
-	//   name = ["InfoArray", "Time"]
-	//   indexes = ["Research1"]
+	//   name = [["InfoArray", "Research1"], "Time"]
 	// Because InfoArray is an array, but Time is just a value inside an item in that array
 	// 
 	// Note that in both cases, string indexes are just aliases for a number. Research1 is 0. Minerals is 0.
 	
-	name:string[];
-	indexes?:(string|number)[];
+	name:(string|[string, string|number])[];
 }
 
 function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:true):XMLNode;
@@ -74,9 +74,9 @@ function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExis
 function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
 	let arr = catalog.entriesByID[entry.id];
 	if(arr){
-		for(let v of arr){
-			if(v.tagname != entry.type) continue;
-			return v;
+		for(let node of arr){
+			if(node.tagname != entry.type) continue;
+			return node;
 		}
 	}
 	
@@ -87,92 +87,176 @@ function accessCatalogEntry(catalog:Catalog, entry:CatalogEntry, createIfNotExis
 		
 		let node = newNode(entry.type, attrs);
 		addCatalogEntry(catalog, node);
+		map.modifiedCatalogs.add(catalog);
 		return node;
 	}else{
 		return undefined;
 	}
 }
 
-function getEntryToken(catalog:Catalog, entry:CatalogEntry, key:string):string|undefined {
-	let cur = accessCatalogEntry(catalog, entry, false);
-	if(!cur) return undefined;
-	if(!cur.attr) return undefined;
-	return cur.attr[key];
-}
+type NodeWithCatalog = { node:XMLNode, catalog:Catalog };
 
-function setEntryToken(catalog:Catalog, entry:CatalogEntry, key:string, value:string) {
-	let cur = accessCatalogEntry(catalog, entry, true);
-	assert(cur);
-	cur.attr[key] = value;
-}
-
-function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:true):XMLNode;
-function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:boolean):XMLNode|undefined;
-function accessFieldValue(catalog:Catalog, field:CatalogField, createIfNotExists:boolean):XMLNode|undefined {
-	if(field.indexes) assert(field.name.length >= field.indexes.length);
-	assert(field.name.length >= 1);
-	
-	let cur_ = accessCatalogEntry(catalog, field.entry, createIfNotExists);
-	if(!cur_){
-		return undefined;
+function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithCatalog;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithCatalog|undefined;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithCatalog|undefined {
+	for(let catalog of map.catalogs){
+		let cur = accessCatalogEntry(catalog, entry, false);
+		if(cur) return {node: cur, catalog};
 	}
 	
-	let cur:XMLNode = cur_; // typescript workaround
+	if(!createIfNotExists) return undefined;
 	
-	let i = 0;
+	let catalog = getDestinationCatalog();
+	return {node:accessCatalogEntry(catalog, entry, true), catalog};
+}
+
+function getCatalogForPossiblyNewEntry(entry:CatalogEntry):Catalog {
+	for(let catalog of map.catalogs){
+		if(accessCatalogEntry(catalog, entry, false)){
+			return catalog;
+		}
+	}
 	
-	assert(cur.attr);
+	return getDestinationCatalog();
+}
+
+
+function getEntryToken(entry:CatalogEntry, key:string):string|undefined {
+	let cur = accessEntry(entry, false);
+	if(!cur) return undefined;
+	if(!cur.node.attr) return undefined;
+	return cur.node.attr[key];
+}
+
+function setEntryToken(entry:CatalogEntry, key:string, value:string) {
+	let cur = accessEntry(entry, true);
 	
-	if(field.indexes){
-		for(; i < field.indexes.length; ++i){
-			let tmp = accessArray(cur, field.name[i], field.indexes[i], createIfNotExists);
-			if(!tmp){
-				assert(!createIfNotExists);
-				return undefined;
-			}
+	if(cur.node.attr[key] === value) return;
+	
+	map.modifiedCatalogs.add(cur.catalog);
+	cur.node.attr[key] = value;
+}
+
+function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:true):XMLNode;
+function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:boolean):XMLNode|undefined;
+function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:boolean):XMLNode|undefined {
+	for(let i = 0; i < field.name.length-1; ++i){
+		let name = field.name[i];
+		if(typeof name == 'string'){
+			let tmp = accessStruct(cur, name, createIfNotExists);
+			if(!tmp) return undefined;
+			
+			cur = tmp;
+		}else{
+			let [arrayName, arrayIndex] = name;
+			
+			let tmp = accessArray(cur, arrayName, arrayIndex, createIfNotExists);
+			if(!tmp) return undefined;
 			
 			cur = tmp;
 		}
-	}
-	
-	for(; i < field.name.length - 1; ++i){
-		let tmp = accessStruct(cur, field.name[i], createIfNotExists);
-		if(!tmp){
-			assert(!createIfNotExists);
-			return undefined;
-		}
-		
-		cur = tmp;
 	}
 	
 	return cur;
 }
 
 function getFieldValue(field:CatalogField):string|undefined {
-	for(let catalog of catalogs){
-		let v = accessFieldValue(catalog, field, false);
-		if(!v) continue;
-		
-		// We're already at the element we need to retrieve...
-		if(field.indexes && field.indexes.length == field.name.length){
-			return getValue(v, "value");
-		}else{
-			return getValue(v, field.name[field.name.length - 1]);
-		}
-	}
+	assert(field.name.length >= 1);
 	
-	return undefined;
+	let vv = accessEntry(field.entry, false);
+	if(!vv) return undefined;
+	
+	let cur = getFieldContainer(field, vv.node, false);
+	if(!cur) return undefined;
+	
+	let name = field.name[field.name.length - 1];
+	if(typeof name == 'string'){
+		// There are two ways this could be defined, say we're accessing "Row"
+		// 1. <DefaultButtonLayout Row="1"/>
+		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+		
+		// Check the first form
+		if(name in cur.attr){
+			return cur.attr[name];
+		}
+		
+		// Then check the second form
+		let subnodes = getChildrenByTagName(cur, name);
+		if(!subnodes || subnodes.length == 0) return undefined;
+		return subnodes[0].attr["value"];
+	}else{
+		// This is an array of simple values, such as
+		// <Resource index="Minerals" value="100"/>
+		let [arrayName, arrayIndex] = name;
+		
+		let v = accessArray(cur, arrayName, arrayIndex, false);
+		if(!v) return undefined;
+		
+		return v.attr["value"];
+	}
 }
 
-function setFieldValue(catalog:Catalog, field:CatalogField, value:string|number|null){
-	let v = accessFieldValue(catalog, field, true);
-	assert(v);
+function setFieldValue(field:CatalogField, newValue:string){
+	assert(field.name.length >= 1);
 	
-	// We're already at the element we need to set...
-	if(field.indexes && field.indexes.length == field.name.length){
-		setValue(v, "value", value, true);
+	let vv = accessEntry(field.entry, false);
+	if(!vv) return;
+	
+	let cur = getFieldContainer(field, vv.node, false);
+	if(!cur) return;
+	
+	let name = field.name[field.name.length - 1];
+	if(typeof name == 'string'){
+		// There are two ways this could be defined, say we're accessing "Row"
+		// 1. <DefaultButtonLayout Row="1"/>
+		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+		
+		// Check if the first form exists
+		if(name in cur.attr){
+			if(cur.attr[name] === newValue) return; // Not changed
+			cur.attr[name] = newValue;
+			map.modifiedCatalogs.add(vv.catalog);
+			return;
+		}
+		
+		// Check the second form exists
+		let subnodes = getChildrenByTagName(cur, name);
+		if(subnodes && subnodes.length > 0){
+			assert(subnodes.length == 1); // Otherwise this should've been an array...
+			
+			// So just set the "value" attribute in that child
+			
+			let sub = subnodes[0];
+			if(sub.attr["value"] === newValue) return; // Not changed
+			
+			sub.attr["value"] = newValue;
+			map.modifiedCatalogs.add(vv.catalog);
+			return;
+		}
+		
+		// Neither exists, so we must create it
+		if(cur == vv.node){
+			// Our `cur` node is also our entry node
+			// We can't put root ones in the attributes, or it'd be a token
+			
+			// Create a <name value="newValue"/> inside it
+			addChild(cur, newNode(name, {value:newValue}));
+			map.modifiedCatalogs.add(vv.catalog);
+		}else{
+			cur.attr[name] = newValue;
+			map.modifiedCatalogs.add(vv.catalog);
+		}
 	}else{
-		setValue(v, field.name[field.name.length - 1], value, field.name.length > 1);
+		// This is an array of simple values, such as
+		// <Resource index="Minerals" value="100"/>
+		let [arrayName, arrayIndex] = name;
+		
+		let v = accessArray(cur, arrayName, arrayIndex, true);
+		
+		if(v.attr["value"] === newValue) return; // Not changed
+		
+		v.attr["value"] = newValue;
+		map.modifiedCatalogs.add(vv.catalog);
 	}
 }
 
@@ -183,46 +267,65 @@ const messageHandlers:{
 		
 	},
 	
+	async loadMap(rootMapDir:string){
+		let index = await loadCatalogIndex(rootMapDir);
+		
+		map = {
+			rootMapDir,
+			index,
+			catalogs: await loadCatalogsFromIndex(index),
+			modifiedCatalogs: new Set(),
+			mustAddToIndexIfModified: new Set(),
+			destinationCatalogIndex: 0,
+			
+			stringsModified: false,
+			strings: await importTxtFile(rootMapDir, "enUS"),
+			
+			hotkeysModified: false,
+			hotkeys: await importHotkeysFile(rootMapDir),
+		};
+	},
+	
 	async getFieldValue(field){
 		return getFieldValue(field);
 	},
 	
 	async save(){
-		let arr = Array.from(modifiedCatalogs);
-		modifiedCatalogs.clear();
+		let arr = Array.from(map.modifiedCatalogs);
+		map.modifiedCatalogs.clear();
 		
 		await saveCatalogs(arr);
 		
 		let addCatalogsToIndex:Catalog[] = [];
 		for(let catalog of arr){
-			if(mustAddToIndexIfModified.has(catalog)){
+			if(map.mustAddToIndexIfModified.has(catalog)){
 				addCatalogsToIndex.push(catalog);
 			}
 		}
 		
 		for(let catalog of addCatalogsToIndex){
-			addCatalogToIndex(index, catalog);
-			mustAddToIndexIfModified.delete(catalog);
+			addCatalogToIndex(map.index, catalog);
+			map.mustAddToIndexIfModified.delete(catalog);
 		}
 		
 		if(addCatalogsToIndex.length > 0){
-			saveCatalogIndex(index);
+			saveCatalogIndex(map.index);
 		}
 		
-		if(stringsModified){
-			stringsModified = false;
-			await exportTxtFile("enUS", strings);
+		if(map.stringsModified){
+			map.stringsModified = false;
+			await exportTxtFile(map.rootMapDir, "enUS", map.strings);
 		}
 		
-		if(hotkeysModified){
-			hotkeysModified = false;
-			await exportHotkeysFile(hotkeys);
+		if(map.hotkeysModified){
+			map.hotkeysModified = false;
+			await exportHotkeysFile(map.rootMapDir, map.hotkeys);
 		}
 	},
 	
 	async getCatalogList(){
-		const base = getCatalogFilenameBase();
-		let arr = catalogs.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
+		const base = getCatalogFilenameBase(map.index.rootMapDir);
+		let arr = map.catalogs.map(v => v.filename.slice(base.length, -4).replace(/\\/g, '/'));
 		
 		arr.sort(function(a, b){
 			let aDepth = 0;
@@ -244,40 +347,34 @@ const messageHandlers:{
 	},
 	
 	async setDestinationCatalog(value:string){
-		const base = getCatalogFilenameBase();
+		const base = getCatalogFilenameBase(map.index.rootMapDir);
 		value = base + value + ".xml";
 		
-		for(let i = 0; i < catalogs.length; ++i){
-			if(catalogs[i].filename == value){
-				destinationCatalogIndex = i;
+		for(let i = 0; i < map.catalogs.length; ++i){
+			if(map.catalogs[i].filename == value){
+				map.destinationCatalogIndex = i;
 				return;
 			}
 		}
 		
-		destinationCatalogIndex = catalogs.length;
+		map.destinationCatalogIndex = map.catalogs.length;
 		let catalog = newCatalog(value);
-		catalogs.push(catalog);
-		mustAddToIndexIfModified.add(catalog);
+		map.catalogs.push(catalog);
+		map.mustAddToIndexIfModified.add(catalog);
 	},
 	
 	async entryExists(entry:CatalogEntry){
-		for(let catalog of catalogs){
-			if(accessCatalogEntry(catalog, entry, false)){
-				return true;
-			}
-		}
-		
-		return false;
+		return accessEntry(entry, false) !== undefined;
 	},
 	
 	async getStringLink(link:string){
-		return strings.get(link);
+		return map.strings.get(link);
 	},
 	
 	async getEntriesOfTypes(types:string[], parent?:string){
 		let ret:string[] = [];
 		
-		for(let catalog of catalogs){
+		for(let catalog of map.catalogs){
 			for(let type of types){
 				let arr = catalog.data.childrenByTagname[type];
 				if(arr){
@@ -290,17 +387,19 @@ const messageHandlers:{
 		return ret;
 	},
 	
+	async getEntryParent(entry:CatalogEntry){
+		let v = accessEntry(entry, false);
+		if(!v) return undefined;
+		return v.node.attr["parent"];
+	},
+	
 	async setEntryParent(entry:CatalogEntry, value:string){
-		for(let catalog of catalogs){
-			let node = accessCatalogEntry(catalog, entry, false);
-			if(!node) continue;
-			
-			node.attr["parent"] = value;
-			return;
-		}
+		let {node, catalog} = accessEntry(entry, true);
 		
-		let node = accessCatalogEntry(getDestinationCatalog(), entry, true);
+		if(node.attr["parent"] === value) return;
 		node.attr["parent"] = value;
+		
+		map.modifiedCatalogs.add(catalog);
 	},
 };
 
@@ -329,53 +428,20 @@ async function onMessage(msg:Message){
 	throw new Error("Empty message? " + JSON.stringify(msg));
 }
 
-let queuedMessages:Message[] = [];
-
-// For now, until init is done, we just queue up the messages
-onmessage = function(e){
-	queuedMessages.push(e.data);
-}
-
-async function init(){
-	console.time("loadCatalogs");
-	index = await loadCatalogIndex();
-	catalogs = await loadCatalogsFromIndex(index);
-	console.timeEnd("loadCatalogs");
-	
-	console.time("importTxtFile");
-	strings = await importTxtFile("enUS");
-	console.timeEnd("importTxtFile");
-	
-	console.time("importHotkeysFile");
-	hotkeys = await importHotkeysFile();
-	console.timeEnd("importHotkeysFile");
-	
-	function receiveMessage(msg:Message){
-		onMessage(msg).then(function(value:any){
-			postMessage(<MessageResponse>{ id: msg.id, value });
-		}).catch(function(e){
-			postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
-		});
-	}
-	
-	onmessage = function(e){
-		receiveMessage(e.data);
-	}
-	
-	for(let v of queuedMessages){
-		receiveMessage(v);
-	}
-	
-	queuedMessages.length = 0;
-}
-
 function getDestinationCatalog(){
-	assert(destinationCatalogIndex < catalogs.length);
-	modifiedCatalogs.add(catalogs[destinationCatalogIndex]);
-	return catalogs[destinationCatalogIndex];
+	assert(map.destinationCatalogIndex < map.catalogs.length);
+	return map.catalogs[map.destinationCatalogIndex];
 }
 
-init();
+onmessage = function(e){
+	const msg:Message = e.data;
+	onMessage(msg).then(function(value:any){
+		postMessage(<MessageResponse>{ id: msg.id, value });
+	}).catch(function(e){
+		postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
+	});
+}
+
 
 /*
 type WizardInputPromptString = { type:"str"; text:string; default?:string; catalogDefault?:string; };

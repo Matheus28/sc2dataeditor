@@ -16,41 +16,32 @@ export type XMLNode = ({
 
 type XMLParseResult = Record<string, XMLNode>;
 
-let rootMapDir = "D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map/";
-
-export function getRootMapDir(){
-	return rootMapDir;
-}
-
-export function setRootMapDir(v:string){
-	rootMapDir = v;
-}
-
-export function getCatalogFilenameBase(){
-	return getRootMapDir() + "/Base.SC2Data/GameData/";
+export function getCatalogFilenameBase(rootMapDir:string){
+	return rootMapDir + "/Base.SC2Data/GameData/";
 }
 
 export type CatalogIndex = {
+	rootMapDir:string;
 	includes:XMLNode;
 };
 
-export async function loadCatalogIndex():Promise<CatalogIndex> {
-	let v = await parseXML(await fs.readFile(getIndexFilename(), "utf8"));
-	return { includes: v["Includes"] };
+export async function loadCatalogIndex(rootMapDir:string):Promise<CatalogIndex> {
+	let v = await parseXML(await fs.readFile(getIndexFilename(rootMapDir), "utf8"));
+	return { rootMapDir, includes: v["Includes"] };
 }
 
-function getIndexFilename():string {
-	return getRootMapDir() + "/Base.SC2Data/GameData.xml";
+function getIndexFilename(rootMapDir:string):string {
+	return rootMapDir + "/Base.SC2Data/GameData.xml";
 }
 
 export async function saveCatalogIndex(v:CatalogIndex):Promise<void> {
-	await fs.writeFile(getIndexFilename(), await encodeXML(v.includes), "utf8");
+	await fs.writeFile(v.rootMapDir, await encodeXML(v.includes), "utf8");
 }
 
 export async function loadCatalogsFromIndex(v:CatalogIndex):Promise<Catalog[]>{
 	const prefixToRemove = "GameData/";
 	
-	const base = getCatalogFilenameBase();
+	const base = getCatalogFilenameBase(v.rootMapDir);
 	const arr = getChildrenByTagName(v.includes, "Catalog");
 	assert(arr);
 	
@@ -131,7 +122,7 @@ export function newCatalog(filename:string):Catalog {
 }
 
 export function addCatalogToIndex(index:CatalogIndex, catalog:Catalog){
-	const base = getCatalogFilenameBase();
+	const base = getCatalogFilenameBase(index.rootMapDir);
 	assert(catalog.filename.startsWith(base));
 	
 	const includesFilename = "GameData/" + catalog.filename.slice(base.length);
@@ -401,97 +392,6 @@ export function accessStruct(node:XMLNode, name:string, createIfNotExists:boolea
 	return subnodes[0];
 }
 
-export function getValue(node:XMLNode, name:string):string|undefined {
-	if(node.attr){
-		if(name in node.attr){
-			return node.attr[name];
-		}
-	}
-	
-	let subnodes = getChildrenByTagName(node, name);
-	if(!subnodes || subnodes.length == 0) return undefined;
-	
-	if(!subnodes[0].attr) return;
-	assert(name != "value");
-	return subnodes[0].attr["value"];
-}
-
-export function setValue(node:XMLNode, name:string, value:string|number|null, canSetInAttributes:boolean){
-	if(typeof value == "number") value = possiblyBigNumberToString(value);
-	if(name == 'value') assert(canSetInAttributes);
-	
-	// First check if we have this value in the attributes
-	if(name in node.attr){
-		// so we have a <node name="value"/>
-		if(value == null){
-			delete node.attr[name];
-			return;
-		}
-		
-		if(canSetInAttributes){
-			// just replace the value
-			// <node name="value" />
-			node.attr[name] = value;
-		}else{
-			// delete the attribute and add a child
-			// <node><name value="value" /></node>
-			delete node.attr[name];
-			addChild(node, newNode(name, {value:value}));
-		}
-		
-		return;
-	}
-	
-	let subnodes = getChildrenByTagName(node, name);
-	
-	if(!subnodes || subnodes.length == 0){
-		// we have a <node/>
-		if(value == null) return;
-		
-		if(canSetInAttributes){
-			// <node name="value" />
-			node.attr[name] = value;
-		}else{
-			// <node><name value="value" /></node>
-			addChild(node, newNode(name, {value:value}));
-		}
-		
-		return;
-	}
-	
-	assert(subnodes.length == 1, `${name} should be a single value, but found an array? Check your types`)
-	
-	// we have <node><name ???>???</name></node>
-	if(subnodes[0].children.length == 0 && Object.keys(subnodes[0].attr).filter(s => s != "index" && s != "removed").length == 0){
-		// we have a <node><name/></node>
-		// with no other attributes, we don't have to preserve this node
-		
-		if(value == null){
-			clearChildrenByTagName(node, name);
-			return;
-		}
-		
-		if(canSetInAttributes){
-			// <node name="value" />
-			clearChildrenByTagName(node, name);
-			node.attr[name] = value;
-		}else{
-			// <node><name value="value" /></node>
-			subnodes[0].attr["value"] = value;
-		}
-	}
-	
-	// from now on we must preserve the node, since we know there's other stuff there
-	
-	// <node><name ???>???</name></node>
-	
-	if(value == null){
-		delete subnodes[0].attr["value"];
-	}else{
-		subnodes[0].attr["value"] = value;
-	}
-}
-
 export function newNode(tag:string, attrs?:Record<string, string>):XMLNode {
 	return {
 		tagname: tag,
@@ -514,6 +414,3 @@ export function clearChildren(x:XMLNode){
 	x.children.length = 0;
 	x.childrenByTagname = {};
 }
-
-// Debugging line to re-save all catalogs to make sure we can be idempotent
-if(require.main === module) loadCatalogIndex().then(loadCatalogsFromIndex).then(saveCatalogs);

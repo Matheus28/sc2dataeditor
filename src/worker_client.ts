@@ -10,6 +10,10 @@ export function ping():Promise<void> {
 	return sendMessage("ping", arguments);
 }
 
+export function loadMap(_value:string):Promise<void> {
+	return sendMessage("loadMap", arguments);
+}
+
 export function getFieldValue(_field:CatalogField):Promise<string|undefined>{
 	return sendMessage("getFieldValue", arguments);
 }
@@ -36,6 +40,10 @@ export function getEntriesOfTypes(_types:string[], _parent?:string):Promise<stri
 
 export function getStringLink(_link:string):Promise<string|undefined> {
 	return sendMessage("getStringLink", arguments);
+}
+
+export function getEntryParent(_entry:CatalogEntry):Promise<string|undefined> {
+	return sendMessage("getEntryParent", arguments);
 }
 
 export function setEntryParent(_entry:CatalogEntry, _value:string):Promise<void> {

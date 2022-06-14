@@ -1,8 +1,7 @@
 import * as fs from "fs/promises";
-import { getRootMapDir } from "./game_data_loader";
 
-export async function importHotkeysFile():Promise<Map<string,string>>{
-	let contents = await fs.readFile(langCodeToGameHotkeysFilename("enUS"), "utf8");
+export async function importHotkeysFile(rootMapDir:string):Promise<Map<string,string>>{
+	let contents = await fs.readFile(langCodeToGameHotkeysFilename(rootMapDir, "enUS"), "utf8");
 	
 	// Strip BOM (editor adds it...)
 	if(contents.charCodeAt(0) == 0xFEFF){
@@ -23,8 +22,8 @@ export async function importHotkeysFile():Promise<Map<string,string>>{
 	return new Map(sortMapByKey(res));
 }
 
-export async function exportHotkeysFile(data:Map<string, string>){
-	await fs.writeFile(langCodeToGameHotkeysFilename("enUS"), "\uFEFF" + sortMapByKey(data).map(kv => kv[0] + "=" + kv[1]).join("\r\n") + "\r\n");
+export async function exportHotkeysFile(rootMapDir:string, data:Map<string, string>){
+	await fs.writeFile(langCodeToGameHotkeysFilename(rootMapDir, "enUS"), "\uFEFF" + sortMapByKey(data).map(kv => kv[0] + "=" + kv[1]).join("\r\n") + "\r\n");
 }
 
 function sortMapByKey<A, B>(m:Map<A,B>) : [A,B][] {
@@ -34,6 +33,6 @@ function sortMapByKey<A, B>(m:Map<A,B>) : [A,B][] {
 	});
 }
 
-function langCodeToGameHotkeysFilename(lang:string){
-	return getRootMapDir() + "/" + lang + '.SC2Data/LocalizedData/GameHotkeys.txt';
+function langCodeToGameHotkeysFilename(rootMapDir:string, lang:string){
+	return rootMapDir + "/" + lang + '.SC2Data/LocalizedData/GameHotkeys.txt';
 }
