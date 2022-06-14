@@ -1,4 +1,5 @@
 import assert from "assert";
+import { CatalogName } from "./lib/game_data_loader";
 import { CatalogEntry, CatalogField, Message, MessageResponse } from "./worker";
 
 const worker = new Worker("./out/worker_wrapper.js");
@@ -34,8 +35,8 @@ export function entryExists(_entry:CatalogEntry):Promise<boolean> {
 	return sendMessage("entryExists", arguments);
 }
 
-export function getEntriesOfTypes(_types:string[], _parent?:string):Promise<string[]> {
-	return sendMessage("getEntriesOfTypes", arguments);
+export function getEntriesOfCatalog(_catalogName:CatalogName, _parent?:string):Promise<string[]> {
+	return sendMessage("getEntriesOfCatalog", arguments);
 }
 
 export function getStringLink(_link:string):Promise<string|undefined> {

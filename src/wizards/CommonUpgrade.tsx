@@ -1,11 +1,10 @@
 import * as React from 'react';
-import { Button, Container, Row, Col, Form, InputGroup, Card, Alert } from 'react-bootstrap';
-import { getFieldValue, getStringLink } from '../worker_client';
-import { CatalogEntry, CatalogField } from '../worker';
-import SelectID from './components/SelectID';
+import { Card, Form } from 'react-bootstrap';
+import { CatalogEntry } from '../worker';
 import CatalogFieldInt from './components/CatalogFieldInt';
-import EntryParent from './components/EntryParent';
 import CatalogFieldStringLink from './components/CatalogFieldStringLink';
+import EntryParent from './components/EntryParent';
+import SelectID from './components/SelectID';
 
 export default function CommonUpgradeWizard(){
 	const [id, setID] = React.useState("");
@@ -25,7 +24,7 @@ export default function CommonUpgradeWizard(){
 		<Card>
 			<Card.Body>
 				<Form>
-					<SelectID type="CUpgrade" parent="CommonUpgrade" onChange={setID}/>
+					<SelectID catalog="Upgrade" parent="CommonUpgrade" onChange={setID}/>
 					
 					{ id.length > 0 && <>
 						<EntryParent entry={upgradeEntry} parent="CommonUpgrade"/>

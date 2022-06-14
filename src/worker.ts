@@ -1,5 +1,5 @@
 import assert from "assert";
-import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, loadDataspacesFromIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild } from './lib/game_data_loader';
+import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, loadDataspacesFromIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild, getCatalogNameByTagname, changeDataspaceEntryType, CatalogName } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import { possiblyBigNumberToString, unreachable } from "./lib/utils";
@@ -73,12 +73,22 @@ export interface CatalogField {
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
-	let arr = dataspace.entriesByID[entry.id];
-	if(arr){
-		for(let node of arr){
-			if(node.tagname != entry.type) continue;
-			return node;
+	let catalogName = getCatalogNameByTagname(entry.type);
+	let catalog = dataspace.catalogs[catalogName];
+	
+	if(entry.id in catalog.entryByID){
+		let node = catalog.entryByID[entry.id];
+		
+		if(node.tagname != entry.type){
+			console.error(`Desired tagname ${entry.type} does not match current tagname ${node.tagname}`);
+			if(createIfNotExists){
+				changeDataspaceEntryType(dataspace, node, entry.type);
+			}else{
+				return undefined;
+			}
 		}
+		
+		return node;
 	}
 	
 	if(createIfNotExists){
@@ -361,15 +371,20 @@ const messageHandlers:{
 		return map.strings.get(link);
 	},
 	
-	async getEntriesOfTypes(types:string[], parent?:string){
+	async getEntriesOfCatalog(catalogName:CatalogName, parent?:string){
 		let ret:string[] = [];
 		
 		for(let dataspace of map.dataspaces){
-			for(let type of types){
-				let arr = dataspace.data.childrenByTagname[type];
-				if(arr){
-					ret = ret.concat(arr.filter(node => (typeof parent == "undefined" || node.attr["parent"] == parent)).map(node => node.attr["id"]).filter(v => v != undefined));
+			let catalog = dataspace.catalogs[catalogName];
+			
+			for(let entry of catalog.entries){
+				if(typeof parent != "undefined" && entry.attr["parent"] != parent){
+					continue;
 				}
+				
+				if(!("id" in entry.attr)) continue;
+				
+				ret.push(entry.attr["id"]);
 			}
 		}
 		

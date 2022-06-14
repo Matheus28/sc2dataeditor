@@ -2,6 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
+import { CatalogTypes, CatalogTypesInstance } from "./game_data";
 
 export type XMLNode = ({
 	tagname:string;
@@ -12,7 +13,7 @@ export type XMLNode = ({
 	children:XMLNode[];
 	attr:Record<string, string>;
 	childrenByTagname:Record<string,XMLNode[]>;
-}
+};
 
 type XMLParseResult = Record<string, XMLNode>;
 
@@ -58,29 +59,80 @@ export async function loadDataspacesFromIndex(v:GameDataIndex):Promise<Dataspace
 export interface Dataspace {
 	filename:string;
 	
-	entriesByID:Record<string, XMLNode[]>;
-	data:XMLNode;
+	data_:XMLNode;
+	
+	catalogs:{
+		[Catalog in keyof CatalogTypes]:{
+			entries:XMLNode[];
+			entryByID:Record<string, XMLNode & {tagname:keyof CatalogTypes[Catalog]}>;
+		}
+	};
 };
+
+export type CatalogName = keyof CatalogTypes;
+
+const tagnameToCatalog:Record<string, CatalogName> = {};
+for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
+	for(let type of Object.keys(CatalogTypesInstance[catalog])){
+		tagnameToCatalog[type] = catalog;
+	}
+}
+
+export function getCatalogNameByTagname(tagname:string):CatalogName {
+	assert(tagname in tagnameToCatalog);
+	return tagnameToCatalog[tagname];
+}
+
+function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
+	let catalogs:Partial<Dataspace["catalogs"]> = {};
+		
+	for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
+		catalogs[catalog] = {
+			entries: [],
+			entryByID: {},
+		}
+	}
+	
+	return catalogs as Dataspace["catalogs"];
+}
+
 
 export async function loadDataspaces(files:string[]):Promise<Dataspace[]>{
 	return await Promise.all(files.map(async function(filename):Promise<Dataspace> {
 		let str = await fs.readFile(filename, "utf8");
 		
 		let data = (await parseXML(str))["Catalog"];
+		let catalogs = createEmptyDataspaceCatalogs();
 		
-		let entriesByID:Record<string, XMLNode[]> = {};
 		for(let v of data.children){
-			if("id" in v.attr){
-				const id = v.attr["id"];
-				entriesByID[id] = entriesByID[id] || [];
-				entriesByID[id].push(v);
+			// Ideally these should be attached to the closest child, so we can stop using data_
+			if(v.tagname == "#text") continue;
+			if(v.tagname == "#comment") continue;
+			
+			if(!(v.tagname in tagnameToCatalog)){
+				console.log("Unknown catalog entry tagname: " + v.tagname);
+				continue;
 			}
+			
+			let catalogName = getCatalogNameByTagname(v.tagname);
+			let catalog = catalogs[catalogName];
+			
+			let id = v.attr["id"];
+			if(id !== undefined){
+				if(id in catalog.entryByID){
+					throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
+				}
+				
+				catalog.entryByID[id] = v as any;
+			}
+			
+			catalog.entries.push(v);
 		}
 		
 		return {
 			filename,
-			entriesByID,
-			data
+			data_: data,
+			catalogs,
 		};
 	}));
 }
@@ -88,12 +140,34 @@ export async function loadDataspaces(files:string[]):Promise<Dataspace[]>{
 export function addDataspaceEntry(dataspace:Dataspace, child:XMLNode){
 	assert("id" in child.attr);
 	
-	const id = child.attr["id"];
-	dataspace.entriesByID[id] = dataspace.entriesByID[id] || [];
-	dataspace.entriesByID[id].push(child);
-	addChild(dataspace.data, child);
+	let catalogName = getCatalogNameByTagname(child.tagname);
+	let catalog = dataspace.catalogs[catalogName];
+	catalog.entries.push(child);
+	
+	let id = child.attr["id"];
+	if(id !== undefined){
+		if(id in catalog.entryByID){
+			throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
+		}
+		
+		catalog.entryByID[id] = child as any;
+	}
+	
+	addChild(dataspace.data_, child);
 }
 
+export function changeDataspaceEntryType(_dataspace:Dataspace, child:XMLNode, newType:string){
+	assert("id" in child.attr);
+	
+	let catalogName = getCatalogNameByTagname(child.tagname);
+	
+	// Make sure we're not changing the catalog with the type
+	assert(catalogName == getCatalogNameByTagname(newType));
+	
+	child.tagname = newType;
+}
+
+// DO NOT USE THIS ON DATASPACE datas_
 export function addChild(parent:XMLNode, child:XMLNode){
 	assert(child);
 	
@@ -116,8 +190,8 @@ export function addChild(parent:XMLNode, child:XMLNode){
 export function newDataspace(filename:string):Dataspace {
 	return {
 		filename,
-		entriesByID: {},
-		data: newNode("Catalog"),
+		catalogs: createEmptyDataspaceCatalogs(),
+		data_: newNode("Catalog"),
 	};
 }
 
@@ -271,7 +345,7 @@ function encodeXML(root:XMLNode){
 
 export async function saveDataspaces(datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
-		await fs.writeFile(data.filename, encodeXML(data.data), "utf8");
+		await fs.writeFile(data.filename, encodeXML(data.data_), "utf8");
 	}));
 }
 

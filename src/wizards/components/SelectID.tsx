@@ -1,7 +1,8 @@
 import * as React from 'react';
 import Select from "react-select/creatable";
 import { Form, Alert } from 'react-bootstrap';
-import { getEntriesOfTypes } from '../../worker_client';
+import { getEntriesOfCatalog } from '../../worker_client';
+import { CatalogName } from '../../lib/game_data_loader';
 
 interface SelectOption {
 	value:string;
@@ -9,7 +10,7 @@ interface SelectOption {
 }
 
 interface SelectID_Props {
-	type:string;
+	catalog:CatalogName;
 	parent?:string;
 	
 	onChange:(id:string)=>void;
@@ -31,7 +32,7 @@ export default class SelectID extends React.Component<SelectID_Props, SelectID_S
 	override componentDidMount(){
 		let token = {};
 		this.getEntriesOfTypesToken = token;
-		getEntriesOfTypes(["CUpgrade"], "CommonUpgrade").then(arr => arr.map(v => ({ value: v, label: v }))).then((arr) => {
+		getEntriesOfCatalog(this.props.catalog, this.props.parent).then(arr => arr.map(v => ({ value: v, label: v }))).then((arr) => {
 			if(this.getEntriesOfTypesToken !== token) return;
 			this.setState((state) => ({
 				existingIDs: arr,
