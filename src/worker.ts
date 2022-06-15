@@ -1,4 +1,5 @@
 import assert from "assert";
+import { CatalogTypesInstance } from "./lib/game_data";
 import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild, getCatalogNameByTagname, changeDataspaceEntryType, CatalogName } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
@@ -203,11 +204,8 @@ function getFieldValue(field:CatalogField):string|undefined {
 function setFieldValue(field:CatalogField, newValue:string){
 	assert(field.name.length >= 1);
 	
-	let vv = accessEntry(field.entry, false);
-	if(!vv) return;
-	
-	let cur = getFieldContainer(field, vv.node, false);
-	if(!cur) return;
+	let vv = accessEntry(field.entry, true);
+	let cur = getFieldContainer(field, vv.node, true);
 	
 	let name = field.name[field.name.length - 1];
 	if(typeof name == 'string'){

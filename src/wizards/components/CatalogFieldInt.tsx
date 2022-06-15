@@ -32,6 +32,7 @@ export default function(props:Props){
 				setValue(parseInt(v, 10));
 			}else{
 				setValue(props.default);
+				setFieldValue(props.field, props.default.toString());
 			}
 		});
 		
@@ -52,7 +53,7 @@ export default function(props:Props){
 			onChange={(e) => {
 				if(!e.target.validity.valid) return;
 				let v = parseInt(e.target.value, 10);
-				if(isNaN(v)) return;
+				if(!isFinite(v)) return;
 				
 				setValue(v);
 				setFieldValue(props.field, v.toString());
