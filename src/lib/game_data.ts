@@ -1,10 +1,251 @@
 import assert from "assert";
 
+type DataFieldDefaults = typeof DataFieldDefaults;
+type DataFieldTypes = keyof DataFieldDefaults;
+
+type SimpleFieldValue = {
+	[Type in DataFieldTypes]: {
+		// Values dependent on type
+		type: Type;
+		default?: DataFieldDefaults[Type]|undefined;
+		restrictions?: Type extends keyof DataFieldRestrictions ? DataFieldRestrictions[Type]|undefined : undefined;
+	}
+}[DataFieldTypes];
+
+type NonEmptyArray<T> = [T, ...T[]];
+
+type FieldValue = SimpleFieldValue  | {
+	type:"CEnum";
+	// Default value is implied to be the first one
+	values:NonEmptyArray<string>;
+};
+
+type FieldType = {
+	value?:FieldValue;
+} & (
+	{}
+	|
+	{
+		struct:Record<string, FieldType>;
+	}
+	|
+	{
+		// This differs from struct because they're stored a lot like arrays
+		// like <Name index="..." value="..."/>
+		namedArray:Record<string, FieldType>;
+	}
+	|
+	{
+		array:FieldType;
+	}
+);
+
+function simpleType<T extends SimpleFieldValue["type"]>(type: T, def?: DataFieldDefaults[T], restrictions?:T extends keyof DataFieldRestrictions ? DataFieldRestrictions[T]:undefined): FieldType {
+	return { value: {type, default: def, restrictions} as SimpleFieldValue }; // `as` needed to help compiler...
+}
+
+function array(subtype:FieldType){
+	return { array: subtype };
+}
+
+function struct(fields:Record<string, FieldType>){
+	return { struct: fields };
+}
+
+function namedArray(values: Record<string, FieldType>): FieldType {
+	return {
+		namedArray: values,
+	};
+}
+
+// First value is implied to be the default
+function simpleEnum(values:NonEmptyArray<string>): FieldType {
+	return { value: { type: "CEnum", values } }
+}
+
+// Use this to combine multiple types
+// Usually used for amounts that are affected by accumulators
+// (they are a combination of simpleType + array[simpleType])
+function combine(...args:FieldType[]):FieldType {
+	assert((():boolean => {
+		let keysSeen = new Set<string>();
+		for(let arg of args){
+			for(let i in arg){
+				if(keysSeen.has(i)) return false;
+				keysSeen.add(i);
+			}
+		}
+		
+		return true;
+	})(), "Bad combine, there's some intersection in keys");
+	
+	return Object.assign({}, ...args);
+}
+
+// Anything that is shared for absolutely everything in the editor
+function editorFields(catalogName: CatalogName): Record<string, FieldType> {
+	return {
+		"EditorCategories": simpleType("CString"),
+		"EditorDescription": simpleType("CStringLink", `${catalogName}/EditorDescription/##id##`),
+		"EditorPrefix": simpleType("CStringLink", `${catalogName}/EditorPrefix/##id##`),
+		"EditorSuffix": simpleType("CStringLink", `${catalogName}/EditorSuffix/##id##`),
+
+		"Name": simpleType("CStringLink", `${catalogName}/Name/##id##`),
+
+		// This is stored as a xml comment just before the entry in the xml.
+		// But also means we'll need special handling to do it properly.
+		// This is done when we load the xml, it inserts the value as a tag when parsing,
+		// and transforms it into a comment when encoding
+		"EditorComment": simpleType("CString"),
+	};
+}
+
+interface CatalogSubtype {
+	parent: string | null;
+	abstract?: boolean;
+	fields: Record<string, FieldType>;
+}
+
+const unspecifiedSubtype = (): CatalogSubtype => ({
+	parent: null,
+	fields: {},
+	abstract: true,
+});
+
+function subtype(catalogName: CatalogName, v: CatalogSubtype): CatalogSubtype {
+	v.fields = {...editorFields(catalogName), ...v.fields};
+
+	return v;
+}
+
+// This avoids some recursive definitions
+export const CatalogNameArray = [
+	"Abil",
+	"Accumulator",
+	"Behavior",
+	"DataCollection",
+	"DataCollectionPattern",
+	"Effect",
+	"Footprint",
+	"Item",
+	"Loot",
+	"Mover",
+	"PlayerResponse",
+	"Requirement",
+	"Turret",
+	"Unit",
+	"Upgrade",
+	"Validator",
+	"Weapon",
+	"ArmyCategory",
+	"ArmyUnit",
+	"ArmyUpgrade",
+	"BankCondition",
+	"Campaign",
+	"Character",
+	"Commander",
+	"Conversation",
+	"ConversationState",
+	"Location",
+	"Map",
+	"Objective",
+	"Preload",
+	"Actor",
+	"AttachMethod",
+	"Beam",
+	"Button",
+	"DSP",
+	"LensFlareSet",
+	"Light",
+	"Model",
+	"Reverb",
+	"Shape",
+	"Sound",
+	"SoundExclusivity",
+	"SoundMixSnapshot",
+	"Soundtrack",
+	"Texture",
+	"Cliff",
+	"CliffMesh",
+	"FoW",
+	"PhysicsMaterial",
+	"Terrain",
+	"TerrainObject",
+	"TerrainTex",
+	"Tile",
+	"Water",
+	"Artifact",
+	"ArtifactSlot",
+	"Config",
+	"Hero",
+	"HeroAbil",
+	"HeroStat",
+	"Mount",
+	"Skin",
+	"Talent",
+	"TalentProfile",
+	"VoiceOver",
+	"Alert",
+	"RaceBannerPack",
+	"Camera",
+	"ConsoleSkin",
+	"Cursor",
+	"GameUI",
+	"Bundle",
+	"Ping",
+	"ColorStyle",
+	"Achievement",
+	"AchievementTerm",
+	"Boost",
+	"DecalPack",
+	"Emoticon",
+	"EmoticonPack",
+	"Error",
+	"Game",
+	"Herd",
+	"HerdNode",
+	"ItemClass",
+	"ItemContainer",
+	"Kinetic",
+	"PortraitPack",
+	"PremiumMap",
+	"Race",
+	"RequirementNode",
+	"Reward",
+	"ScoreResult",
+	"ScoreValue",
+	"SkinPack",
+	"Spray",
+	"SprayPack",
+	"TacCooldown",
+	"Tactical",
+	"TargetFind",
+	"TargetSort",
+	"TextureSheet",
+	"Trophy",
+	"User",
+	"VoicePack",
+	"WarChest",
+	"WarChestSeason",
+	"StimPack"
+] as const;
+
+export type CatalogName = (typeof CatalogNameArray)[number];
+
+type CatalogLinks = {
+	[Key in CatalogName as `C${Key}Link`]:Key;
+}
+
 // It seems we can find most types by adding a token and looking through the available types
 // Mapping to their default value
-const DataFieldTypes = {
+const DataFieldDefaults = {
 	"CString": "",
 	"CStringLink": "",
+	"CHotkeyLink": "",
+	"bool": 0,
+	"bool8": 0,
+	"bool16": 0,
+	"bool32": 0,
 	"int8": 0,
 	"int16": 0,
 	"int32": 0,
@@ -15,64 +256,32 @@ const DataFieldTypes = {
 	"uint64": 0,
 	"CFixed": 0.0,
 	"real32": 0.0,
-	
-	"Array": <unknown[]>[],
-	"Struct": {},
+	...(():Record<keyof CatalogLinks, string> => {
+		let v = {} as Record<keyof CatalogLinks, string>;
+		for(let i of CatalogNameArray) v[`C${i}Link`] = "";
+		return v;
+	})()
 };
 
-type DataFieldTypes = typeof DataFieldTypes;
+const numberRestrictions:{
+	min?:number;
+	max?:number;
+} = {};
 
-type CatalogDataField = ({
-	[Type in keyof DataFieldTypes]:{
-		name:string;
-		category?:string;
-		
-		type:Type;
-		default?:DataFieldTypes[Type];
-		subtype?:Type extends "Array"|"Struct" ? CatalogDataField : never;
-	}
-}[keyof DataFieldTypes]);
-
-interface CatalogSubtype {
-	parent:string|null;
-	abstract?:boolean;
-	fields:CatalogDataField[];
-}
-
-function simpleField<T extends keyof DataFieldTypes>(name:string, type:T, def?:DataFieldTypes[T]):CatalogDataField {
-	let tmp:CatalogDataField = { name, type };
-	if(typeof def != "undefined") tmp.default = def;
-	return tmp;
-}
-
-// Anything that is shared for absolutely everything in the editor
-const editorFields = (catalogName:CatalogName) => [
-	simpleField("EditorCategories", "CString"),
-	simpleField("EditorDescription", "CStringLink", `${catalogName}/EditorDescription/##id##`),
-	simpleField("EditorPrefix", "CStringLink", `${catalogName}/EditorPrefix/##id##`),
-	simpleField("EditorSuffix", "CStringLink", `${catalogName}/EditorSuffix/##id##`),
-	
-	simpleField("Name", "CStringLink", `${catalogName}/Name/##id##`),
-	
-	// This is stored as a xml comment just before the entry in the xml.
-	// But also means we'll need special handling to do it properly.
-	// This is done when we load the xml, it inserts the value as a tag when parsing,
-	// and transforms it into a comment when encoding
-	simpleField("EditorComment", "CString"),
-];
-
-const UnspecifiedSubtype = ():CatalogSubtype => ({
-	parent: null,
-	fields: [],
-});
-
-const Subtype = (v:Partial<CatalogSubtype>):CatalogSubtype => {
-	// Just here so we can fill in default values later
-	assert(v.parent !== undefined);
-	assert(v.fields !== undefined);
-	
-	return v as CatalogSubtype;
+const DataFieldRestrictions = {
+	"int8": numberRestrictions,
+	"int16": numberRestrictions,
+	"int32": numberRestrictions,
+	"int64": numberRestrictions,
+	"uint8": numberRestrictions,
+	"uint16": numberRestrictions,
+	"uint32": numberRestrictions,
+	"uint64": numberRestrictions,
+	"CFixed": numberRestrictions,
+	"real32": numberRestrictions,
 };
+
+type DataFieldRestrictions = typeof DataFieldRestrictions;
 
 /*
 	Note for later, abstract types:
@@ -119,928 +328,1041 @@ const Subtype = (v:Partial<CatalogSubtype>):CatalogSubtype => {
 	CWeapon
 */
 
+const e_effectHistory = simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]);
+const e_effectLocation = simpleEnum([
+	"TargetPoint", // Is this the default for every use?
+	"CasterOuterPoint",
+	"CasterOuterUnit",
+	"CasterOuterUnitOrPoint",
+	"CasterPoint",
+	"CasterUnit",
+	"CasterUnitOrPoint",
+	"OriginPoint",
+	"OriginUnit",
+	"OriginUnitOrPoint",
+	"OuterPoint",
+	"OuterUnit",
+	"OuterUnitOrPoint",
+	"SourcePoint",
+	"SourceUnit",
+	"SourceUnitOrPoint",
+	"TargetOuterPoint",
+	"TargetOuterUnit",
+	"TargetOuterUnitOrPoint",
+	"TargetUnit",
+	"TargetUnitOrPoint",
+]);
+
+const e_effectPlayer = simpleEnum(["Unknown", "Caster", "CasterOuter", "Creator", "Hostile", "Neutral", "Outer", "Origin", "Source", "Target", "TargetOuter", "Origin"]);
+const e_effectUnit = simpleEnum(["Unknown", "Caster", "CasterOuter", "Outer", "Source", "Target", "TargetOuter", "Origin"]);
+
+const SEffectWhichLocation = struct({
+	"Effect": simpleType("CEffectLink"),
+	"History": simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]),
+	"Value": e_effectLocation,
+});
+
+
 export const CatalogTypesInstance = {
-	"Abil":{
-		"CAbil": UnspecifiedSubtype(),
-		"CAbilArmMagazine": UnspecifiedSubtype(),
-		"CAbilAttack": UnspecifiedSubtype(),
-		"CAbilAttackModifier": UnspecifiedSubtype(),
-		"CAbilAugment": UnspecifiedSubtype(),
-		"CAbilBattery": UnspecifiedSubtype(),
-		"CAbilBeacon": UnspecifiedSubtype(),
-		"CAbilBehavior": UnspecifiedSubtype(),
-		"CAbilBuild": UnspecifiedSubtype(),
-		"CAbilBuildable": UnspecifiedSubtype(),
-		"CAbilEffect": UnspecifiedSubtype(),
-		"CAbilEffectInstant": UnspecifiedSubtype(),
-		"CAbilEffectTarget": UnspecifiedSubtype(),
-		"CAbilHarvest": UnspecifiedSubtype(),
-		"CAbilInteract": UnspecifiedSubtype(),
-		"CAbilInventory": UnspecifiedSubtype(),
-		"CAbilLearn": UnspecifiedSubtype(),
-		"CAbilMerge": UnspecifiedSubtype(),
-		"CAbilMergeable": UnspecifiedSubtype(),
-		"CAbilMorph": UnspecifiedSubtype(),
-		"CAbilMorphPlacement": UnspecifiedSubtype(),
-		"CAbilMove": UnspecifiedSubtype(),
-		"CAbilPawn": UnspecifiedSubtype(),
-		"CAbilProgress": UnspecifiedSubtype(),
-		"CAbilQueue": UnspecifiedSubtype(),
-		"CAbilQueueable": UnspecifiedSubtype(),
-		"CAbilRally": UnspecifiedSubtype(),
-		"CAbilRedirect": UnspecifiedSubtype(),
-		"CAbilRedirectInstant": UnspecifiedSubtype(),
-		"CAbilRedirectTarget": UnspecifiedSubtype(),
-		"CAbilResearch": UnspecifiedSubtype(),
-		"CAbilRevive": UnspecifiedSubtype(),
-		"CAbilSpecialize": UnspecifiedSubtype(),
-		"CAbilStop": UnspecifiedSubtype(),
-		"CAbilTrain": UnspecifiedSubtype(),
-		"CAbilTransport": UnspecifiedSubtype(),
-		"CAbilWarpTrain": UnspecifiedSubtype(),
-		"CAbilWarpable": UnspecifiedSubtype(),
-	},
-	
-	"Accumulator":{
-		"CAccumulator": UnspecifiedSubtype(),
-		"CAccumulatorAbilLevel": UnspecifiedSubtype(),
-		"CAccumulatorArithmetic": UnspecifiedSubtype(),
-		"CAccumulatorAttributePoints": UnspecifiedSubtype(),
-		"CAccumulatorBehavior": UnspecifiedSubtype(),
-		"CAccumulatorCargo": UnspecifiedSubtype(),
-		"CAccumulatorConstant": UnspecifiedSubtype(),
-		"CAccumulatorDistance": UnspecifiedSubtype(),
-		"CAccumulatorEffectAmount": UnspecifiedSubtype(),
-		"CAccumulatorSwitch": UnspecifiedSubtype(),
-		"CAccumulatorTrackedUnitCount": UnspecifiedSubtype(),
-		"CAccumulatorUnitCustomValue": UnspecifiedSubtype(),
-		"CAccumulatorUserData": UnspecifiedSubtype(),
-		"CAccumulatorVeterancyLevel": UnspecifiedSubtype(),
-		"CAccumulatorVitals": UnspecifiedSubtype(),
-	},
-	
-	"Behavior":{
-		"CBehavior": UnspecifiedSubtype(),
-		"CBehaviorAttackModifier": UnspecifiedSubtype(),
-		"CBehaviorAttribute": UnspecifiedSubtype(),
-		"CBehaviorBuff": UnspecifiedSubtype(),
-		"CBehaviorClickResponse": UnspecifiedSubtype(),
-		"CBehaviorConjoined": UnspecifiedSubtype(),
-		"CBehaviorCreepSource": UnspecifiedSubtype(),
-		"CBehaviorJump": UnspecifiedSubtype(),
-		"CBehaviorPowerSource": UnspecifiedSubtype(),
-		"CBehaviorPowerUser": UnspecifiedSubtype(),
-		"CBehaviorResource": UnspecifiedSubtype(),
-		"CBehaviorReveal": UnspecifiedSubtype(),
-		"CBehaviorSpawn": UnspecifiedSubtype(),
-		"CBehaviorUnitTracker": UnspecifiedSubtype(),
-		"CBehaviorVeterancy": UnspecifiedSubtype(),
-		"CBehaviorWander": UnspecifiedSubtype(),
-	},
-	
-	"DataCollection":{
-		"CDataCollection": UnspecifiedSubtype(),
-		"CDataCollectionAbil": UnspecifiedSubtype(),
-		"CDataCollectionUnit": UnspecifiedSubtype(),
-		"CDataCollectionUpgrade": UnspecifiedSubtype(),
-	},
-	
-	"DataCollectionPattern":{
-		"CDataCollectionPattern": UnspecifiedSubtype(),
-	},
-	
-	"Effect":{
-		"CEffect": UnspecifiedSubtype(),
-		"CEffectAddTrackedUnit": UnspecifiedSubtype(),
-		"CEffectAddTrackedUnits": UnspecifiedSubtype(),
-		"CEffectApplyBehavior": UnspecifiedSubtype(),
-		"CEffectApplyForce": UnspecifiedSubtype(),
-		"CEffectApplyKinetic": UnspecifiedSubtype(),
-		"CEffectCancelOrder": UnspecifiedSubtype(),
-		"CEffectClearTrackedUnits": UnspecifiedSubtype(),
-		"CEffectCreateHealer": UnspecifiedSubtype(),
-		"CEffectCreatePersistent": UnspecifiedSubtype(),
-		"CEffectCreateUnit": UnspecifiedSubtype(),
-		"CEffectCreep": UnspecifiedSubtype(),
-		"CEffectDamage": UnspecifiedSubtype(),
-		"CEffectDestroyPersistent": UnspecifiedSubtype(),
-		"CEffectEnumArea": UnspecifiedSubtype(),
-		"CEffectEnumInventory": UnspecifiedSubtype(),
-		"CEffectEnumMagazine": UnspecifiedSubtype(),
-		"CEffectEnumTrackedUnits": UnspecifiedSubtype(),
-		"CEffectEnumTransport": UnspecifiedSubtype(),
-		"CEffectIssueOrder": UnspecifiedSubtype(),
-		"CEffectLastTarget": UnspecifiedSubtype(),
-		"CEffectLaunchMissile": UnspecifiedSubtype(),
-		"CEffectLoadContainer": UnspecifiedSubtype(),
-		"CEffectModifyPlayer": UnspecifiedSubtype(),
-		"CEffectModifyUnit": UnspecifiedSubtype(),
-		"CEffectMorph": UnspecifiedSubtype(),
-		"CEffectRandomPointInCircle": UnspecifiedSubtype(),
-		"CEffectRedirectMissile": UnspecifiedSubtype(),
-		"CEffectReleaseMagazine": UnspecifiedSubtype(),
-		"CEffectRemoveBehavior": UnspecifiedSubtype(),
-		"CEffectRemoveKinetic": UnspecifiedSubtype(),
-		"CEffectRemoveTrackedUnit": UnspecifiedSubtype(),
-		"CEffectReturnMagazine": UnspecifiedSubtype(),
-		"CEffectSet": UnspecifiedSubtype(),
-		"CEffectSwitch": UnspecifiedSubtype(),
-		"CEffectTeleport": UnspecifiedSubtype(),
-		"CEffectTransferBehavior": UnspecifiedSubtype(),
-		"CEffectUseCalldown": UnspecifiedSubtype(),
-		"CEffectUseMagazine": UnspecifiedSubtype(),
-		"CEffectUserData": UnspecifiedSubtype(),
-	},
-	
-	"Footprint":{
-		"CFootprint": UnspecifiedSubtype(),
-	},
-	
-	"Item":{
-		"CItem": UnspecifiedSubtype(),
-		"CItemAbil": UnspecifiedSubtype(),
-		"CItemAbilPowerUp": UnspecifiedSubtype(),
-		"CItemEffect": UnspecifiedSubtype(),
-		"CItemEffectInstant": UnspecifiedSubtype(),
-		"CItemEffectTarget": UnspecifiedSubtype(),
-	},
-	
-	"Loot":{
-		"CLoot": UnspecifiedSubtype(),
-		"CLootEffect": UnspecifiedSubtype(),
-		"CLootItem": UnspecifiedSubtype(),
-		"CLootSet": UnspecifiedSubtype(),
-		"CLootSpawn": UnspecifiedSubtype(),
-		"CLootUnit": UnspecifiedSubtype(),
-	},
-	
-	"Mover":{
-		"CMover": UnspecifiedSubtype(),
-		"CMoverAvoid": UnspecifiedSubtype(),
-		"CMoverFlock": UnspecifiedSubtype(),
-		"CMoverMissile": UnspecifiedSubtype(),
-	},
-	
-	"PlayerResponse":{
-		"CPlayerResponse": UnspecifiedSubtype(),
-		"CPlayerResponseUnit": UnspecifiedSubtype(),
-		"CPlayerResponseUnitBirth": UnspecifiedSubtype(),
-		"CPlayerResponseUnitDamage": UnspecifiedSubtype(),
-		"CPlayerResponseUnitDeath": UnspecifiedSubtype(),
-	},
-	
-	"Requirement":{
-		"CRequirement": UnspecifiedSubtype(),
-	},
-	
-	"Turret":{
-		"CTurret": UnspecifiedSubtype(),
-	},
-	
-	"Unit":{
-		"CUnit": UnspecifiedSubtype(),
-		"CUnitHero": UnspecifiedSubtype(),
-	},
-	
-	"Upgrade":{
-		"CUpgrade": UnspecifiedSubtype(),
-	},
-	
-	"Validator":{
-		"CValidator": UnspecifiedSubtype(),
-		"CValidatorCombine": UnspecifiedSubtype(),
-		"CValidatorCompareTrackedUnitsCount": UnspecifiedSubtype(),
-		"CValidatorCondition": UnspecifiedSubtype(),
-		"CValidatorEffect": UnspecifiedSubtype(),
-		"CValidatorEffectCompareDodged": UnspecifiedSubtype(),
-		"CValidatorEffectCompareEvaded": UnspecifiedSubtype(),
-		"CValidatorEffectTreeUserData": UnspecifiedSubtype(),
-		"CValidatorFunction": UnspecifiedSubtype(),
-		"CValidatorGameCommanderActive": UnspecifiedSubtype(),
-		"CValidatorGameCompareTerrain": UnspecifiedSubtype(),
-		"CValidatorGameCompareTimeEvent": UnspecifiedSubtype(),
-		"CValidatorGameCompareTimeOfDay": UnspecifiedSubtype(),
-		"CValidatorIsUnitTracked": UnspecifiedSubtype(),
-		"CValidatorLocation": UnspecifiedSubtype(),
-		"CValidatorLocationArc": UnspecifiedSubtype(),
-		"CValidatorLocationCompareCliffLevel": UnspecifiedSubtype(),
-		"CValidatorLocationComparePower": UnspecifiedSubtype(),
-		"CValidatorLocationCompareRange": UnspecifiedSubtype(),
-		"CValidatorLocationCreep": UnspecifiedSubtype(),
-		"CValidatorLocationCrossChasm": UnspecifiedSubtype(),
-		"CValidatorLocationCrossCliff": UnspecifiedSubtype(),
-		"CValidatorLocationEnumArea": UnspecifiedSubtype(),
-		"CValidatorLocationInPlayableMapArea": UnspecifiedSubtype(),
-		"CValidatorLocationPathable": UnspecifiedSubtype(),
-		"CValidatorLocationPlacement": UnspecifiedSubtype(),
-		"CValidatorLocationShrub": UnspecifiedSubtype(),
-		"CValidatorLocationType": UnspecifiedSubtype(),
-		"CValidatorLocationVision": UnspecifiedSubtype(),
-		"CValidatorPlayer": UnspecifiedSubtype(),
-		"CValidatorPlayerAlliance": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareDifficulty": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareFoodAvailable": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareFoodUsed": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareFoodMade": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareRace": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareResource": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareResult": UnspecifiedSubtype(),
-		"CValidatorPlayerCompareType": UnspecifiedSubtype(),
-		"CValidatorPlayerFood": UnspecifiedSubtype(),
-		"CValidatorPlayerRequirement": UnspecifiedSubtype(),
-		"CValidatorUnit": UnspecifiedSubtype(),
-		"CValidatorUnitAI": UnspecifiedSubtype(),
-		"CValidatorUnitAbil": UnspecifiedSubtype(),
-		"CValidatorUnitAlliance": UnspecifiedSubtype(),
-		"CValidatorUnitArmor": UnspecifiedSubtype(),
-		"CValidatorUnitBehaviorStackAlias": UnspecifiedSubtype(),
-		"CValidatorUnitBehaviorState": UnspecifiedSubtype(),
-		"CValidatorUnitCombatAI": UnspecifiedSubtype(),
-		"CValidatorUnitCompareAIAreaEvalRatio": UnspecifiedSubtype(),
-		"CValidatorUnitCompareAbilLevel": UnspecifiedSubtype(),
-		"CValidatorUnitCompareAbilSkillPoint": UnspecifiedSubtype(),
-		"CValidatorUnitCompareAbilStage": UnspecifiedSubtype(),
-		"CValidatorUnitCompareAttackPriority": UnspecifiedSubtype(),
-		"CValidatorUnitCompareBehaviorCount": UnspecifiedSubtype(),
-		"CValidatorUnitCompareCargo": UnspecifiedSubtype(),
-		"CValidatorUnitCompareChargeUsed": UnspecifiedSubtype(),
-		"CValidatorUnitCompareCooldown": UnspecifiedSubtype(),
-		"CValidatorUnitCompareDamageDealtTime": UnspecifiedSubtype(),
-		"CValidatorUnitCompareDamageTakenTime": UnspecifiedSubtype(),
-		"CValidatorUnitCompareDeath": UnspecifiedSubtype(),
-		"CValidatorUnitCompareDetectRange": UnspecifiedSubtype(),
-		"CValidatorUnitCompareField": UnspecifiedSubtype(),
-		"CValidatorUnitCompareHeight": UnspecifiedSubtype(),
-		"CValidatorUnitCompareKillCount": UnspecifiedSubtype(),
-		"CValidatorUnitCompareMarkerCount": UnspecifiedSubtype(),
-		"CValidatorUnitCompareMoverPhase": UnspecifiedSubtype(),
-		"CValidatorUnitCompareOrderCount": UnspecifiedSubtype(),
-		"CValidatorUnitCompareOrderTargetRange": UnspecifiedSubtype(),
-		"CValidatorUnitComparePowerSourceLevel": UnspecifiedSubtype(),
-		"CValidatorUnitComparePowerUserLevel": UnspecifiedSubtype(),
-		"CValidatorUnitCompareRallyPointCount": UnspecifiedSubtype(),
-		"CValidatorUnitCompareResourceContents": UnspecifiedSubtype(),
-		"CValidatorUnitCompareResourceHarvesters": UnspecifiedSubtype(),
-		"CValidatorUnitCompareSpeed": UnspecifiedSubtype(),
-		"CValidatorUnitCompareVeterancyLevel": UnspecifiedSubtype(),
-		"CValidatorUnitCompareVital": UnspecifiedSubtype(),
-		"CValidatorUnitCompareVitality": UnspecifiedSubtype(),
-		"CValidatorUnitDetected": UnspecifiedSubtype(),
-		"CValidatorUnitFilters": UnspecifiedSubtype(),
-		"CValidatorUnitFlying": UnspecifiedSubtype(),
-		"CValidatorUnitInWeaponRange": UnspecifiedSubtype(),
-		"CValidatorUnitInventory": UnspecifiedSubtype(),
-		"CValidatorUnitInventoryContainsItem": UnspecifiedSubtype(),
-		"CValidatorUnitInventoryIsFull": UnspecifiedSubtype(),
-		"CValidatorUnitKinetic": UnspecifiedSubtype(),
-		"CValidatorUnitLastDamagePlayer": UnspecifiedSubtype(),
-		"CValidatorUnitMissileNullified": UnspecifiedSubtype(),
-		"CValidatorUnitMover": UnspecifiedSubtype(),
-		"CValidatorUnitOrder": UnspecifiedSubtype(),
-		"CValidatorUnitOrderQueue": UnspecifiedSubtype(),
-		"CValidatorUnitOrderTargetPathable": UnspecifiedSubtype(),
-		"CValidatorUnitOrderTargetType": UnspecifiedSubtype(),
-		"CValidatorUnitPathable": UnspecifiedSubtype(),
-		"CValidatorUnitPathing": UnspecifiedSubtype(),
-		"CValidatorUnitScanning": UnspecifiedSubtype(),
-		"CValidatorUnitState": UnspecifiedSubtype(),
-		"CValidatorUnitTestWeaponType": UnspecifiedSubtype(),
-		"CValidatorUnitType": UnspecifiedSubtype(),
-		"CValidatorUnitWeaponAnimating": UnspecifiedSubtype(),
-		"CValidatorUnitWeaponFiring": UnspecifiedSubtype(),
-		"CValidatorUnitWeaponPlane": UnspecifiedSubtype(),
-	},
-	
-	"Weapon":{
-		"CWeapon": UnspecifiedSubtype(),
-		"CWeaponLegacy": UnspecifiedSubtype(),
-		"CWeaponStrafe": UnspecifiedSubtype(),
-	},
-	
-	"ArmyCategory":{
-		"CArmyCategory": UnspecifiedSubtype(),
-	},
-	
-	"ArmyUnit":{
-		"CArmyUnit": UnspecifiedSubtype(),
-	},
-	
-	"ArmyUpgrade":{
-		"CArmyUpgrade": UnspecifiedSubtype(),
-	},
-	
-	"BankCondition":{
-		"CBankConditionCombine": UnspecifiedSubtype(),
-		"CBankConditionCompare": UnspecifiedSubtype(),
-		"CBankConditionCompareValueCount": UnspecifiedSubtype(),
-		"CBankConditionCompareValueInteger": UnspecifiedSubtype(),
-		"CBankConditionCompareValueString": UnspecifiedSubtype(),
-		"CBankConditionCompareValueSum": UnspecifiedSubtype(),
-		"CBankConditionCurrentMap": UnspecifiedSubtype(),
-	},
-	
-	"Campaign":{
-		"CCampaign": UnspecifiedSubtype(),
-	},
-	
-	"Character":{
-		"CCharacter": UnspecifiedSubtype(),
-	},
-	
-	"Commander":{
-		"CCommander": UnspecifiedSubtype(),
-	},
-	
-	"Conversation":{
-		"CConversation": UnspecifiedSubtype(),
-	},
-	
-	"ConversationState":{
-		"CConversationState": UnspecifiedSubtype(),
-	},
-	
-	"Location":{
-		"CLocation": UnspecifiedSubtype(),
-	},
-	
-	"Map":{
-		"CMap": UnspecifiedSubtype(),
-	},
-	
-	"Objective":{
-		"CObjective": UnspecifiedSubtype(),
-	},
-	
-	"Preload":{
-		"CPreload": UnspecifiedSubtype(),
-		"CPreloadActor": UnspecifiedSubtype(),
-		"CPreloadAsset": UnspecifiedSubtype(),
-		"CPreloadConversation": UnspecifiedSubtype(),
-		"CPreloadModel": UnspecifiedSubtype(),
-		"CPreloadScene": UnspecifiedSubtype(),
-		"CPreloadSound": UnspecifiedSubtype(),
-		"CPreloadUnit": UnspecifiedSubtype(),
-	},
-	
-	"Actor":{
-		"CActor": UnspecifiedSubtype(),
-		"CActorAction": UnspecifiedSubtype(),
-		"CActorActionOverride": UnspecifiedSubtype(),
-		"CActorArc": UnspecifiedSubtype(),
-		"CActorBase": UnspecifiedSubtype(),
-		"CActorBatch": UnspecifiedSubtype(),
-		"CActorBeamSimple": UnspecifiedSubtype(),
-		"CActorBeamStandard": UnspecifiedSubtype(),
-		"CActorBearings": UnspecifiedSubtype(),
-		"CActorBlob": UnspecifiedSubtype(),
-		"CActorCamera": UnspecifiedSubtype(),
-		"CActorCameraModel": UnspecifiedSubtype(),
-		"CActorCreep": UnspecifiedSubtype(),
-		"CActorCutscene": UnspecifiedSubtype(),
-		"CActorDoodad": UnspecifiedSubtype(),
-		"CActorDoodadPreserver": UnspecifiedSubtype(),
-		"CActorEditorCamera": UnspecifiedSubtype(),
-		"CActorEditorPoint": UnspecifiedSubtype(),
-		"CActorEventMacro": UnspecifiedSubtype(),
-		"CActorEventMacroRunnable": UnspecifiedSubtype(),
-		"CActorFoliageFXSpawner": UnspecifiedSubtype(),
-		"CActorForce": UnspecifiedSubtype(),
-		"CActorForceBox": UnspecifiedSubtype(),
-		"CActorForceConeRoundedEnd": UnspecifiedSubtype(),
-		"CActorForceCylinder": UnspecifiedSubtype(),
-		"CActorForceSphere": UnspecifiedSubtype(),
-		"CActorGlobalConfig": UnspecifiedSubtype(),
-		"CActorLightModel": UnspecifiedSubtype(),
-		"CActorLightOmni": UnspecifiedSubtype(),
-		"CActorLightOmniModel": UnspecifiedSubtype(),
-		"CActorLightSpot": UnspecifiedSubtype(),
-		"CActorLightSpotModel": UnspecifiedSubtype(),
-		"CActorList": UnspecifiedSubtype(),
-		"CActorLookAt": UnspecifiedSubtype(),
-		"CActorMinimap": UnspecifiedSubtype(),
-		"CActorMissile": UnspecifiedSubtype(),
-		"CActorModel": UnspecifiedSubtype(),
-		"CActorModelMaterial": UnspecifiedSubtype(),
-		"CActorPortrait": UnspecifiedSubtype(),
-		"CActorPower": UnspecifiedSubtype(),
-		"CActorProgress": UnspecifiedSubtype(),
-		"CActorPropertyCurveSet": UnspecifiedSubtype(),
-		"CActorQuad": UnspecifiedSubtype(),
-		"CActorQueryResponse": UnspecifiedSubtype(),
-		"CActorRange": UnspecifiedSubtype(),
-		"CActorRegion": UnspecifiedSubtype(),
-		"CActorRegionArc": UnspecifiedSubtype(),
-		"CActorRegionCircle": UnspecifiedSubtype(),
-		"CActorRegionGame": UnspecifiedSubtype(),
-		"CActorRegionQuad": UnspecifiedSubtype(),
-		"CActorRegionWater": UnspecifiedSubtype(),
-		"CActorScene": UnspecifiedSubtype(),
-		"CActorSelection": UnspecifiedSubtype(),
-		"CActorSetQueried": UnspecifiedSubtype(),
-		"CActorShadow": UnspecifiedSubtype(),
-		"CActorShield": UnspecifiedSubtype(),
-		"CActorShieldImpact": UnspecifiedSubtype(),
-		"CActorSimple": UnspecifiedSubtype(),
-		"CActorSite": UnspecifiedSubtype(),
-		"CActorSiteBillboard": UnspecifiedSubtype(),
-		"CActorSiteMover": UnspecifiedSubtype(),
-		"CActorSiteOp2DRotation": UnspecifiedSubtype(),
-		"CActorSiteOpAction": UnspecifiedSubtype(),
-		"CActorSiteOpAttach": UnspecifiedSubtype(),
-		"CActorSiteOpAttachVolume": UnspecifiedSubtype(),
-		"CActorSiteOpBanker": UnspecifiedSubtype(),
-		"CActorSiteOpBankerUnit": UnspecifiedSubtype(),
-		"CActorSiteOpBasic": UnspecifiedSubtype(),
-		"CActorSiteOpCursor": UnspecifiedSubtype(),
-		"CActorSiteOpDeathMotion": UnspecifiedSubtype(),
-		"CActorSiteOpEffect": UnspecifiedSubtype(),
-		"CActorSiteOpForward": UnspecifiedSubtype(),
-		"CActorSiteOpGameCameraFollow": UnspecifiedSubtype(),
-		"CActorSiteOpHeight": UnspecifiedSubtype(),
-		"CActorSiteOpHigherOfTerrainAndWater": UnspecifiedSubtype(),
-		"CActorSiteOpHostBearings": UnspecifiedSubtype(),
-		"CActorSiteOpHostedOffset": UnspecifiedSubtype(),
-		"CActorSiteOpIncoming": UnspecifiedSubtype(),
-		"CActorSiteOpLocalOffset": UnspecifiedSubtype(),
-		"CActorSiteOpOrbiter": UnspecifiedSubtype(),
-		"CActorSiteOpPatch": UnspecifiedSubtype(),
-		"CActorSiteOpPhysicsImpact": UnspecifiedSubtype(),
-		"CActorSiteOpRandomPointInCircle": UnspecifiedSubtype(),
-		"CActorSiteOpRandomPointInCrossbar": UnspecifiedSubtype(),
-		"CActorSiteOpRandomPointInSphere": UnspecifiedSubtype(),
-		"CActorSiteOpRotationExplicit": UnspecifiedSubtype(),
-		"CActorSiteOpRotationRandom": UnspecifiedSubtype(),
-		"CActorSiteOpRotationSmooth": UnspecifiedSubtype(),
-		"CActorSiteOpRotationVariancer": UnspecifiedSubtype(),
-		"CActorSiteOpRotator": UnspecifiedSubtype(),
-		"CActorSiteOpSelectionOffset": UnspecifiedSubtype(),
-		"CActorSiteOpSerpentHead": UnspecifiedSubtype(),
-		"CActorSiteOpSerpentSegment": UnspecifiedSubtype(),
-		"CActorSiteOpShadow": UnspecifiedSubtype(),
-		"CActorSiteOpTether": UnspecifiedSubtype(),
-		"CActorSiteOpTilter": UnspecifiedSubtype(),
-		"CActorSiteOpTipability": UnspecifiedSubtype(),
-		"CActorSiteOpUp": UnspecifiedSubtype(),
-		"CActorSiteOpZ": UnspecifiedSubtype(),
-		"CActorSiteOrbiter": UnspecifiedSubtype(),
-		"CActorSiteRocker": UnspecifiedSubtype(),
-		"CActorSnapshot": UnspecifiedSubtype(),
-		"CActorSound": UnspecifiedSubtype(),
-		"CActorSplat": UnspecifiedSubtype(),
-		"CActorSquib": UnspecifiedSubtype(),
-		"CActorStateMonitor": UnspecifiedSubtype(),
-		"CActorTerrain": UnspecifiedSubtype(),
-		"CActorTerrainDeformer": UnspecifiedSubtype(),
-		"CActorText": UnspecifiedSubtype(),
-		"CActorTurret": UnspecifiedSubtype(),
-		"CActorUnit": UnspecifiedSubtype(),
-	},
-	
-	"AttachMethod":{
-		"CAttachMethod": UnspecifiedSubtype(),
-		"CAttachMethodArcTest": UnspecifiedSubtype(),
-		"CAttachMethodAttachType": UnspecifiedSubtype(),
-		"CAttachMethodBestMatch": UnspecifiedSubtype(),
-		"CAttachMethodFilter": UnspecifiedSubtype(),
-		"CAttachMethodIncoming": UnspecifiedSubtype(),
-		"CAttachMethodNodeOccupancy": UnspecifiedSubtype(),
-		"CAttachMethodNodeOccupancy2": UnspecifiedSubtype(),
-		"CAttachMethodNumericField": UnspecifiedSubtype(),
-		"CAttachMethodPattern": UnspecifiedSubtype(),
-		"CAttachMethodPortAllocator": UnspecifiedSubtype(),
-		"CAttachMethodProximity": UnspecifiedSubtype(),
-		"CAttachMethodRandom": UnspecifiedSubtype(),
-		"CAttachMethodReduction": UnspecifiedSubtype(),
-		"CAttachMethodVolumesRequery": UnspecifiedSubtype(),
-		"CAttachMethodVolumesTargets": UnspecifiedSubtype(),
-		"CAttachMethodVolumesWeightedPick": UnspecifiedSubtype(),
-	},
-	
-	"Beam":{
-		"CBeamAsyncLinear": UnspecifiedSubtype(),
-	},
-	
-	"Button":{
-		"CButton": UnspecifiedSubtype(),
-	},
-	
-	"DSP":{
-		"CDSPChorus": UnspecifiedSubtype(),
-		"CDSPCompressor": UnspecifiedSubtype(),
-		"CDSPCustomCompressor": UnspecifiedSubtype(),
-		"CDSPDistortion": UnspecifiedSubtype(),
-		"CDSPEcho": UnspecifiedSubtype(),
-		"CDSPFlange": UnspecifiedSubtype(),
-		"CDSPHighPass": UnspecifiedSubtype(),
-		"CDSPLimiter": UnspecifiedSubtype(),
-		"CDSPLowPass": UnspecifiedSubtype(),
-		"CDSPLowPassSimple": UnspecifiedSubtype(),
-		"CDSPNormalize": UnspecifiedSubtype(),
-		"CDSPParamEQ": UnspecifiedSubtype(),
-		"CDSPPitchShift": UnspecifiedSubtype(),
-		"CDSPReverb": UnspecifiedSubtype(),
-	},
-	
-	"LensFlareSet":{
-		"CLensFlareSet": UnspecifiedSubtype(),
-	},
-	
-	"Light":{
-		"CLight": UnspecifiedSubtype(),
-	},
-	
-	"Model":{
-		"CModel": UnspecifiedSubtype(),
-		"CModelFoliage": UnspecifiedSubtype(),
-	},
-	
-	"Reverb":{
-		"CReverb": UnspecifiedSubtype(),
-	},
-	
-	"Shape":{
-		"CShape": UnspecifiedSubtype(),
-		"CShapeArc": UnspecifiedSubtype(),
-		"CShapeQuad": UnspecifiedSubtype(),
-	},
-	
-	"Sound":{
-		"CSound": UnspecifiedSubtype(),
-	},
-	
-	"SoundExclusivity":{
-		"CSoundExclusivity": UnspecifiedSubtype(),
-	},
-	
-	"SoundMixSnapshot":{
-		"CSoundMixSnapshot": UnspecifiedSubtype(),
-	},
-	
-	"Soundtrack":{
-		"CSoundtrack": UnspecifiedSubtype(),
-	},
-	
-	"Texture":{
-		"CTexture": UnspecifiedSubtype(),
-	},
-	
-	"Cliff":{
-		"CCliff": UnspecifiedSubtype(),
-	},
-	
-	"CliffMesh":{
-		"CCliffMesh": UnspecifiedSubtype(),
-	},
-	
-	"FoW":{
-		"CFoW": UnspecifiedSubtype(),
-	},
-	
-	"PhysicsMaterial":{
-		"CPhysicsMaterial": UnspecifiedSubtype(),
-	},
-	
-	"Terrain":{
-		"CTerrain": UnspecifiedSubtype(),
-	},
-	
-	"TerrainObject":{
-		"CTerrainObject": UnspecifiedSubtype(),
-		"CCliffDoodad": UnspecifiedSubtype(), // I know, it's weird... but it's here
-	},
-	
-	"TerrainTex":{
-		"CTerrainTex": UnspecifiedSubtype(),
-	},
-	
-	"Tile":{
-		"CTile": UnspecifiedSubtype(),
-	},
-	
-	"Water":{
-		"CWater": UnspecifiedSubtype(),
-	},
-	
-	"Artifact":{
-		"CArtifact": UnspecifiedSubtype(),
-	},
-	
-	"ArtifactSlot":{
-		"CArtifactSlot": UnspecifiedSubtype(),
-	},
-	
-	"Config":{
-		"CConfig": UnspecifiedSubtype(),
-	},
-	
-	"Hero":{
-		"CHero": UnspecifiedSubtype(),
-	},
-	
-	"HeroAbil":{
-		"CHeroAbil": UnspecifiedSubtype(),
-	},
-	
-	"HeroStat":{
-		"CHeroStat": UnspecifiedSubtype(),
-	},
-	
-	"Mount":{
-		"CMount": UnspecifiedSubtype(),
-	},
-	
-	"Skin":{
-		"CSkin": UnspecifiedSubtype(),
-	},
-	
-	"Talent":{
-		"CTalent": UnspecifiedSubtype(),
-	},
-	
-	"TalentProfile":{
-		"CTalentProfile": UnspecifiedSubtype(),
-	},
-	
-	"VoiceOver":{
-		"CVoiceOver": UnspecifiedSubtype(),
-	},
-	
-	"Alert":{
-		"CAlert": UnspecifiedSubtype(),
-	},
-	
-	"RaceBannerPack":{
-		"CRaceBannerPack": UnspecifiedSubtype(),
-	},
-	
-	"Camera":{
-		"CCamera": UnspecifiedSubtype(),
-	},
-	
-	"ConsoleSkin":{
-		"CConsoleSkin": UnspecifiedSubtype(),
-	},
-	
-	"Cursor":{
-		"CCursor": UnspecifiedSubtype(),
-	},
-	
-	"GameUI":{
-		"CGameUI": UnspecifiedSubtype(),
-	},
-	
-	"Bundle":{
-		"CBundle": UnspecifiedSubtype(),
-	},
-	
-	"Ping":{
-		"CPing": UnspecifiedSubtype(),
-	},
-	
-	"ColorStyle":{
-		"CColorStyle": UnspecifiedSubtype(),
-	},
-	
-	"Achievement":{
-		"CAchievement": UnspecifiedSubtype(),
-	},
-	
-	"AchievementTerm":{
-		"CAchievementTerm": UnspecifiedSubtype(),
-		"CAchievementTermAbilInteract": UnspecifiedSubtype(),
-		"CAchievementTermAbilLoad": UnspecifiedSubtype(),
-		"CAchievementTermAbilUse": UnspecifiedSubtype(),
-		"CAchievementTermAchievement": UnspecifiedSubtype(),
-		"CAchievementTermBehaviorCount": UnspecifiedSubtype(),
-		"CAchievementTermBehaviorElapsed": UnspecifiedSubtype(),
-		"CAchievementTermBehaviorState": UnspecifiedSubtype(),
-		"CAchievementTermCombine": UnspecifiedSubtype(),
-		"CAchievementTermEffectAbsorbed": UnspecifiedSubtype(),
-		"CAchievementTermEffectDamaged": UnspecifiedSubtype(),
-		"CAchievementTermEffectDodged": UnspecifiedSubtype(),
-		"CAchievementTermEffectHealed": UnspecifiedSubtype(),
-		"CAchievementTermEffectKilled": UnspecifiedSubtype(),
-		"CAchievementTermEffectUse": UnspecifiedSubtype(),
-		"CAchievementTermGeneric": UnspecifiedSubtype(),
-		"CAchievementTermReplay": UnspecifiedSubtype(),
-		"CAchievementTermScoreValue": UnspecifiedSubtype(),
-		"CAchievementTermTime": UnspecifiedSubtype(),
-		"CAchievementTermUnitBirth": UnspecifiedSubtype(),
-		"CAchievementTermUnitDeath": UnspecifiedSubtype(),
-		"CAchievementTermUnitKills": UnspecifiedSubtype(),
-		"CAchievementTermUnitRegen": UnspecifiedSubtype(),
-		"CAchievementTermUnitSupplyLoss": UnspecifiedSubtype(),
-	},
-	
-	"Boost":{
-		"CBoost": UnspecifiedSubtype(),
-	},
-	
-	"DecalPack":{
-		"CDecalPack": UnspecifiedSubtype(),
-	},
-	
-	"Emoticon":{
-		"CEmoticon": UnspecifiedSubtype(),
-	},
-	
-	"EmoticonPack":{
-		"CEmoticonPack": UnspecifiedSubtype(),
-	},
-	
-	"Error":{
-	},
-	
-	"Game":{
-		"CGame": UnspecifiedSubtype(),
-	},
-	
-	"Herd":{
-		"CHerd": UnspecifiedSubtype(),
-	},
-	
-	"HerdNode":{
-		"CHerdNode": UnspecifiedSubtype(),
-	},
-	
-	"ItemClass":{
-		"CItemClass": UnspecifiedSubtype(),
-	},
-	
-	"ItemContainer":{
-		"CItemContainer": UnspecifiedSubtype(),
-	},
-	
-	"Kinetic":{
-		"CKinetic": UnspecifiedSubtype(),
-		"CKineticDistance": UnspecifiedSubtype(),
-		"CKineticFollow": UnspecifiedSubtype(),
-		"CKineticRotate": UnspecifiedSubtype(),
-		"CKineticSequence": UnspecifiedSubtype(),
-		"CKineticSet": UnspecifiedSubtype(),
-		"CKineticTranslate": UnspecifiedSubtype(),
-	},
-	
-	"PortraitPack":{
-		"CPortraitPack": UnspecifiedSubtype(),
-	},
-	
-	"PremiumMap":{
-		"CPremiumMap": UnspecifiedSubtype(),
-	},
-	
-	"Race":{
-		"CRace": UnspecifiedSubtype(),
-	},
-	
-	"RequirementNode":{
-		"CRequirementNode": UnspecifiedSubtype(),
-		"CRequirementAllowAbil": UnspecifiedSubtype(),
-		"CRequirementAllowBehavior": UnspecifiedSubtype(),
-		"CRequirementAllowUnit": UnspecifiedSubtype(),
-		"CRequirementAllowUpgrade": UnspecifiedSubtype(),
-		"CRequirementAnd": UnspecifiedSubtype(),
-		"CRequirementConst": UnspecifiedSubtype(),
-		"CRequirementCountAbil": UnspecifiedSubtype(),
-		"CRequirementCountBehavior": UnspecifiedSubtype(),
-		"CRequirementCountUnit": UnspecifiedSubtype(),
-		"CRequirementCountUpgrade": UnspecifiedSubtype(),
-		"CRequirementDiv": UnspecifiedSubtype(),
-		"CRequirementEq": UnspecifiedSubtype(),
-		"CRequirementGT": UnspecifiedSubtype(),
-		"CRequirementGTE": UnspecifiedSubtype(),
-		"CRequirementLT": UnspecifiedSubtype(),
-		"CRequirementLTE": UnspecifiedSubtype(),
-		"CRequirementMod": UnspecifiedSubtype(),
-		"CRequirementMul": UnspecifiedSubtype(),
-		"CRequirementNE": UnspecifiedSubtype(),
-		"CRequirementNot": UnspecifiedSubtype(),
-		"CRequirementOdd": UnspecifiedSubtype(),
-		"CRequirementOr": UnspecifiedSubtype(),
-		"CRequirementSum": UnspecifiedSubtype(),
-		"CRequirementXor": UnspecifiedSubtype(),
-	},
-	
-	"Reward":{
-		"CReward": UnspecifiedSubtype(),
-		"CRewardConsoleSkin": UnspecifiedSubtype(),
-		"CRewardDecal": UnspecifiedSubtype(),
-		"CRewardEmoticon": UnspecifiedSubtype(),
-		"CRewardIcon": UnspecifiedSubtype(),
-		"CRewardModel": UnspecifiedSubtype(),
-		"CRewardPoints": UnspecifiedSubtype(),
-		"CRewardPortrait": UnspecifiedSubtype(),
-		"CRewardPortraitInGame": UnspecifiedSubtype(),
-		"CRewardRaceBanner": UnspecifiedSubtype(),
-		"CRewardSpray": UnspecifiedSubtype(),
-		"CRewardSprayUseDecal": UnspecifiedSubtype(),
-		"CRewardTrophy": UnspecifiedSubtype(),
-		"CRewardVoicePack": UnspecifiedSubtype(),
-	},
-	
-	"ScoreResult":{
-		"CScoreResult": UnspecifiedSubtype(),
-		"CScoreResultBuildOrder": UnspecifiedSubtype(),
-		"CScoreResultExperience": UnspecifiedSubtype(),
-		"CScoreResultGraph": UnspecifiedSubtype(),
-		"CScoreResultPerformance": UnspecifiedSubtype(),
-		"CScoreResultRoot": UnspecifiedSubtype(),
-		"CScoreResultScore": UnspecifiedSubtype(),
-	},
-	
-	"ScoreValue":{
-		"CScoreValue": UnspecifiedSubtype(),
-		"CScoreValueCombine": UnspecifiedSubtype(),
-		"CScoreValueConstant": UnspecifiedSubtype(),
-		"CScoreValueCustom": UnspecifiedSubtype(),
-		"CScoreValueStandard": UnspecifiedSubtype(),
-	},
-	
-	"SkinPack":{
-		"CSkinPack": UnspecifiedSubtype(),
-	},
-	
-	"Spray":{
-		"CSpray": UnspecifiedSubtype(),
-	},
-	
-	"SprayPack":{
-		"CSprayPack": UnspecifiedSubtype(),
-	},
-	
-	"TacCooldown":{
-		"CTacCooldown": UnspecifiedSubtype(),
-	},
-	
-	"Tactical":{
-		"CTactical": UnspecifiedSubtype(),
-		"CTacticalOrder": UnspecifiedSubtype(),
-		"CTacticalSet": UnspecifiedSubtype(),
-	},
-	
-	"TargetFind":{
-		"CTargetFind": UnspecifiedSubtype(),
-		"CTargetFindBestPoint": UnspecifiedSubtype(),
-		"CTargetFindEffect": UnspecifiedSubtype(),
-		"CTargetFindEnumArea": UnspecifiedSubtype(),
-		"CTargetFindLastAttacker": UnspecifiedSubtype(),
-		"CTargetFindOffset": UnspecifiedSubtype(),
-		"CTargetFindOrder": UnspecifiedSubtype(),
-		"CTargetFindRallyPoint": UnspecifiedSubtype(),
-		"CTargetFindSet": UnspecifiedSubtype(),
-		"CTargetFindWorkerRallyPoint": UnspecifiedSubtype(),
-	},
-	
-	"TargetSort":{
-		"CTargetSort": UnspecifiedSubtype(),
-		"CTargetSortAlliance": UnspecifiedSubtype(),
-		"CTargetSortAngle": UnspecifiedSubtype(),
-		"CTargetSortBehaviorCount": UnspecifiedSubtype(),
-		"CTargetSortBehaviorDuration": UnspecifiedSubtype(),
-		"CTargetSortChargeCount": UnspecifiedSubtype(),
-		"CTargetSortChargeRegen": UnspecifiedSubtype(),
-		"CTargetSortCooldown": UnspecifiedSubtype(),
-		"CTargetSortDistance": UnspecifiedSubtype(),
-		"CTargetSortField": UnspecifiedSubtype(),
-		"CTargetSortInterruptible": UnspecifiedSubtype(),
-		"CTargetSortMarker": UnspecifiedSubtype(),
-		"CTargetSortPowerSourceLevel": UnspecifiedSubtype(),
-		"CTargetSortPowerUserLevel": UnspecifiedSubtype(),
-		"CTargetSortPriority": UnspecifiedSubtype(),
-		"CTargetSortRandom": UnspecifiedSubtype(),
-		"CTargetSortValidator": UnspecifiedSubtype(),
-		"CTargetSortVital": UnspecifiedSubtype(),
-		"CTargetSortVitalFraction": UnspecifiedSubtype(),
-	},
-	
-	"TextureSheet":{
-		"CTextureSheet": UnspecifiedSubtype(),
-	},
-	
-	"Trophy":{
-		"CTrophy": UnspecifiedSubtype(),
-	},
-	
-	"User":{
-		"CUser": UnspecifiedSubtype(),
-	},
-	
-	"VoicePack":{
-		"CVoicePack": UnspecifiedSubtype(),
-	},
-	
-	"WarChest":{
-		"CWarChest": UnspecifiedSubtype(),
-	},
-	
-	"WarChestSeason":{
-		"CWarChestSeason": UnspecifiedSubtype(),
-	},
-	
-	"StimPack":{
-		"CStimPack": UnspecifiedSubtype(),
-	},	
+	"Abil": {
+		"CAbil": unspecifiedSubtype(),
+		"CAbilArmMagazine": unspecifiedSubtype(),
+		"CAbilAttack": unspecifiedSubtype(),
+		"CAbilAttackModifier": unspecifiedSubtype(),
+		"CAbilAugment": unspecifiedSubtype(),
+		"CAbilBattery": unspecifiedSubtype(),
+		"CAbilBeacon": unspecifiedSubtype(),
+		"CAbilBehavior": unspecifiedSubtype(),
+		"CAbilBuild": unspecifiedSubtype(),
+		"CAbilBuildable": unspecifiedSubtype(),
+		"CAbilEffect": unspecifiedSubtype(),
+		"CAbilEffectInstant": unspecifiedSubtype(),
+		"CAbilEffectTarget": unspecifiedSubtype(),
+		"CAbilHarvest": unspecifiedSubtype(),
+		"CAbilInteract": unspecifiedSubtype(),
+		"CAbilInventory": unspecifiedSubtype(),
+		"CAbilLearn": unspecifiedSubtype(),
+		"CAbilMerge": unspecifiedSubtype(),
+		"CAbilMergeable": unspecifiedSubtype(),
+		"CAbilMorph": unspecifiedSubtype(),
+		"CAbilMorphPlacement": unspecifiedSubtype(),
+		"CAbilMove": unspecifiedSubtype(),
+		"CAbilPawn": unspecifiedSubtype(),
+		"CAbilProgress": unspecifiedSubtype(),
+		"CAbilQueue": unspecifiedSubtype(),
+		"CAbilQueueable": unspecifiedSubtype(),
+		"CAbilRally": unspecifiedSubtype(),
+		"CAbilRedirect": unspecifiedSubtype(),
+		"CAbilRedirectInstant": unspecifiedSubtype(),
+		"CAbilRedirectTarget": unspecifiedSubtype(),
+		"CAbilResearch": unspecifiedSubtype(),
+		"CAbilRevive": unspecifiedSubtype(),
+		"CAbilSpecialize": unspecifiedSubtype(),
+		"CAbilStop": unspecifiedSubtype(),
+		"CAbilTrain": unspecifiedSubtype(),
+		"CAbilTransport": unspecifiedSubtype(),
+		"CAbilWarpTrain": unspecifiedSubtype(),
+		"CAbilWarpable": unspecifiedSubtype(),
+	},
+
+	"Accumulator": {
+		"CAccumulator": unspecifiedSubtype(),
+		"CAccumulatorAbilLevel": unspecifiedSubtype(),
+		"CAccumulatorArithmetic": unspecifiedSubtype(),
+		"CAccumulatorAttributePoints": unspecifiedSubtype(),
+		"CAccumulatorBehavior": unspecifiedSubtype(),
+		"CAccumulatorCargo": unspecifiedSubtype(),
+		"CAccumulatorConstant": unspecifiedSubtype(),
+		"CAccumulatorDistance": unspecifiedSubtype(),
+		"CAccumulatorEffectAmount": unspecifiedSubtype(),
+		"CAccumulatorSwitch": unspecifiedSubtype(),
+		"CAccumulatorTrackedUnitCount": unspecifiedSubtype(),
+		"CAccumulatorUnitCustomValue": unspecifiedSubtype(),
+		"CAccumulatorUserData": unspecifiedSubtype(),
+		"CAccumulatorVeterancyLevel": unspecifiedSubtype(),
+		"CAccumulatorVitals": unspecifiedSubtype(),
+	},
+
+	"Behavior": {
+		"CBehavior": unspecifiedSubtype(),
+		"CBehaviorAttackModifier": unspecifiedSubtype(),
+		"CBehaviorAttribute": unspecifiedSubtype(),
+		"CBehaviorBuff": unspecifiedSubtype(),
+		"CBehaviorClickResponse": unspecifiedSubtype(),
+		"CBehaviorConjoined": unspecifiedSubtype(),
+		"CBehaviorCreepSource": unspecifiedSubtype(),
+		"CBehaviorJump": unspecifiedSubtype(),
+		"CBehaviorPowerSource": unspecifiedSubtype(),
+		"CBehaviorPowerUser": unspecifiedSubtype(),
+		"CBehaviorResource": unspecifiedSubtype(),
+		"CBehaviorReveal": unspecifiedSubtype(),
+		"CBehaviorSpawn": unspecifiedSubtype(),
+		"CBehaviorUnitTracker": unspecifiedSubtype(),
+		"CBehaviorVeterancy": unspecifiedSubtype(),
+		"CBehaviorWander": unspecifiedSubtype(),
+	},
+
+	"DataCollection": {
+		"CDataCollection": unspecifiedSubtype(),
+		"CDataCollectionAbil": unspecifiedSubtype(),
+		"CDataCollectionUnit": unspecifiedSubtype(),
+		"CDataCollectionUpgrade": unspecifiedSubtype(),
+	},
+
+	"DataCollectionPattern": {
+		"CDataCollectionPattern": unspecifiedSubtype(),
+	},
+
+	"Effect": {
+		"CEffect": subtype("Effect", {
+			parent: null,
+			abstract: true,
+			fields: {
+				"AINotifyFlags": namedArray({
+					"HelpFriend": simpleType("bool"),
+					"HurtFriend": simpleType("bool"),
+					"HurtEnemy": simpleType("bool"),
+					"OnlyWorkers": simpleType("bool"),
+					"MinorDanger": simpleType("bool"),
+					"MajorDanger": simpleType("bool"),
+				}),
+				
+				"Alert": simpleType("CAlertLink"),
+				"CanBeBlocked": simpleType("bool"),
+				"CasterHistory": e_effectHistory,
+				"Chance": simpleType("CFixed", 1, {min:0, max:1}),
+				"DamageModifierSource": struct({
+					"Effect": simpleType("CEffectLink"),
+					"History": e_effectHistory,
+					"Value": e_effectUnit,
+				}),
+				
+				"Marker": struct({
+					"Count": simpleType("int32", 1),
+					"Duration": simpleType("CFixed", 0),
+					"Link": simpleType("CEffectLink", "Effect/##id##"),
+					"MatchFlags": namedArray({
+						"Id": simpleType("bool"),
+						"Link": simpleType("bool"),
+						"CasterPlayer": simpleType("bool"),
+						"CasterUnit": simpleType("bool"),
+					}),
+					
+					"MismatchFlags": namedArray({
+						"Id": simpleType("bool"),
+						"Link": simpleType("bool"),
+						"CasterPlayer": simpleType("bool"),
+						"CasterUnit": simpleType("bool"),
+					}),
+				}),
+				
+				"OwningPlayer": struct({
+					"Effect": simpleType("CEffectLink"),
+					"Value": e_effectPlayer,
+				}),
+				
+				"PreloadValidatorArray": array(simpleType("CValidatorLink")),
+				"TechAliasArray": array(simpleType("CString")),
+				"ValidatorArray": array(simpleType("CValidatorLink")),
+			},
+		}),
+		
+		"CEffectAddTrackedUnit": unspecifiedSubtype(),
+		"CEffectAddTrackedUnits": unspecifiedSubtype(),
+		"CEffectApplyBehavior": unspecifiedSubtype(),
+		"CEffectApplyForce": unspecifiedSubtype(),
+		"CEffectApplyKinetic": unspecifiedSubtype(),
+		"CEffectCancelOrder": unspecifiedSubtype(),
+		"CEffectClearTrackedUnits": unspecifiedSubtype(),
+		"CEffectCreateHealer": unspecifiedSubtype(),
+		"CEffectCreatePersistent": unspecifiedSubtype(),
+		"CEffectCreateUnit": unspecifiedSubtype(),
+		
+		"CEffectCreep": subtype("Effect", {
+			parent: "CEffect",
+			fields: {
+				"CreepFlags": namedArray({
+					"RemoveCreep": simpleType("bool"),
+					"Permanent": simpleType("bool", 1),
+					"Immediate": simpleType("bool"),
+					"Ideal": simpleType("bool"),
+				}),
+				
+				"Radius": combine(
+					simpleType("CFixed", 1),
+					struct({
+						"AccumulatorArray": array(simpleType("CAccumulatorLink")),
+					}),
+				),
+				
+				"WhichLocation": SEffectWhichLocation,
+			},
+		}),
+		
+		"CEffectDamage": unspecifiedSubtype(),
+		"CEffectDestroyPersistent": unspecifiedSubtype(),
+		"CEffectEnumArea": unspecifiedSubtype(),
+		"CEffectEnumInventory": unspecifiedSubtype(),
+		"CEffectEnumMagazine": unspecifiedSubtype(),
+		"CEffectEnumTrackedUnits": unspecifiedSubtype(),
+		"CEffectEnumTransport": unspecifiedSubtype(),
+		"CEffectIssueOrder": unspecifiedSubtype(),
+		"CEffectLastTarget": unspecifiedSubtype(),
+		"CEffectLaunchMissile": unspecifiedSubtype(),
+		"CEffectLoadContainer": unspecifiedSubtype(),
+		"CEffectModifyPlayer": unspecifiedSubtype(),
+		"CEffectModifyUnit": unspecifiedSubtype(),
+		"CEffectMorph": unspecifiedSubtype(),
+		"CEffectRandomPointInCircle": unspecifiedSubtype(),
+		"CEffectRedirectMissile": unspecifiedSubtype(),
+		"CEffectReleaseMagazine": unspecifiedSubtype(),
+		"CEffectRemoveBehavior": unspecifiedSubtype(),
+		"CEffectRemoveKinetic": unspecifiedSubtype(),
+		"CEffectRemoveTrackedUnit": unspecifiedSubtype(),
+		"CEffectReturnMagazine": unspecifiedSubtype(),
+		"CEffectSet": unspecifiedSubtype(),
+		"CEffectSwitch": unspecifiedSubtype(),
+		"CEffectTeleport": unspecifiedSubtype(),
+		"CEffectTransferBehavior": unspecifiedSubtype(),
+		"CEffectUseCalldown": unspecifiedSubtype(),
+		"CEffectUseMagazine": unspecifiedSubtype(),
+		"CEffectUserData": unspecifiedSubtype(),
+	},
+
+	"Footprint": {
+		"CFootprint": unspecifiedSubtype(),
+	},
+
+	"Item": {
+		"CItem": unspecifiedSubtype(),
+		"CItemAbil": unspecifiedSubtype(),
+		"CItemAbilPowerUp": unspecifiedSubtype(),
+		"CItemEffect": unspecifiedSubtype(),
+		"CItemEffectInstant": unspecifiedSubtype(),
+		"CItemEffectTarget": unspecifiedSubtype(),
+	},
+
+	"Loot": {
+		"CLoot": unspecifiedSubtype(),
+		"CLootEffect": unspecifiedSubtype(),
+		"CLootItem": unspecifiedSubtype(),
+		"CLootSet": unspecifiedSubtype(),
+		"CLootSpawn": unspecifiedSubtype(),
+		"CLootUnit": unspecifiedSubtype(),
+	},
+
+	"Mover": {
+		"CMover": unspecifiedSubtype(),
+		"CMoverAvoid": unspecifiedSubtype(),
+		"CMoverFlock": unspecifiedSubtype(),
+		"CMoverMissile": unspecifiedSubtype(),
+	},
+
+	"PlayerResponse": {
+		"CPlayerResponse": unspecifiedSubtype(),
+		"CPlayerResponseUnit": unspecifiedSubtype(),
+		"CPlayerResponseUnitBirth": unspecifiedSubtype(),
+		"CPlayerResponseUnitDamage": unspecifiedSubtype(),
+		"CPlayerResponseUnitDeath": unspecifiedSubtype(),
+	},
+
+	"Requirement": {
+		"CRequirement": unspecifiedSubtype(),
+	},
+
+	"Turret": {
+		"CTurret": unspecifiedSubtype(),
+	},
+
+	"Unit": {
+		"CUnit": unspecifiedSubtype(),
+		"CUnitHero": unspecifiedSubtype(),
+	},
+
+	"Upgrade": {
+		"CUpgrade": unspecifiedSubtype(),
+	},
+
+	"Validator": {
+		"CValidator": unspecifiedSubtype(),
+		"CValidatorCombine": unspecifiedSubtype(),
+		"CValidatorCompareTrackedUnitsCount": unspecifiedSubtype(),
+		"CValidatorCondition": unspecifiedSubtype(),
+		"CValidatorEffect": unspecifiedSubtype(),
+		"CValidatorEffectCompareDodged": unspecifiedSubtype(),
+		"CValidatorEffectCompareEvaded": unspecifiedSubtype(),
+		"CValidatorEffectTreeUserData": unspecifiedSubtype(),
+		"CValidatorFunction": unspecifiedSubtype(),
+		"CValidatorGameCommanderActive": unspecifiedSubtype(),
+		"CValidatorGameCompareTerrain": unspecifiedSubtype(),
+		"CValidatorGameCompareTimeEvent": unspecifiedSubtype(),
+		"CValidatorGameCompareTimeOfDay": unspecifiedSubtype(),
+		"CValidatorIsUnitTracked": unspecifiedSubtype(),
+		"CValidatorLocation": unspecifiedSubtype(),
+		"CValidatorLocationArc": unspecifiedSubtype(),
+		"CValidatorLocationCompareCliffLevel": unspecifiedSubtype(),
+		"CValidatorLocationComparePower": unspecifiedSubtype(),
+		"CValidatorLocationCompareRange": unspecifiedSubtype(),
+		"CValidatorLocationCreep": unspecifiedSubtype(),
+		"CValidatorLocationCrossChasm": unspecifiedSubtype(),
+		"CValidatorLocationCrossCliff": unspecifiedSubtype(),
+		"CValidatorLocationEnumArea": unspecifiedSubtype(),
+		"CValidatorLocationInPlayableMapArea": unspecifiedSubtype(),
+		"CValidatorLocationPathable": unspecifiedSubtype(),
+		"CValidatorLocationPlacement": unspecifiedSubtype(),
+		"CValidatorLocationShrub": unspecifiedSubtype(),
+		"CValidatorLocationType": unspecifiedSubtype(),
+		"CValidatorLocationVision": unspecifiedSubtype(),
+		"CValidatorPlayer": unspecifiedSubtype(),
+		"CValidatorPlayerAlliance": unspecifiedSubtype(),
+		"CValidatorPlayerCompareDifficulty": unspecifiedSubtype(),
+		"CValidatorPlayerCompareFoodAvailable": unspecifiedSubtype(),
+		"CValidatorPlayerCompareFoodUsed": unspecifiedSubtype(),
+		"CValidatorPlayerCompareFoodMade": unspecifiedSubtype(),
+		"CValidatorPlayerCompareRace": unspecifiedSubtype(),
+		"CValidatorPlayerCompareResource": unspecifiedSubtype(),
+		"CValidatorPlayerCompareResult": unspecifiedSubtype(),
+		"CValidatorPlayerCompareType": unspecifiedSubtype(),
+		"CValidatorPlayerFood": unspecifiedSubtype(),
+		"CValidatorPlayerRequirement": unspecifiedSubtype(),
+		"CValidatorUnit": unspecifiedSubtype(),
+		"CValidatorUnitAI": unspecifiedSubtype(),
+		"CValidatorUnitAbil": unspecifiedSubtype(),
+		"CValidatorUnitAlliance": unspecifiedSubtype(),
+		"CValidatorUnitArmor": unspecifiedSubtype(),
+		"CValidatorUnitBehaviorStackAlias": unspecifiedSubtype(),
+		"CValidatorUnitBehaviorState": unspecifiedSubtype(),
+		"CValidatorUnitCombatAI": unspecifiedSubtype(),
+		"CValidatorUnitCompareAIAreaEvalRatio": unspecifiedSubtype(),
+		"CValidatorUnitCompareAbilLevel": unspecifiedSubtype(),
+		"CValidatorUnitCompareAbilSkillPoint": unspecifiedSubtype(),
+		"CValidatorUnitCompareAbilStage": unspecifiedSubtype(),
+		"CValidatorUnitCompareAttackPriority": unspecifiedSubtype(),
+		"CValidatorUnitCompareBehaviorCount": unspecifiedSubtype(),
+		"CValidatorUnitCompareCargo": unspecifiedSubtype(),
+		"CValidatorUnitCompareChargeUsed": unspecifiedSubtype(),
+		"CValidatorUnitCompareCooldown": unspecifiedSubtype(),
+		"CValidatorUnitCompareDamageDealtTime": unspecifiedSubtype(),
+		"CValidatorUnitCompareDamageTakenTime": unspecifiedSubtype(),
+		"CValidatorUnitCompareDeath": unspecifiedSubtype(),
+		"CValidatorUnitCompareDetectRange": unspecifiedSubtype(),
+		"CValidatorUnitCompareField": unspecifiedSubtype(),
+		"CValidatorUnitCompareHeight": unspecifiedSubtype(),
+		"CValidatorUnitCompareKillCount": unspecifiedSubtype(),
+		"CValidatorUnitCompareMarkerCount": unspecifiedSubtype(),
+		"CValidatorUnitCompareMoverPhase": unspecifiedSubtype(),
+		"CValidatorUnitCompareOrderCount": unspecifiedSubtype(),
+		"CValidatorUnitCompareOrderTargetRange": unspecifiedSubtype(),
+		"CValidatorUnitComparePowerSourceLevel": unspecifiedSubtype(),
+		"CValidatorUnitComparePowerUserLevel": unspecifiedSubtype(),
+		"CValidatorUnitCompareRallyPointCount": unspecifiedSubtype(),
+		"CValidatorUnitCompareResourceContents": unspecifiedSubtype(),
+		"CValidatorUnitCompareResourceHarvesters": unspecifiedSubtype(),
+		"CValidatorUnitCompareSpeed": unspecifiedSubtype(),
+		"CValidatorUnitCompareVeterancyLevel": unspecifiedSubtype(),
+		"CValidatorUnitCompareVital": unspecifiedSubtype(),
+		"CValidatorUnitCompareVitality": unspecifiedSubtype(),
+		"CValidatorUnitDetected": unspecifiedSubtype(),
+		"CValidatorUnitFilters": unspecifiedSubtype(),
+		"CValidatorUnitFlying": unspecifiedSubtype(),
+		"CValidatorUnitInWeaponRange": unspecifiedSubtype(),
+		"CValidatorUnitInventory": unspecifiedSubtype(),
+		"CValidatorUnitInventoryContainsItem": unspecifiedSubtype(),
+		"CValidatorUnitInventoryIsFull": unspecifiedSubtype(),
+		"CValidatorUnitKinetic": unspecifiedSubtype(),
+		"CValidatorUnitLastDamagePlayer": unspecifiedSubtype(),
+		"CValidatorUnitMissileNullified": unspecifiedSubtype(),
+		"CValidatorUnitMover": unspecifiedSubtype(),
+		"CValidatorUnitOrder": unspecifiedSubtype(),
+		"CValidatorUnitOrderQueue": unspecifiedSubtype(),
+		"CValidatorUnitOrderTargetPathable": unspecifiedSubtype(),
+		"CValidatorUnitOrderTargetType": unspecifiedSubtype(),
+		"CValidatorUnitPathable": unspecifiedSubtype(),
+		"CValidatorUnitPathing": unspecifiedSubtype(),
+		"CValidatorUnitScanning": unspecifiedSubtype(),
+		"CValidatorUnitState": unspecifiedSubtype(),
+		"CValidatorUnitTestWeaponType": unspecifiedSubtype(),
+		"CValidatorUnitType": unspecifiedSubtype(),
+		"CValidatorUnitWeaponAnimating": unspecifiedSubtype(),
+		"CValidatorUnitWeaponFiring": unspecifiedSubtype(),
+		"CValidatorUnitWeaponPlane": unspecifiedSubtype(),
+	},
+
+	"Weapon": {
+		"CWeapon": unspecifiedSubtype(),
+		"CWeaponLegacy": unspecifiedSubtype(),
+		"CWeaponStrafe": unspecifiedSubtype(),
+	},
+
+	"ArmyCategory": {
+		"CArmyCategory": unspecifiedSubtype(),
+	},
+
+	"ArmyUnit": {
+		"CArmyUnit": unspecifiedSubtype(),
+	},
+
+	"ArmyUpgrade": {
+		"CArmyUpgrade": unspecifiedSubtype(),
+	},
+
+	"BankCondition": {
+		"CBankConditionCombine": unspecifiedSubtype(),
+		"CBankConditionCompare": unspecifiedSubtype(),
+		"CBankConditionCompareValueCount": unspecifiedSubtype(),
+		"CBankConditionCompareValueInteger": unspecifiedSubtype(),
+		"CBankConditionCompareValueString": unspecifiedSubtype(),
+		"CBankConditionCompareValueSum": unspecifiedSubtype(),
+		"CBankConditionCurrentMap": unspecifiedSubtype(),
+	},
+
+	"Campaign": {
+		"CCampaign": unspecifiedSubtype(),
+	},
+
+	"Character": {
+		"CCharacter": unspecifiedSubtype(),
+	},
+
+	"Commander": {
+		"CCommander": unspecifiedSubtype(),
+	},
+
+	"Conversation": {
+		"CConversation": unspecifiedSubtype(),
+	},
+
+	"ConversationState": {
+		"CConversationState": unspecifiedSubtype(),
+	},
+
+	"Location": {
+		"CLocation": unspecifiedSubtype(),
+	},
+
+	"Map": {
+		"CMap": unspecifiedSubtype(),
+	},
+
+	"Objective": {
+		"CObjective": unspecifiedSubtype(),
+	},
+
+	"Preload": {
+		"CPreload": unspecifiedSubtype(),
+		"CPreloadActor": unspecifiedSubtype(),
+		"CPreloadAsset": unspecifiedSubtype(),
+		"CPreloadConversation": unspecifiedSubtype(),
+		"CPreloadModel": unspecifiedSubtype(),
+		"CPreloadScene": unspecifiedSubtype(),
+		"CPreloadSound": unspecifiedSubtype(),
+		"CPreloadUnit": unspecifiedSubtype(),
+	},
+
+	"Actor": {
+		"CActor": unspecifiedSubtype(),
+		"CActorAction": unspecifiedSubtype(),
+		"CActorActionOverride": unspecifiedSubtype(),
+		"CActorArc": unspecifiedSubtype(),
+		"CActorBase": unspecifiedSubtype(),
+		"CActorBatch": unspecifiedSubtype(),
+		"CActorBeamSimple": unspecifiedSubtype(),
+		"CActorBeamStandard": unspecifiedSubtype(),
+		"CActorBearings": unspecifiedSubtype(),
+		"CActorBlob": unspecifiedSubtype(),
+		"CActorCamera": unspecifiedSubtype(),
+		"CActorCameraModel": unspecifiedSubtype(),
+		"CActorCreep": unspecifiedSubtype(),
+		"CActorCutscene": unspecifiedSubtype(),
+		"CActorDoodad": unspecifiedSubtype(),
+		"CActorDoodadPreserver": unspecifiedSubtype(),
+		"CActorEditorCamera": unspecifiedSubtype(),
+		"CActorEditorPoint": unspecifiedSubtype(),
+		"CActorEventMacro": unspecifiedSubtype(),
+		"CActorEventMacroRunnable": unspecifiedSubtype(),
+		"CActorFoliageFXSpawner": unspecifiedSubtype(),
+		"CActorForce": unspecifiedSubtype(),
+		"CActorForceBox": unspecifiedSubtype(),
+		"CActorForceConeRoundedEnd": unspecifiedSubtype(),
+		"CActorForceCylinder": unspecifiedSubtype(),
+		"CActorForceSphere": unspecifiedSubtype(),
+		"CActorGlobalConfig": unspecifiedSubtype(),
+		"CActorLightModel": unspecifiedSubtype(),
+		"CActorLightOmni": unspecifiedSubtype(),
+		"CActorLightOmniModel": unspecifiedSubtype(),
+		"CActorLightSpot": unspecifiedSubtype(),
+		"CActorLightSpotModel": unspecifiedSubtype(),
+		"CActorList": unspecifiedSubtype(),
+		"CActorLookAt": unspecifiedSubtype(),
+		"CActorMinimap": unspecifiedSubtype(),
+		"CActorMissile": unspecifiedSubtype(),
+		"CActorModel": unspecifiedSubtype(),
+		"CActorModelMaterial": unspecifiedSubtype(),
+		"CActorPortrait": unspecifiedSubtype(),
+		"CActorPower": unspecifiedSubtype(),
+		"CActorProgress": unspecifiedSubtype(),
+		"CActorPropertyCurveSet": unspecifiedSubtype(),
+		"CActorQuad": unspecifiedSubtype(),
+		"CActorQueryResponse": unspecifiedSubtype(),
+		"CActorRange": unspecifiedSubtype(),
+		"CActorRegion": unspecifiedSubtype(),
+		"CActorRegionArc": unspecifiedSubtype(),
+		"CActorRegionCircle": unspecifiedSubtype(),
+		"CActorRegionGame": unspecifiedSubtype(),
+		"CActorRegionQuad": unspecifiedSubtype(),
+		"CActorRegionWater": unspecifiedSubtype(),
+		"CActorScene": unspecifiedSubtype(),
+		"CActorSelection": unspecifiedSubtype(),
+		"CActorSetQueried": unspecifiedSubtype(),
+		"CActorShadow": unspecifiedSubtype(),
+		"CActorShield": unspecifiedSubtype(),
+		"CActorShieldImpact": unspecifiedSubtype(),
+		"CActorSimple": unspecifiedSubtype(),
+		"CActorSite": unspecifiedSubtype(),
+		"CActorSiteBillboard": unspecifiedSubtype(),
+		"CActorSiteMover": unspecifiedSubtype(),
+		"CActorSiteOp2DRotation": unspecifiedSubtype(),
+		"CActorSiteOpAction": unspecifiedSubtype(),
+		"CActorSiteOpAttach": unspecifiedSubtype(),
+		"CActorSiteOpAttachVolume": unspecifiedSubtype(),
+		"CActorSiteOpBanker": unspecifiedSubtype(),
+		"CActorSiteOpBankerUnit": unspecifiedSubtype(),
+		"CActorSiteOpBasic": unspecifiedSubtype(),
+		"CActorSiteOpCursor": unspecifiedSubtype(),
+		"CActorSiteOpDeathMotion": unspecifiedSubtype(),
+		"CActorSiteOpEffect": unspecifiedSubtype(),
+		"CActorSiteOpForward": unspecifiedSubtype(),
+		"CActorSiteOpGameCameraFollow": unspecifiedSubtype(),
+		"CActorSiteOpHeight": unspecifiedSubtype(),
+		"CActorSiteOpHigherOfTerrainAndWater": unspecifiedSubtype(),
+		"CActorSiteOpHostBearings": unspecifiedSubtype(),
+		"CActorSiteOpHostedOffset": unspecifiedSubtype(),
+		"CActorSiteOpIncoming": unspecifiedSubtype(),
+		"CActorSiteOpLocalOffset": unspecifiedSubtype(),
+		"CActorSiteOpOrbiter": unspecifiedSubtype(),
+		"CActorSiteOpPatch": unspecifiedSubtype(),
+		"CActorSiteOpPhysicsImpact": unspecifiedSubtype(),
+		"CActorSiteOpRandomPointInCircle": unspecifiedSubtype(),
+		"CActorSiteOpRandomPointInCrossbar": unspecifiedSubtype(),
+		"CActorSiteOpRandomPointInSphere": unspecifiedSubtype(),
+		"CActorSiteOpRotationExplicit": unspecifiedSubtype(),
+		"CActorSiteOpRotationRandom": unspecifiedSubtype(),
+		"CActorSiteOpRotationSmooth": unspecifiedSubtype(),
+		"CActorSiteOpRotationVariancer": unspecifiedSubtype(),
+		"CActorSiteOpRotator": unspecifiedSubtype(),
+		"CActorSiteOpSelectionOffset": unspecifiedSubtype(),
+		"CActorSiteOpSerpentHead": unspecifiedSubtype(),
+		"CActorSiteOpSerpentSegment": unspecifiedSubtype(),
+		"CActorSiteOpShadow": unspecifiedSubtype(),
+		"CActorSiteOpTether": unspecifiedSubtype(),
+		"CActorSiteOpTilter": unspecifiedSubtype(),
+		"CActorSiteOpTipability": unspecifiedSubtype(),
+		"CActorSiteOpUp": unspecifiedSubtype(),
+		"CActorSiteOpZ": unspecifiedSubtype(),
+		"CActorSiteOrbiter": unspecifiedSubtype(),
+		"CActorSiteRocker": unspecifiedSubtype(),
+		"CActorSnapshot": unspecifiedSubtype(),
+		"CActorSound": unspecifiedSubtype(),
+		"CActorSplat": unspecifiedSubtype(),
+		"CActorSquib": unspecifiedSubtype(),
+		"CActorStateMonitor": unspecifiedSubtype(),
+		"CActorTerrain": unspecifiedSubtype(),
+		"CActorTerrainDeformer": unspecifiedSubtype(),
+		"CActorText": unspecifiedSubtype(),
+		"CActorTurret": unspecifiedSubtype(),
+		"CActorUnit": unspecifiedSubtype(),
+	},
+
+	"AttachMethod": {
+		"CAttachMethod": unspecifiedSubtype(),
+		"CAttachMethodArcTest": unspecifiedSubtype(),
+		"CAttachMethodAttachType": unspecifiedSubtype(),
+		"CAttachMethodBestMatch": unspecifiedSubtype(),
+		"CAttachMethodFilter": unspecifiedSubtype(),
+		"CAttachMethodIncoming": unspecifiedSubtype(),
+		"CAttachMethodNodeOccupancy": unspecifiedSubtype(),
+		"CAttachMethodNodeOccupancy2": unspecifiedSubtype(),
+		"CAttachMethodNumericField": unspecifiedSubtype(),
+		"CAttachMethodPattern": unspecifiedSubtype(),
+		"CAttachMethodPortAllocator": unspecifiedSubtype(),
+		"CAttachMethodProximity": unspecifiedSubtype(),
+		"CAttachMethodRandom": unspecifiedSubtype(),
+		"CAttachMethodReduction": unspecifiedSubtype(),
+		"CAttachMethodVolumesRequery": unspecifiedSubtype(),
+		"CAttachMethodVolumesTargets": unspecifiedSubtype(),
+		"CAttachMethodVolumesWeightedPick": unspecifiedSubtype(),
+	},
+
+	"Beam": {
+		"CBeamAsyncLinear": unspecifiedSubtype(),
+	},
+
+	"Button": {
+		"CButton": unspecifiedSubtype(),
+	},
+
+	"DSP": {
+		"CDSPChorus": unspecifiedSubtype(),
+		"CDSPCompressor": unspecifiedSubtype(),
+		"CDSPCustomCompressor": unspecifiedSubtype(),
+		"CDSPDistortion": unspecifiedSubtype(),
+		"CDSPEcho": unspecifiedSubtype(),
+		"CDSPFlange": unspecifiedSubtype(),
+		"CDSPHighPass": unspecifiedSubtype(),
+		"CDSPLimiter": unspecifiedSubtype(),
+		"CDSPLowPass": unspecifiedSubtype(),
+		"CDSPLowPassSimple": unspecifiedSubtype(),
+		"CDSPNormalize": unspecifiedSubtype(),
+		"CDSPParamEQ": unspecifiedSubtype(),
+		"CDSPPitchShift": unspecifiedSubtype(),
+		"CDSPReverb": unspecifiedSubtype(),
+	},
+
+	"LensFlareSet": {
+		"CLensFlareSet": unspecifiedSubtype(),
+	},
+
+	"Light": {
+		"CLight": unspecifiedSubtype(),
+	},
+
+	"Model": {
+		"CModel": unspecifiedSubtype(),
+		"CModelFoliage": unspecifiedSubtype(),
+	},
+
+	"Reverb": {
+		"CReverb": unspecifiedSubtype(),
+	},
+
+	"Shape": {
+		"CShape": unspecifiedSubtype(),
+		"CShapeArc": unspecifiedSubtype(),
+		"CShapeQuad": unspecifiedSubtype(),
+	},
+
+	"Sound": {
+		"CSound": unspecifiedSubtype(),
+	},
+
+	"SoundExclusivity": {
+		"CSoundExclusivity": unspecifiedSubtype(),
+	},
+
+	"SoundMixSnapshot": {
+		"CSoundMixSnapshot": unspecifiedSubtype(),
+	},
+
+	"Soundtrack": {
+		"CSoundtrack": unspecifiedSubtype(),
+	},
+
+	"Texture": {
+		"CTexture": unspecifiedSubtype(),
+	},
+
+	"Cliff": {
+		"CCliff": unspecifiedSubtype(),
+	},
+
+	"CliffMesh": {
+		"CCliffMesh": unspecifiedSubtype(),
+	},
+
+	"FoW": {
+		"CFoW": unspecifiedSubtype(),
+	},
+
+	"PhysicsMaterial": {
+		"CPhysicsMaterial": unspecifiedSubtype(),
+	},
+
+	"Terrain": {
+		"CTerrain": unspecifiedSubtype(),
+	},
+
+	"TerrainObject": {
+		"CTerrainObject": unspecifiedSubtype(),
+		"CCliffDoodad": unspecifiedSubtype(), // I know, it's weird... but it's here
+	},
+
+	"TerrainTex": {
+		"CTerrainTex": unspecifiedSubtype(),
+	},
+
+	"Tile": {
+		"CTile": unspecifiedSubtype(),
+	},
+
+	"Water": {
+		"CWater": unspecifiedSubtype(),
+	},
+
+	"Artifact": {
+		"CArtifact": unspecifiedSubtype(),
+	},
+
+	"ArtifactSlot": {
+		"CArtifactSlot": unspecifiedSubtype(),
+	},
+
+	"Config": {
+		"CConfig": unspecifiedSubtype(),
+	},
+
+	"Hero": {
+		"CHero": unspecifiedSubtype(),
+	},
+
+	"HeroAbil": {
+		"CHeroAbil": unspecifiedSubtype(),
+	},
+
+	"HeroStat": {
+		"CHeroStat": unspecifiedSubtype(),
+	},
+
+	"Mount": {
+		"CMount": unspecifiedSubtype(),
+	},
+
+	"Skin": {
+		"CSkin": unspecifiedSubtype(),
+	},
+
+	"Talent": {
+		"CTalent": unspecifiedSubtype(),
+	},
+
+	"TalentProfile": {
+		"CTalentProfile": unspecifiedSubtype(),
+	},
+
+	"VoiceOver": {
+		"CVoiceOver": unspecifiedSubtype(),
+	},
+
+	"Alert": {
+		"CAlert": unspecifiedSubtype(),
+	},
+
+	"RaceBannerPack": {
+		"CRaceBannerPack": unspecifiedSubtype(),
+	},
+
+	"Camera": {
+		"CCamera": unspecifiedSubtype(),
+	},
+
+	"ConsoleSkin": {
+		"CConsoleSkin": unspecifiedSubtype(),
+	},
+
+	"Cursor": {
+		"CCursor": unspecifiedSubtype(),
+	},
+
+	"GameUI": {
+		"CGameUI": unspecifiedSubtype(),
+	},
+
+	"Bundle": {
+		"CBundle": unspecifiedSubtype(),
+	},
+
+	"Ping": {
+		"CPing": unspecifiedSubtype(),
+	},
+
+	"ColorStyle": {
+		"CColorStyle": unspecifiedSubtype(),
+	},
+
+	"Achievement": {
+		"CAchievement": unspecifiedSubtype(),
+	},
+
+	"AchievementTerm": {
+		"CAchievementTerm": unspecifiedSubtype(),
+		"CAchievementTermAbilInteract": unspecifiedSubtype(),
+		"CAchievementTermAbilLoad": unspecifiedSubtype(),
+		"CAchievementTermAbilUse": unspecifiedSubtype(),
+		"CAchievementTermAchievement": unspecifiedSubtype(),
+		"CAchievementTermBehaviorCount": unspecifiedSubtype(),
+		"CAchievementTermBehaviorElapsed": unspecifiedSubtype(),
+		"CAchievementTermBehaviorState": unspecifiedSubtype(),
+		"CAchievementTermCombine": unspecifiedSubtype(),
+		"CAchievementTermEffectAbsorbed": unspecifiedSubtype(),
+		"CAchievementTermEffectDamaged": unspecifiedSubtype(),
+		"CAchievementTermEffectDodged": unspecifiedSubtype(),
+		"CAchievementTermEffectHealed": unspecifiedSubtype(),
+		"CAchievementTermEffectKilled": unspecifiedSubtype(),
+		"CAchievementTermEffectUse": unspecifiedSubtype(),
+		"CAchievementTermGeneric": unspecifiedSubtype(),
+		"CAchievementTermReplay": unspecifiedSubtype(),
+		"CAchievementTermScoreValue": unspecifiedSubtype(),
+		"CAchievementTermTime": unspecifiedSubtype(),
+		"CAchievementTermUnitBirth": unspecifiedSubtype(),
+		"CAchievementTermUnitDeath": unspecifiedSubtype(),
+		"CAchievementTermUnitKills": unspecifiedSubtype(),
+		"CAchievementTermUnitRegen": unspecifiedSubtype(),
+		"CAchievementTermUnitSupplyLoss": unspecifiedSubtype(),
+	},
+
+	"Boost": {
+		"CBoost": unspecifiedSubtype(),
+	},
+
+	"DecalPack": {
+		"CDecalPack": unspecifiedSubtype(),
+	},
+
+	"Emoticon": {
+		"CEmoticon": unspecifiedSubtype(),
+	},
+
+	"EmoticonPack": {
+		"CEmoticonPack": unspecifiedSubtype(),
+	},
+
+	"Error": {
+	},
+
+	"Game": {
+		"CGame": unspecifiedSubtype(),
+	},
+
+	"Herd": {
+		"CHerd": unspecifiedSubtype(),
+	},
+
+	"HerdNode": {
+		"CHerdNode": unspecifiedSubtype(),
+	},
+
+	"ItemClass": {
+		"CItemClass": unspecifiedSubtype(),
+	},
+
+	"ItemContainer": {
+		"CItemContainer": unspecifiedSubtype(),
+	},
+
+	"Kinetic": {
+		"CKinetic": unspecifiedSubtype(),
+		"CKineticDistance": unspecifiedSubtype(),
+		"CKineticFollow": unspecifiedSubtype(),
+		"CKineticRotate": unspecifiedSubtype(),
+		"CKineticSequence": unspecifiedSubtype(),
+		"CKineticSet": unspecifiedSubtype(),
+		"CKineticTranslate": unspecifiedSubtype(),
+	},
+
+	"PortraitPack": {
+		"CPortraitPack": unspecifiedSubtype(),
+	},
+
+	"PremiumMap": {
+		"CPremiumMap": unspecifiedSubtype(),
+	},
+
+	"Race": {
+		"CRace": unspecifiedSubtype(),
+	},
+
+	"RequirementNode": {
+		"CRequirementNode": unspecifiedSubtype(),
+		"CRequirementAllowAbil": unspecifiedSubtype(),
+		"CRequirementAllowBehavior": unspecifiedSubtype(),
+		"CRequirementAllowUnit": unspecifiedSubtype(),
+		"CRequirementAllowUpgrade": unspecifiedSubtype(),
+		"CRequirementAnd": unspecifiedSubtype(),
+		"CRequirementConst": unspecifiedSubtype(),
+		"CRequirementCountAbil": unspecifiedSubtype(),
+		"CRequirementCountBehavior": unspecifiedSubtype(),
+		"CRequirementCountUnit": unspecifiedSubtype(),
+		"CRequirementCountUpgrade": unspecifiedSubtype(),
+		"CRequirementDiv": unspecifiedSubtype(),
+		"CRequirementEq": unspecifiedSubtype(),
+		"CRequirementGT": unspecifiedSubtype(),
+		"CRequirementGTE": unspecifiedSubtype(),
+		"CRequirementLT": unspecifiedSubtype(),
+		"CRequirementLTE": unspecifiedSubtype(),
+		"CRequirementMod": unspecifiedSubtype(),
+		"CRequirementMul": unspecifiedSubtype(),
+		"CRequirementNE": unspecifiedSubtype(),
+		"CRequirementNot": unspecifiedSubtype(),
+		"CRequirementOdd": unspecifiedSubtype(),
+		"CRequirementOr": unspecifiedSubtype(),
+		"CRequirementSum": unspecifiedSubtype(),
+		"CRequirementXor": unspecifiedSubtype(),
+	},
+
+	"Reward": {
+		"CReward": unspecifiedSubtype(),
+		"CRewardConsoleSkin": unspecifiedSubtype(),
+		"CRewardDecal": unspecifiedSubtype(),
+		"CRewardEmoticon": unspecifiedSubtype(),
+		"CRewardIcon": unspecifiedSubtype(),
+		"CRewardModel": unspecifiedSubtype(),
+		"CRewardPoints": unspecifiedSubtype(),
+		"CRewardPortrait": unspecifiedSubtype(),
+		"CRewardPortraitInGame": unspecifiedSubtype(),
+		"CRewardRaceBanner": unspecifiedSubtype(),
+		"CRewardSpray": unspecifiedSubtype(),
+		"CRewardSprayUseDecal": unspecifiedSubtype(),
+		"CRewardTrophy": unspecifiedSubtype(),
+		"CRewardVoicePack": unspecifiedSubtype(),
+	},
+
+	"ScoreResult": {
+		"CScoreResult": unspecifiedSubtype(),
+		"CScoreResultBuildOrder": unspecifiedSubtype(),
+		"CScoreResultExperience": unspecifiedSubtype(),
+		"CScoreResultGraph": unspecifiedSubtype(),
+		"CScoreResultPerformance": unspecifiedSubtype(),
+		"CScoreResultRoot": unspecifiedSubtype(),
+		"CScoreResultScore": unspecifiedSubtype(),
+	},
+
+	"ScoreValue": {
+		"CScoreValue": unspecifiedSubtype(),
+		"CScoreValueCombine": unspecifiedSubtype(),
+		"CScoreValueConstant": unspecifiedSubtype(),
+		"CScoreValueCustom": unspecifiedSubtype(),
+		"CScoreValueStandard": unspecifiedSubtype(),
+	},
+
+	"SkinPack": {
+		"CSkinPack": unspecifiedSubtype(),
+	},
+
+	"Spray": {
+		"CSpray": unspecifiedSubtype(),
+	},
+
+	"SprayPack": {
+		"CSprayPack": unspecifiedSubtype(),
+	},
+
+	"TacCooldown": {
+		"CTacCooldown": unspecifiedSubtype(),
+	},
+
+	"Tactical": {
+		"CTactical": unspecifiedSubtype(),
+		"CTacticalOrder": unspecifiedSubtype(),
+		"CTacticalSet": unspecifiedSubtype(),
+	},
+
+	"TargetFind": {
+		"CTargetFind": unspecifiedSubtype(),
+		"CTargetFindBestPoint": unspecifiedSubtype(),
+		"CTargetFindEffect": unspecifiedSubtype(),
+		"CTargetFindEnumArea": unspecifiedSubtype(),
+		"CTargetFindLastAttacker": unspecifiedSubtype(),
+		"CTargetFindOffset": unspecifiedSubtype(),
+		"CTargetFindOrder": unspecifiedSubtype(),
+		"CTargetFindRallyPoint": unspecifiedSubtype(),
+		"CTargetFindSet": unspecifiedSubtype(),
+		"CTargetFindWorkerRallyPoint": unspecifiedSubtype(),
+	},
+
+	"TargetSort": {
+		"CTargetSort": unspecifiedSubtype(),
+		"CTargetSortAlliance": unspecifiedSubtype(),
+		"CTargetSortAngle": unspecifiedSubtype(),
+		"CTargetSortBehaviorCount": unspecifiedSubtype(),
+		"CTargetSortBehaviorDuration": unspecifiedSubtype(),
+		"CTargetSortChargeCount": unspecifiedSubtype(),
+		"CTargetSortChargeRegen": unspecifiedSubtype(),
+		"CTargetSortCooldown": unspecifiedSubtype(),
+		"CTargetSortDistance": unspecifiedSubtype(),
+		"CTargetSortField": unspecifiedSubtype(),
+		"CTargetSortInterruptible": unspecifiedSubtype(),
+		"CTargetSortMarker": unspecifiedSubtype(),
+		"CTargetSortPowerSourceLevel": unspecifiedSubtype(),
+		"CTargetSortPowerUserLevel": unspecifiedSubtype(),
+		"CTargetSortPriority": unspecifiedSubtype(),
+		"CTargetSortRandom": unspecifiedSubtype(),
+		"CTargetSortValidator": unspecifiedSubtype(),
+		"CTargetSortVital": unspecifiedSubtype(),
+		"CTargetSortVitalFraction": unspecifiedSubtype(),
+	},
+
+	"TextureSheet": {
+		"CTextureSheet": unspecifiedSubtype(),
+	},
+
+	"Trophy": {
+		"CTrophy": unspecifiedSubtype(),
+	},
+
+	"User": {
+		"CUser": unspecifiedSubtype(),
+	},
+
+	"VoicePack": {
+		"CVoicePack": unspecifiedSubtype(),
+	},
+
+	"WarChest": {
+		"CWarChest": unspecifiedSubtype(),
+	},
+
+	"WarChestSeason": {
+		"CWarChestSeason": unspecifiedSubtype(),
+	},
+
+	"StimPack": {
+		"CStimPack": unspecifiedSubtype(),
+	},
 };
 
 export type CatalogTypes = typeof CatalogTypesInstance;
-export type CatalogName = keyof CatalogTypes;
+
+{
+	// Make sure these two match
+	let _a: CatalogName = "" as keyof CatalogTypes;
+	let _b: keyof CatalogTypes = "" as CatalogName;
+}

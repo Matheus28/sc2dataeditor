@@ -102,7 +102,7 @@ export interface Dataspace {
 	data_:XMLNode;
 	
 	catalogs:{
-		[Catalog in keyof CatalogTypes]:{
+		[Catalog in CatalogName]:{
 			entries:XMLNode[];
 			entryByID:Record<string, XMLNode & {tagname:keyof CatalogTypes[Catalog]}>;
 		}
