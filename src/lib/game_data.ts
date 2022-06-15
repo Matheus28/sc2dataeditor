@@ -100,9 +100,22 @@ function editorFields(catalogName: CatalogName): Record<string, FieldType> {
 	};
 }
 
+// i18n key (for example, name = CEffectCreep):
+// EDSTR_ENTRYTYPE_${name}
 interface CatalogSubtype {
 	parent: string | null;
 	abstract?: boolean;
+	
+	// i18n key: complicated
+	// for simple types: EDSTR_FIELDNAME_CEffectCreep_WhichLocation
+	// 
+	// for stuff inside structs, we have to know the structure name:
+	//     EDSTR_FIELDNAME_SButtonCardLayout_Row (for CButton > DefaultButtonLayout > Row)
+	// 
+	// There doesn't seem to be a way to find that out.
+	// The furthest we can get to is the "base" of the structure:
+	//     EDSTR_FIELDNAME_CButton_DefaultButtonLayout
+	//
 	fields: Record<string, FieldType>;
 }
 
@@ -114,7 +127,7 @@ const unspecifiedSubtype = (): CatalogSubtype => ({
 
 function subtype(catalogName: CatalogName, v: CatalogSubtype): CatalogSubtype {
 	v.fields = {...editorFields(catalogName), ...v.fields};
-
+	
 	return v;
 }
 
@@ -242,6 +255,8 @@ const DataFieldDefaults = {
 	"CString": "",
 	"CStringLink": "",
 	"CHotkeyLink": "",
+	"TMarkerLink": "Effect/##id##",
+	"TCooldownLink": "Abil/##id##",
 	"bool": 0,
 	"bool8": 0,
 	"bool16": 0,
@@ -362,7 +377,6 @@ const SEffectWhichLocation = struct({
 	"Value": e_effectLocation,
 });
 
-
 export const CatalogTypesInstance = {
 	"Abil": {
 		"CAbil": unspecifiedSubtype(),
@@ -480,7 +494,7 @@ export const CatalogTypesInstance = {
 				"Marker": struct({
 					"Count": simpleType("int32", 1),
 					"Duration": simpleType("CFixed", 0),
-					"Link": simpleType("CEffectLink", "Effect/##id##"),
+					"Link": simpleType("TMarkerLink", "Effect/##id##"),
 					"MatchFlags": namedArray({
 						"Id": simpleType("bool"),
 						"Link": simpleType("bool"),
