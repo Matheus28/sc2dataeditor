@@ -1,9 +1,8 @@
 import assert from "assert";
-import { CatalogTypesInstance } from "./lib/game_data";
-import { getGameDataFilenameBase, Dataspace, XMLNode, accessArray, accessStruct, newNode, saveDataspaces, addDataspaceEntry, newDataspace, GameDataIndex, loadGameDataIndex, addDataspaceToIndex, saveGameDataIndex, getChildrenByTagName, addChild, getCatalogNameByTagname, changeDataspaceEntryType, CatalogName } from './lib/game_data_loader';
+import { CatalogName } from "./lib/game_data";
+import { accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
-import { possiblyBigNumberToString, unreachable } from "./lib/utils";
 import * as worker_client from "./worker_client";
 
 type WorkerClient = typeof worker_client;
@@ -276,7 +275,7 @@ const messageHandlers:{
 			rootMapDir,
 			index,
 			modifiedDataspaces: new Set(),
-			destinationDataspace: 0,
+			destinationDataspace: -1,
 			hasIndexChanges: false,
 			
 			stringsModified: false,
@@ -313,6 +312,13 @@ const messageHandlers:{
 		}
 		
 		notifyChanges();
+	},
+	
+	async forceSaveAll(){
+		await Promise.all([
+			saveDataspaces(map.index, map.index.dataspaces),
+			saveDataspaces(map.index, Object.values(map.index.implicitDataspaces)),
+		]);
 	},
 	
 	async getDataspaceList(){

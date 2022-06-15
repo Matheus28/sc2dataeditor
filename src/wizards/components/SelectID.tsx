@@ -2,7 +2,7 @@ import * as React from 'react';
 import Select from "react-select/creatable";
 import { Form, Alert, Badge } from 'react-bootstrap';
 import { getEntriesOfCatalog } from '../../worker_client';
-import { CatalogName } from '../../lib/game_data_loader';
+import { CatalogName } from '../../lib/game_data';
 
 interface SelectOption {
 	value:string;

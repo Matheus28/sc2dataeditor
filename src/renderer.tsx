@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom/client';
 import { Container, Row, Col, Form } from 'react-bootstrap';
 import assert from 'assert';
 import CommonUpgradeWizard from './wizards/CommonUpgrade';
-import SelectDestinationDataspace from './components/SelectDestinationDataSpace';
+import SelectDestinationDataspace from './components/SelectDestinationDataspace';
 import { loadMap } from './worker_client';
 import ChangedList from './components/ChangedList';
 
@@ -62,6 +62,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 	</React.StrictMode>;
 }
 
+//D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map
 root.render(
-	<CatalogBrowser rootDir="D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map/"/>
+	<CatalogBrowser rootDir="./out/test.SC2Map"/>
 );

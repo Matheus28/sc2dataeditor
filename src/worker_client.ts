@@ -1,5 +1,5 @@
 import assert from "assert";
-import { CatalogName } from "./lib/game_data_loader";
+import { CatalogName } from "./lib/game_data";
 import { CatalogEntry, CatalogField, Message, MessageResponse } from "./worker";
 
 const worker = new Worker("./out/worker_wrapper.js");
@@ -21,6 +21,10 @@ export function getFieldValue(_field:CatalogField):Promise<string|undefined>{
 
 export function save():Promise<void> {
 	return sendMessage("save", arguments);
+}
+
+export function forceSaveAll():Promise<void> {
+	return sendMessage("forceSaveAll", arguments);
 }
 
 export function getDataspaceList():Promise<string[]> {
