@@ -2,7 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
-import { CatalogTypes, CatalogTypesInstance, CatalogName } from "./game_data";
+import { CatalogTypes, CatalogTypesInstance, CatalogName, CatalogNameArray } from "./game_data";
 
 export type XMLNode = ({
 	tagname:string;
@@ -22,20 +22,71 @@ export function getGameDataFilenameBase(rootMapDir:string){
 	return rootMapDir + "/Base.SC2Data/GameData/";
 }
 
+interface GameDataDependency {
+	name:string;
+	dataspace:Dataspace; // We just merge all dataspaces together for that dependency :D
+}
+
 export type GameDataIndex = {
 	rootMapDir:string;
 	includes:XMLNode;
+	
+	dependencies:GameDataDependency[];
 	
 	implicitDataspaces:Record<CatalogName, Dataspace>;
 	dataspaces:Dataspace[];
 };
 
+export async function loadDependency(name:string, rootMapDir:string):Promise<GameDataDependency[]>{
+	return await flattenIndexIntoDependency(name, await loadGameDataIndex(rootMapDir));
+}
+
+function loadDependencyInWorker(name:string, rootMapDir:string):Promise<GameDataDependency[]> {
+	return new Promise((resolve) => {
+		let worker = new Worker(__dirname + "/game_data_loader_worker_wrapper.js");
+		worker.postMessage([name, rootMapDir]);
+		worker.onmessage = function(e){
+			resolve(e.data);
+			worker.terminate();
+		}
+	});
+}
+
 export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex> {
-	let v = await parseXML(await fs.readFile(getGameDataIndexFilename(rootMapDir), "utf8"));
+	let includes:XMLNode;
+	
+	{
+		let str:string|undefined;
+		try {
+			str = await fs.readFile(getGameDataIndexFilename(rootMapDir), "utf8")
+		}catch{}
+		
+		if(str !== undefined){
+			includes = (await parseXML(str))["Includes"];
+		}else{
+			includes = newNode("Includes");
+		}
+	}
+	
+	{ // StarCoop.SC2Mod has this extra thingie with more things to load :(
+		let str:string|undefined;
+		try {
+			str = await fs.readFile(rootMapDir + "/Base.SC2Data/Includes.xml", "utf8")
+		}catch{}
+		
+		if(str !== undefined){
+			let moreIncludes = (await parseXML(str))["Includes"];
+			for(let node of moreIncludes.children){
+				appendChildToEnd(includes, node);
+			}
+		}
+	}
+	
 	let index:GameDataIndex = {
 		rootMapDir,
-		includes: v["Includes"],
+		includes: includes,
 		implicitDataspaces: {} as any,
+		dependencies: [],
 		dataspaces: [],
 	};
 	
@@ -61,10 +112,82 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		(async function(){
 			index.dataspaces = await loadIndexIncludes(index);
 		})(),
+		
+		// Dependencies
+		(async function(){
+			let docInfoStr:string;
+			
+			try {
+				docInfoStr = await fs.readFile(rootMapDir + "/DocumentInfo", "utf8");
+			}catch(e){
+				return; // No dependencies
+			}
+			
+			let docInfo = (await parseXML(docInfoStr))["DocInfo"];
+			let depsRoot = docInfo.childrenByTagname["Dependencies"];
+			if(!depsRoot || depsRoot.length == 0) return;
+			assert(depsRoot.length == 1);
+			
+			let depsArr = depsRoot[0].childrenByTagname["Value"];
+			if(!depsArr) return;
+			
+			let deps:string[] = [];
+			for(let node of depsArr){
+				if(node.children.length == 0) continue; // Empty <Value />... skip
+				assert(node.children.length == 1);
+				
+				let textNode = node.children[0];
+				assert(textNode.tagname == "#text");
+				assert('text' in textNode);
+				
+				deps.push(textNode.text);
+			}
+			
+			for(let dep of deps){
+				if(!dep.startsWith("bnet:")) throw new Error("No idea how to handle this");
+			}
+			
+			let depsDataspaces = await Promise.all(deps.map(async (dep:string) => {
+				let r = /,file:([a-z0-9_\.]+(?:\/[a-z0-9_\.]+)*)$/i;
+				let m = dep.match(r);
+				if(m == null) throw new Error("Invalid dep line: " + dep);
+				
+				let m2 = m[1].match(/\/[a-z0-9_\.]+$/i);
+				if(!m2) throw new Error("Invalid dep line: " + dep);
+				let name = m2[0]; // Core.SC2Mod
+				
+				let filename = "deps/SC2GameData/" + m[1].toLowerCase();
+				console.time(filename);
+				let v = await loadDependencyInWorker(name, filename);
+				console.timeEnd(filename);
+				return v;
+			}));
+			
+			index.dependencies = depsDataspaces.reduce((previous, cur) => previous.concat(cur), []);
+		})(),
 	]);
 	
 	
 	return index;
+}
+
+function flattenIndexIntoDependency(name:string, index:GameDataIndex):GameDataDependency[] {
+	let dataspace = newDataspace(name);
+	for(let i in index.implicitDataspaces){
+		dataspace = mergeDataspaces(name, dataspace, index.implicitDataspaces[i as CatalogName]);
+	}
+	
+	for(let d of index.dataspaces){
+		dataspace = mergeDataspaces(name, dataspace, d);
+	}
+	
+	return [
+		...index.dependencies,
+		{
+			name,
+			dataspace,
+		}
+	];
 }
 
 function getGameDataIndexFilename(rootMapDir:string):string {
@@ -80,7 +203,7 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 	
 	const base = getGameDataFilenameBase(index.rootMapDir);
 	const arr = getChildrenByTagName(index.includes, "Catalog");
-	assert(arr);
+	if(!arr || arr.length == 0) return [];
 	
 	let filenames:string[] = arr.map(v => {
 		assert(v.attr);
@@ -99,7 +222,7 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 export interface Dataspace {
 	name:string;
 	
-	data_:XMLNode;
+	data_:XMLNode|null;
 	
 	catalogs:{
 		[Catalog in CatalogName]:{
@@ -226,6 +349,7 @@ async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspa
 }
 
 export function addDataspaceEntry(dataspace:Dataspace, child:XMLNode){
+	assert(dataspace.data_ != null);
 	assert("id" in child.attr);
 	
 	let catalogName = getCatalogNameByTagname(child.tagname);
@@ -293,6 +417,41 @@ function dataspaceNameToFilename(rootMapDir:string, name:string):string {
 	const base = getGameDataFilenameBase(rootMapDir);
 	
 	return base + name + ".xml";
+}
+
+// Merges dataspaces, kinda shallowy. Meant for dependencies so it's easier & faster to look up stuff inside them
+// b will override a in case of conflicts
+function mergeDataspaces(name:string, a:Dataspace, b:Dataspace):Dataspace {
+	let catalogs = createEmptyDataspaceCatalogs();
+	
+	for(let i in catalogs){
+		assert(CatalogNameArray.includes(i as any));
+		let j = i as keyof Dataspace["catalogs"];
+		
+		// First add b
+		catalogs[j].entries = b.catalogs[j].entries.concat();
+		catalogs[j].entryByID = Object.assign({}, b.catalogs[j].entryByID);
+		
+		let arr:XMLNode[] = [];
+		for(let k in a.catalogs[j].entryByID){
+			if(k in catalogs[j].entryByID){
+				console.warn("Duplicate entry for " + k + " when merging dataspaces");
+				continue;
+			}
+			
+			let node = a.catalogs[j].entryByID[k];
+			catalogs[j].entryByID[k] = node;
+			arr.push(node);
+		}
+		
+		catalogs[j].entries = arr.concat(catalogs[j].entries);
+	}
+	
+	return {
+		name,
+		catalogs,
+		data_: null, // Since this isn't meant to be saved
+	}
 }
 
 export function newDataspace(name:string):Dataspace {
@@ -460,6 +619,7 @@ function notUndefined<T>(v:T|undefined): v is T {
 
 export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
+		assert(data.data_ != null);
 		let xml:XMLNode = shallowCopyNode(null, data.data_);
 		
 		// We need to make some changes to pull <EditorComment> out to an actual xml comment

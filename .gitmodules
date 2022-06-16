@@ -1,0 +1,3 @@
+[submodule "deps/SC2GameData"]
+	path = deps/SC2GameData
+	url = https://github.com/SC2Mapster/SC2GameData.git

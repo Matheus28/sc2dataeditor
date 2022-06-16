@@ -269,7 +269,9 @@ const messageHandlers:{
 	},
 	
 	async loadMap(rootMapDir:string){
+		console.time("loadMap");
 		let index = await loadGameDataIndex(rootMapDir);
+		console.timeEnd("loadMap");
 		
 		map = {
 			rootMapDir,
@@ -508,8 +510,5 @@ onmessage = function(e){
 	const msg:Message = e.data;
 	onMessage(msg).then(function(value:any){
 		postMessage(<MessageResponse>{ id: msg.id, value });
-	}).catch(function(e){
-		postMessage(<MessageResponse>{ id: msg.id, error: String(e) });
-		throw e;
 	});
 }

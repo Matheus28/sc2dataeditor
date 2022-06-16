@@ -89,6 +89,6 @@ process.on("unhandledRejection", e => { throw e; });
 
 try {
 	require('electron-reloader')(module, {
-		ignore: ['src', "out/**/*.SC2Map"],
+		ignore: ['src', 'deps', "out/test.SC2Map"],
 	});
 } catch {}
