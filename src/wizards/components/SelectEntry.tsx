@@ -106,6 +106,18 @@ export default function(props:Props){
 	
 	const canCreate = props.catalog !== null;
 	
+	const makeNewOptionValue = (inputValue:string):Value => {
+		if(props.catalog === null) throw new Error("can't create");
+		return {
+			id: inputValue,
+			catalog: props.catalog,
+			source: null,
+			dataspace: props.dataspace,
+			
+			exists: false,
+		};
+	};
+	
 	return <>
 		<Form.Group className="mb-3">
 			<Select
@@ -116,25 +128,12 @@ export default function(props:Props){
 				filterOption={filterOption}
 				onChange={props.onChange}
 				onCreateOption={(inputValue) => {
-					if(props.catalog === null) throw new Error("can't create");
+					let value = makeNewOptionValue(inputValue);
 					
-					let value:Value = {
-						id: inputValue,
-						catalog: props.catalog,
-						source: null,
-						dataspace: props.dataspace,
-						
-						exists: false,
-					};
-					
-					if(props.dataspace !== undefined) value.dataspace = props.dataspace;
-					
-					let option:SelectOption = {
+					props.onChange({
 						value,
 						label: createLabel(value.id, value),
-					};
-					
-					props.onChange(option);
+					});
 				}}
 				
 				getOptionValue={(option) => {
@@ -150,18 +149,7 @@ export default function(props:Props){
 				}}
 				
 				getNewOptionData={(inputValue) => {
-					if(props.catalog === null) throw new Error("can't create");
-					
-					let value:Value = {
-						id: inputValue,
-						catalog: props.catalog,
-						source: null,
-						dataspace: props.dataspace,
-						
-						exists: false,
-					};
-					
-					if(props.dataspace !== undefined) value.dataspace = props.dataspace;
+					let value = makeNewOptionValue(inputValue);
 					
 					return {
 						value,
