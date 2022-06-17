@@ -5,7 +5,7 @@ import { CatalogEntry } from '../worker';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldStringLink from './components/CatalogFieldStringLink';
 import EntryParent from './components/ForceEntryParent';
-import SelectID from './components/SelectID';
+import SelectEntry, { SelectOption } from './components/SelectEntry';
 
 
 interface Props {
@@ -15,18 +15,14 @@ interface Props {
 }
 
 export default function(props:Props){
-	const [id, setID] = React.useState("");
-	
+	const [entry, setEntry] = React.useState<SelectOption|null>(null);
 	
 	return <>
 		<Card>
 			<Card.Body>
 				<Form>
-					<SelectID catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={setID}/>
+					<SelectEntry value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={setEntry}/>
 					
-					{ id.length > 0 && <>
-						
-					</>}
 				</Form>
 			</Card.Body>
 		</Card>

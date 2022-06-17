@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { Card, Form } from 'react-bootstrap';
 import { CatalogEntry } from '../worker';

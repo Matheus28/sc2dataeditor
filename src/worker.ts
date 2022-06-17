@@ -39,7 +39,7 @@ let map:{
 
 export interface CatalogEntry {
 	id:string;
-	type:string; // Like CAbilResearch. The xml tag for this
+	catalog:CatalogName;
 }
 
 export interface CatalogField {
@@ -71,22 +71,10 @@ export interface CatalogField {
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
-	let catalogName = getCatalogNameByTagname(entry.type);
-	let catalog = dataspace.catalogs[catalogName];
+	let catalog = dataspace.catalogs[entry.catalog];
 	
 	if(entry.id in catalog.entryByID){
-		let node = catalog.entryByID[entry.id];
-		
-		if(node.tagname != entry.type){
-			console.error(`Desired tagname ${entry.type} does not match current tagname ${node.tagname}`);
-			if(createIfNotExists){
-				changeDataspaceEntryType(dataspace, node, entry.type);
-			}else{
-				return undefined;
-			}
-		}
-		
-		return node;
+		return catalog.entryByID[entry.id];
 	}
 	
 	if(createIfNotExists){
@@ -94,7 +82,9 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 			"id": entry.id,
 		};
 		
-		let node = newNode(entry.type, attrs);
+		const initialTagname = `C${entry.catalog}`;
+		
+		let node = newNode(initialTagname, attrs);
 		addDataspaceEntry(dataspace, node);
 		modifiedDataspace(dataspace);
 		return node;
@@ -109,7 +99,7 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithDataspa
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined;
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined {
 	{
-		let dataspace = map.index.implicitDataspaces[getCatalogNameByTagname(entry.type)];
+		let dataspace = map.index.implicitDataspaces[entry.catalog];
 		let cur = accessDataspaceEntry(dataspace, entry, false);
 		if(cur) return {node: cur, dataspace};
 	}
@@ -121,7 +111,7 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithData
 	
 	if(!createIfNotExists) return undefined;
 	
-	let dataspace = getDestinationDataspace(getCatalogNameByTagname(entry.type));
+	let dataspace = getDestinationDataspace(entry.catalog);
 	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
 }
 
@@ -386,7 +376,7 @@ const messageHandlers:{
 		return map.index.dependencies.map(v => v.name);
 	},
 	
-	async getEntries(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string, partialMatch?:string, limit?:number){
+	async getEntries(filterByCatalog:CatalogName|null, filterBySource?:string|null|undefined, filterByDataspace?:string, filterByParent?:string, partialMatch?:string, limit?:number){
 		let ret:Awaited<ReturnType<WorkerClient["getEntries"]>> = {
 			items: [],
 			totalCount: 0,
@@ -396,7 +386,7 @@ const messageHandlers:{
 		
 		const iterateEntries = (entries:XMLNode[], catalogName:CatalogName|null, dataspaceName:string|null, dataspaceSource:string|null) => {
 			for(let entry of entries){
-				if(typeof parent != "undefined" && entry.attr["parent"] != parent){
+				if(typeof filterByParent != "undefined" && entry.attr["parent"] != filterByParent){
 					continue;
 				}
 				
@@ -410,7 +400,6 @@ const messageHandlers:{
 				
 				let e:typeof ret.items[number] = {
 					id: id,
-					type: entry.tagname,
 				};
 				
 				if(dataspaceName != null) e.dataspace = dataspaceName;
@@ -421,28 +410,28 @@ const messageHandlers:{
 			}
 		};
 		
-		if(catalogName != null){
+		if(filterByCatalog != null){
 			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
-				iterateEntries(dataspace.catalogs[catalogName].entries, null, dataspaceName, dataspaceSource);
+				iterateEntries(dataspace.catalogs[filterByCatalog].entries, null, dataspaceName, dataspaceSource);
 			};
 			
 			// This map
-			if(source == null){ // also checks for undefined
-				if(dataspaceName == null){
-					iterateDataspace(map.index.implicitDataspaces[catalogName], null, null);
+			if(filterBySource == null){ // also checks for undefined
+				if(filterByDataspace == null){
+					iterateDataspace(map.index.implicitDataspaces[filterByCatalog], null, null);
 					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
 				}else{
 					for(let dataspace of map.index.dataspaces){
-						if(dataspace.name != dataspaceName) continue;
+						if(dataspace.name != filterByDataspace) continue;
 						iterateDataspace(dataspace, dataspace.name, null);
 					}
 				}
 			}
 			
 			// Dependencies
-			if(dataspaceName == null){
+			if(filterByDataspace == null){
 				for(let dep of map.index.dependencies){
-					if(source === undefined || dep.name == source){
+					if(filterBySource === undefined || dep.name == filterBySource){
 						iterateDataspace(dep.dataspace, null, dep.name);
 					}
 				}
@@ -456,8 +445,8 @@ const messageHandlers:{
 			};
 			
 			// This map
-			if(source == null){ // also checks for undefined
-				if(dataspaceName == null){
+			if(filterBySource == null){ // also checks for undefined
+				if(filterByDataspace == null){
 					for(let d in map.index.implicitDataspaces){
 						iterateDataspace(map.index.implicitDataspaces[d as CatalogName], null, null);
 					}
@@ -465,16 +454,16 @@ const messageHandlers:{
 					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
 				}else{
 					for(let dataspace of map.index.dataspaces){
-						if(dataspace.name != dataspaceName) continue;
+						if(dataspace.name != filterByDataspace) continue;
 						iterateDataspace(dataspace, dataspace.name, null);
 					}
 				}
 			}
 			
 			// Dependencies
-			if(dataspaceName == null){
+			if(filterByDataspace == null){
 				for(let dep of map.index.dependencies){
-					if(source === undefined || dep.name == source){
+					if(filterBySource === undefined || dep.name == filterBySource){
 						iterateDataspace(dep.dataspace, null, dep.name);
 					}
 				}
@@ -482,8 +471,15 @@ const messageHandlers:{
 		}
 		
 		ret.items.sort(function(a, b){
+			if(typeof partialMatchLower !== 'undefined'){
+				let aStarts = a.id.toLowerCase().startsWith(partialMatchLower);
+				let bStarts = b.id.toLowerCase().startsWith(partialMatchLower);
+				if(aStarts != bStarts) return aStarts ? -1 : 1;
+			}
+			
 			if(a.source !== b.source) return b.source !== undefined ? -1 : 1;
 			if(a.id != b.id) return a.id < b.id ? -1 : 1;
+			
 			return 0;
 		});
 		

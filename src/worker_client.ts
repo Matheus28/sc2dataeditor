@@ -39,8 +39,13 @@ export function entryExists(_entry:CatalogEntry):Promise<boolean> {
 	return sendMessage("entryExists", arguments);
 }
 
-export function getEntries(_catalogName:CatalogName|null, _source?:string|null|undefined, _dataspace?:string, _parent?:string, _partialMatch?:string, _limit?:number):Promise<{
-	items:(CatalogEntry & {catalog?:CatalogName,dataspace?:string,source?:string})[];
+export function getEntries(_filterByCatalog:CatalogName|null, _filterBySource?:string|null|undefined, _filterByDataspace?:string, _parent?:string, _partialMatch?:string, _limit?:number):Promise<{
+	items:{
+		id:string;
+		catalog?:CatalogName;
+		dataspace?:string;
+		source?:string;
+	}[];
 	totalCount:number;
 }> {
 	return sendMessage("getEntries", arguments);

@@ -2,7 +2,6 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
 import { Container, Row, Col, Form, Alert } from 'react-bootstrap';
 import assert from 'assert';
-import CommonUpgradeWizard from './wizards/CommonUpgrade';
 import SelectDataspace from './components/SelectDataspace';
 import { loadMap } from './worker_client';
 import ChangedList from './components/ChangedList';
@@ -34,19 +33,23 @@ const CatalogBrowser = function(props:{rootDir:string}){
 		};
 	}, [props.rootDir]);
 	
-	const onSourceChange = React.useCallback((v:string|null|undefined) => {
+	const onCatalogChange = (v:CatalogName|null) => {
+		setCatalog(v);
+	};
+	
+	const onSourceChange = (v:string|null|undefined) => {
 		setSource(v);
 		if(v != null){ // if setting source to a dependency
 			setDataspace(undefined);
 		}
-	}, []);
+	};
 	
-	const onDataspaceChange = React.useCallback((v:string|undefined) => {
+	const onDataspaceChange = (v:string|undefined) => {
 		setDataspace(v);
 		if(v !== undefined && source != null){ // If selecting a dataspace, and source is a dependency
 			setSource(undefined);
 		}
-	}, [source]);
+	};
 	
 	if(!isLoaded){
 		return <>
@@ -65,7 +68,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 			
 			<Row className="mb-3">
 				<Col>
-					<SelectCatalog onChange={setCatalog} />
+					<SelectCatalog onChange={onCatalogChange} />
 				</Col>
 				<Col>
 					<SelectSource value={source} onChange={onSourceChange} />
