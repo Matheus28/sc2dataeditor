@@ -3,7 +3,7 @@ import { Alert, Badge, Form } from 'react-bootstrap';
 import { createFilter } from 'react-select';
 import Select from "react-select/creatable";
 import { CatalogName } from '../../lib/game_data';
-import { getEntriesOfCatalog } from '../../worker_client';
+import { getEntries } from '../../worker_client';
 
 // FIXME: we need a virtual list
 
@@ -45,8 +45,10 @@ export default class SelectID extends React.Component<SelectID_Props, SelectID_S
 		this.getEntriesOfTypesToken = token;
 		
 		const hideDataspace = this.props.dataspace !== undefined;
+		const hideSource = this.props.source !== undefined;
+		const hideCatalog = this.props.catalog !== null;
 		
-		getEntriesOfCatalog(this.props.catalog, this.props.source, this.props.dataspace, this.props.parent).then((arr) => {
+		getEntries(this.props.catalog, this.props.source, this.props.dataspace, this.props.parent).then((arr) => {
 			if(this.getEntriesOfTypesToken !== token) return;
 			
 			this.setState((state) => {
@@ -58,7 +60,9 @@ export default class SelectID extends React.Component<SelectID_Props, SelectID_S
 						value: v.id,
 						label: <>
 							{v.id}
-							{!hideDataspace && <Badge bg="warning" className="float-end">{v.dataspace}</Badge>}
+							{v.dataspace && !hideDataspace && <Badge bg="warning" className="float-end">{v.dataspace}</Badge>}
+							{v.source && !hideSource && <Badge bg="info" className="float-end">{v.source}</Badge>}
+							{v.catalog && !hideCatalog && <Badge bg="danger" className="float-end">{v.catalog}</Badge>}
 						</>
 					}
 					

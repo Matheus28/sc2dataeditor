@@ -386,27 +386,33 @@ const messageHandlers:{
 		return map.index.dependencies.map(v => v.name);
 	},
 	
-	async getEntriesOfCatalog(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string){
-		let ret:Awaited<ReturnType<WorkerClient["getEntriesOfCatalog"]>> = [];
+	async getEntries(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string){
+		let ret:Awaited<ReturnType<WorkerClient["getEntries"]>> = [];
+		
+		const iterateEntries = (entries:XMLNode[], catalogName:CatalogName|null, dataspaceName:string|null, dataspaceSource:string|null) => {
+			for(let entry of entries){
+				if(typeof parent != "undefined" && entry.attr["parent"] != parent){
+					continue;
+				}
+				
+				if(!("id" in entry.attr)) continue;
+				
+				let e:typeof ret[number] = {
+					id: entry.attr["id"],
+					type: entry.tagname,
+				};
+				
+				if(dataspaceName != null) e.dataspace = dataspaceName;
+				if(dataspaceSource != null) e.source = dataspaceSource;
+				if(catalogName) e.catalog = catalogName;
+				
+				ret.push(e);
+			}
+		};
 		
 		if(catalogName != null){
 			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
-				let catalog = dataspace.catalogs[catalogName];
-				
-				for(let entry of catalog.entries){
-					if(typeof parent != "undefined" && entry.attr["parent"] != parent){
-						continue;
-					}
-					
-					if(!("id" in entry.attr)) continue;
-					
-					ret.push({
-						id: entry.attr["id"],
-						type: entry.tagname,
-						dataspace: dataspaceName,
-						source: dataspaceSource,
-					});
-				}
+				iterateEntries(dataspace.catalogs[catalogName].entries, null, dataspaceName, dataspaceSource);
 			};
 			
 			// This map
@@ -434,20 +440,7 @@ const messageHandlers:{
 			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
 				for(let catalogName in dataspace.catalogs){
 					let catalog = dataspace.catalogs[catalogName as CatalogName];
-					for(let entry of catalog.entries){
-						if(typeof parent != "undefined" && entry.attr["parent"] != parent){
-							continue;
-						}
-						
-						if(!("id" in entry.attr)) continue;
-						
-						ret.push({
-							id: entry.attr["id"],
-							type: entry.tagname,
-							dataspace: dataspaceName,
-							source: dataspaceSource,
-						});
-					}
+					iterateEntries(catalog.entries, catalogName as CatalogName, dataspaceName, dataspaceSource);
 				}
 			};
 			
