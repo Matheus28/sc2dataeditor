@@ -31,95 +31,81 @@ const filterOption = createFilter<SelectOption>({
 	ignoreAccents: false, // Performance
 });
 
-export default class SelectID extends React.Component<SelectID_Props, SelectID_State> {
-	private getEntriesOfTypesToken?:{};
+export default function(props:SelectID_Props){
+	const [id, setID] = React.useState<string>("");
+	const [inputValue, setInputValue] = React.useState<string>("");
+	const [idExists, setIDExists] = React.useState<boolean|undefined>(undefined);
+	const [options, setOptions] = React.useState<SelectOption[]|undefined>(undefined);
 	
-	override state:SelectID_State = {
-		id: "",
-	};
+	const idRef = React.useRef<string>(id);
+	idRef.current = id;
 	
-	private refetchList(){
-		let token = {};
+	
+	React.useEffect(() => {
+		setID("");
+		setIDExists(undefined);
+		setOptions(undefined);
 		
-		this.setState({id: "", idExists: undefined, existingIDs: undefined});
-		this.getEntriesOfTypesToken = token;
+		let abort = false;
 		
-		const hideDataspace = this.props.dataspace !== undefined;
-		const hideSource = this.props.source !== undefined;
-		const hideCatalog = this.props.catalog !== null;
-		
-		getEntries(this.props.catalog, this.props.source, this.props.dataspace, this.props.parent).then((arr) => {
-			if(this.getEntriesOfTypesToken !== token) return;
+		getEntries(props.catalog, props.source, props.dataspace, props.parent, inputValue, 6).then((res) => {
+			if(abort) return;
 			
-			this.setState((state) => {
-				let idExists:boolean|undefined = state.id.length > 0 ? false : undefined;
-				let arr2 = arr.map((v):SelectOption => {
-					if(idExists !== undefined && v.id == state.id) idExists = true;
-					
-					return {
-						value: v.id,
-						label: <>
-							{v.id}
-							{v.dataspace && !hideDataspace && <Badge bg="warning" className="float-end">{v.dataspace}</Badge>}
-							{v.source && !hideSource && <Badge bg="info" className="float-end">{v.source}</Badge>}
-							{v.catalog && !hideCatalog && <Badge bg="danger" className="float-end">{v.catalog}</Badge>}
-						</>
-					}
-					
-				});
+			const hideDataspace = props.dataspace !== undefined;
+			const hideSource = props.source !== undefined;
+			const hideCatalog = props.catalog !== null;
+			
+			let idExists:boolean|undefined = idRef.current.length > 0 ? false : undefined;
+			let arr2 = res.items.map((v):SelectOption => {
+				if(idExists !== undefined && v.id == idRef.current) idExists = true;
 				
 				return {
-					existingIDs: arr2,
-					idExists,
-				};
+					value: v.id,
+					label: <div style={{display: 'flex'}}>
+						<span>{v.id}</span>
+						<div style={{display:"inline-block", textAlign: "right", flex: 1}}>
+							{v.dataspace && !hideDataspace && <Badge bg="warning" className="ms-1 align-text-bottom">{v.dataspace}</Badge>}
+							{v.source && !hideSource && <Badge bg="info" className="ms-1 align-text-bottom">{v.source}</Badge>}
+							{v.catalog && !hideCatalog && <Badge bg="danger" className="ms-1 align-text-bottom">{v.catalog}</Badge>}
+						</div>
+					</div>
+				}
+				
 			});
-		});
-	}
-	
-	override componentDidMount(){
-		this.refetchList();
-	}
-	
-	override componentWillUnmount(){
-		delete this.getEntriesOfTypesToken;
-	}
-	
-	override componentDidUpdate(prevProps:SelectID_Props){
-		if(prevProps.parent !== this.props.parent
-		|| prevProps.catalog !== this.props.catalog
-		|| prevProps.source !== this.props.source
-		|| prevProps.dataspace !== this.props.dataspace
-		){
-			this.refetchList();
-		}
-	}
-	
-	override render(): React.ReactNode {
-		return <>
-			<Form.Group className="mb-3">
-				<Select
-					isLoading={this.state.existingIDs === undefined}
-					placeholder="ID"
-					options={this.state.existingIDs}
-					filterOption={filterOption}
-					onChange={(newValue) => {
-						let v = (newValue ? newValue.value : "");
-						this.setState({
-							id: v,
-							idExists: this.state.existingIDs && v.length > 0 ? this.state.existingIDs.filter(vv => vv.value == v).length > 0 : undefined,
-						});
-						this.props.onChange(v);
-					}}
-					
-					isValidNewOption={(newValue) => {
-						return /^[a-z][a-z_0-9@]*$/i.test(newValue);
-					}}
-				/>
-			</Form.Group>
 			
-			{ this.state.idExists === undefined && this.state.id.length > 0 && <Alert variant="info">Loading...</Alert> }
-			{ this.state.idExists === false && <Alert variant="warning">ID does not exist, a new entry will be created</Alert> }
-			{ this.state.idExists === true && <Alert variant="success">Modifying existing entry</Alert> }
-		</>;
-	}
-};
+			setIDExists(idExists);
+			setOptions(arr2);
+		});
+		
+		return () => {
+			abort = true;
+		};
+	}, [inputValue, props.catalog, props.source, props.dataspace, props.parent]);
+	
+	return <>
+		<Form.Group className="mb-3">
+			<Select
+				isLoading={options === undefined}
+				placeholder="ID"
+				options={options}
+				filterOption={filterOption}
+				onChange={(newValue) => {
+					let v = (newValue ? newValue.value : "");
+					setID(v);
+					setIDExists(options && v.length > 0 ? options.filter(vv => vv.value == v).length > 0 : undefined);
+					props.onChange(v);
+				}}
+				
+				isValidNewOption={(newValue) => {
+					return /^[a-z][a-z_0-9@]*$/i.test(newValue);
+				}}
+				
+				onInputChange={setInputValue}
+			/>
+		</Form.Group>
+		
+		{ idExists === undefined && id.length > 0 && <Alert variant="info">Loading...</Alert> }
+		{ idExists === false && <Alert variant="warning">ID does not exist, a new entry will be created</Alert> }
+		{ idExists === true && <Alert variant="success">Modifying existing entry</Alert> }
+	</>;
+}

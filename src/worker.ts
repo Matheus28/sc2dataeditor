@@ -386,8 +386,13 @@ const messageHandlers:{
 		return map.index.dependencies.map(v => v.name);
 	},
 	
-	async getEntries(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string){
-		let ret:Awaited<ReturnType<WorkerClient["getEntries"]>> = [];
+	async getEntries(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string, partialMatch?:string, limit?:number){
+		let ret:Awaited<ReturnType<WorkerClient["getEntries"]>> = {
+			items: [],
+			totalCount: 0,
+		};
+		
+		let partialMatchLower = partialMatch !== undefined ? partialMatch.toLowerCase() : undefined;
 		
 		const iterateEntries = (entries:XMLNode[], catalogName:CatalogName|null, dataspaceName:string|null, dataspaceSource:string|null) => {
 			for(let entry of entries){
@@ -395,10 +400,16 @@ const messageHandlers:{
 					continue;
 				}
 				
-				if(!("id" in entry.attr)) continue;
+				let id = "";
 				
-				let e:typeof ret[number] = {
-					id: entry.attr["id"],
+				if("id" in entry.attr) id = entry.attr["id"];
+				
+				if(typeof partialMatchLower != "undefined"){
+					if(id.toLowerCase().indexOf(partialMatchLower) == -1) continue;
+				}
+				
+				let e:typeof ret.items[number] = {
+					id: id,
 					type: entry.tagname,
 				};
 				
@@ -406,7 +417,7 @@ const messageHandlers:{
 				if(dataspaceSource != null) e.source = dataspaceSource;
 				if(catalogName) e.catalog = catalogName;
 				
-				ret.push(e);
+				ret.items.push(e);
 			}
 		};
 		
@@ -470,10 +481,24 @@ const messageHandlers:{
 			}
 		}
 		
-		ret.sort(function(a, b){
+		ret.items.sort(function(a, b){
+			if(a.source !== b.source) return b.source !== undefined ? -1 : 1;
 			if(a.id != b.id) return a.id < b.id ? -1 : 1;
 			return 0;
 		});
+		
+		ret.totalCount = ret.items.length;
+		
+		if(typeof limit != "undefined" && ret.items.length > limit){
+			// Find the first non-exact match after `limit` so we can cut off there
+			for(let i = limit; i < ret.items.length; ++i){
+				if(ret.items[i].id !== partialMatch){
+					// We can break it here
+					ret.items.length = i;
+					break;
+				}
+			}
+		}
 		
 		return ret;
 	},

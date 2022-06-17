@@ -78,7 +78,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 			<Row className="mb-3">
 				<Col>
 					{
-						dataspace !== undefined || catalog != null || source !== undefined
+						dataspace !== undefined || catalog != null || source !== undefined || true
 						?
 						<GenericEditor catalog={catalog} source={source} dataspace={dataspace} />
 						:
