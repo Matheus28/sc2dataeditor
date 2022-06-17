@@ -1,11 +1,15 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-import { Container, Row, Col, Form } from 'react-bootstrap';
+import { Container, Row, Col, Form, Alert } from 'react-bootstrap';
 import assert from 'assert';
 import CommonUpgradeWizard from './wizards/CommonUpgrade';
-import SelectDestinationDataspace from './components/SelectDestinationDataspace';
+import SelectDataspace from './components/SelectDataspace';
 import { loadMap } from './worker_client';
 import ChangedList from './components/ChangedList';
+import SelectCatalog from './components/SelectCatalog';
+import GenericEditor from './wizards/GenericEditor';
+import { CatalogName } from './lib/game_data';
+import SelectSource from './components/SelectSource';
 
 const mainElement = document.getElementById("main");
 assert(mainElement);
@@ -14,6 +18,9 @@ const root = ReactDOM.createRoot(mainElement);
 
 const CatalogBrowser = function(props:{rootDir:string}){
 	const [isLoaded, setLoaded] = React.useState(false);
+	const [catalog, setCatalog] = React.useState<CatalogName|null>(null);
+	const [source, setSource] = React.useState<string|null|undefined>(undefined);
+	const [dataspace, setDataspace] = React.useState<string|undefined>(undefined);
 	
 	React.useEffect(() => {
 		let abort = false;
@@ -26,6 +33,20 @@ const CatalogBrowser = function(props:{rootDir:string}){
 			abort = true;
 		};
 	}, [props.rootDir]);
+	
+	const onSourceChange = React.useCallback((v:string|null|undefined) => {
+		setSource(v);
+		if(v != null){ // if setting source to a dependency
+			setDataspace(undefined);
+		}
+	}, []);
+	
+	const onDataspaceChange = React.useCallback((v:string|undefined) => {
+		setDataspace(v);
+		if(v !== undefined && source != null){ // If selecting a dataspace, and source is a dependency
+			setSource(undefined);
+		}
+	}, [source]);
 	
 	if(!isLoaded){
 		return <>
@@ -40,22 +61,29 @@ const CatalogBrowser = function(props:{rootDir:string}){
 	
 	return <React.StrictMode>
 		<Container style={{marginTop: 20, marginBottom: 20}}>
-			<Row className="mb-3">
-				<Col>
-					<Form.Select>
-						<option>Common/Upgrade</option>
-					</Form.Select>
-				</Col>
-				<Col>
-					<SelectDestinationDataspace />
-				</Col>
-			</Row>
-			
 			<ChangedList />
 			
 			<Row className="mb-3">
 				<Col>
-					<CommonUpgradeWizard />
+					<SelectCatalog onChange={setCatalog} />
+				</Col>
+				<Col>
+					<SelectSource value={source} onChange={onSourceChange} />
+				</Col>
+				<Col>
+					<SelectDataspace value={dataspace} onChange={onDataspaceChange} />
+				</Col>
+			</Row>
+			
+			<Row className="mb-3">
+				<Col>
+					{
+						dataspace !== undefined || catalog != null || source !== undefined
+						?
+						<GenericEditor catalog={catalog} source={source} dataspace={dataspace} />
+						:
+						<Alert variant="warning">Filter by either Catalog, Source or Dataspace</Alert>
+					}
 				</Col>
 			</Row>
 		</Container>

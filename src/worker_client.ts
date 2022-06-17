@@ -39,8 +39,12 @@ export function entryExists(_entry:CatalogEntry):Promise<boolean> {
 	return sendMessage("entryExists", arguments);
 }
 
-export function getEntriesOfCatalog(_catalogName:CatalogName, _parent?:string):Promise<(CatalogEntry & {dataspace:string})[]> {
+export function getEntriesOfCatalog(_catalogName:CatalogName|null, _source?:string|null|undefined, _dataspace?:string, _parent?:string):Promise<(CatalogEntry & {dataspace:string|null,source:string|null})[]> {
 	return sendMessage("getEntriesOfCatalog", arguments);
+}
+
+export function getSourceList():Promise<string[]> {
+	return sendMessage("getSourceList", arguments);
 }
 
 export function getStringLink(_link:string):Promise<string|undefined> {

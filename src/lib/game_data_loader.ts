@@ -152,9 +152,9 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				let m = dep.match(r);
 				if(m == null) throw new Error("Invalid dep line: " + dep);
 				
-				let m2 = m[1].match(/\/[a-z0-9_\.]+$/i);
+				let m2 = m[1].match(/\/([a-z0-9_\.]+)$/i);
 				if(!m2) throw new Error("Invalid dep line: " + dep);
-				let name = m2[0]; // Core.SC2Mod
+				let name = m2[1]; // Core.SC2Mod
 				
 				let filename = "deps/SC2GameData/" + m[1].toLowerCase();
 				console.time(filename);
@@ -172,6 +172,8 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 }
 
 function flattenIndexIntoDependency(name:string, index:GameDataIndex):GameDataDependency[] {
+	let m = name.match(/\//)
+	
 	let dataspace = newDataspace(name);
 	for(let i in index.implicitDataspaces){
 		dataspace = mergeDataspaces(name, dataspace, index.implicitDataspaces[i as CatalogName]);
@@ -295,6 +297,11 @@ async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspa
 				continue;
 			}
 			
+			if(v.tagname == "const"){
+				//FIXME: handle this
+				continue;
+			}
+			
 			// All comments before this get attached to the node
 			if(comments.length == 0) continue;
 			
@@ -320,6 +327,11 @@ async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspa
 		// Ideally these should be attached to the closest child, so we can stop using data_
 		if(v.tagname == "#text") continue;
 		if(v.tagname == "#comment") continue;
+		
+		if(v.tagname == "const"){
+			//FIXME: handle this
+			continue;
+		}
 		
 		if(!(v.tagname in tagnameToCatalog)){
 			console.log("Unknown catalog entry tagname: " + v.tagname);

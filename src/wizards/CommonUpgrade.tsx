@@ -3,7 +3,7 @@ import { Card, Form } from 'react-bootstrap';
 import { CatalogEntry } from '../worker';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldStringLink from './components/CatalogFieldStringLink';
-import EntryParent from './components/EntryParent';
+import ForceEntryParent from './components/ForceEntryParent';
 import SelectID from './components/SelectID';
 
 export default function CommonUpgradeWizard(){
@@ -27,8 +27,8 @@ export default function CommonUpgradeWizard(){
 					<SelectID catalog="Upgrade" parent="CommonUpgrade" onChange={setID}/>
 					
 					{ id.length > 0 && <>
-						<EntryParent entry={upgradeEntry} parent="CommonUpgrade"/>
-						<EntryParent entry={abilEntry} parent="CommonUpgrade"/>
+						<ForceEntryParent entry={upgradeEntry} parent="CommonUpgrade"/>
+						<ForceEntryParent entry={abilEntry} parent="CommonUpgrade"/>
 						
 						<Form.Group className="mb-3">
 							<Form.Label>Max Level</Form.Label>

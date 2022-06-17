@@ -1,6 +1,5 @@
 import assert from 'assert';
 import * as React from 'react';
-import { FloatingLabel } from 'react-bootstrap';
 import Select from "react-select/creatable";
 import { getDataspaceList, setDestinationDataspace } from '../worker_client';
 
@@ -10,12 +9,14 @@ function makeOption(value:string){
 	return {value, label: value};
 }
 
-export default function(){
+interface Props {
+	value?:string|undefined;
+	onChange?:(x:string|undefined)=>void;
+}
+
+export default function(props:Props){
 	const [value, setValue] = React.useState<SelectOption|null>(null);
-	const valueRef = React.useRef<typeof value>(null);
 	const [dataspaces, setDataspaces] = React.useState<undefined|Awaited<ReturnType<typeof getDataspaceList>>>(undefined);
-	
-	valueRef.current = value;
 	
 	const options = React.useMemo(() => {
 		if(!dataspaces) return undefined;
@@ -23,6 +24,23 @@ export default function(){
 		return dataspaces.map(makeOption);
 	}, [dataspaces])
 	
+	if('value' in props){
+		if(props.value === undefined){
+			if(value != null){
+				setDestinationDataspace(null);
+				setValue(null);
+			}
+		}else if(options !== undefined){
+			let desired = props.value;
+			if(value == null || value.value != desired){
+				let v = options.filter(v => v.value === desired)[0];
+				if(v !== undefined){
+					setDestinationDataspace(desired);
+					setValue(v);
+				}
+			}
+		}
+	}
 	
 	React.useEffect(() => {
 		let abort = false;
@@ -30,9 +48,6 @@ export default function(){
 		getDataspaceList().then((data) => {
 			if(abort) return;
 			setDataspaces(data);
-			if(valueRef.current === null && data.length > 0){
-				setValue(makeOption(data[0]));
-			}
 		});
 		
 		return () => { abort = true; };
@@ -41,18 +56,16 @@ export default function(){
 	return <>
 		<Select 
 			isLoading={dataspaces === undefined}
-			isClearable={false}
+			isClearable={true}
 			allowCreateWhileLoading={false}
 			placeholder="Dataspace"
 			options={options}
 			value={value}
 			
 			onChange={(newValue) => {
-				if(newValue == null) return;
-				
-				console.log("select " + newValue.value);
-				setDestinationDataspace(newValue.value);
 				setValue(newValue);
+				setDestinationDataspace(newValue ? newValue.value : null);
+				if(props.onChange) props.onChange(newValue ? newValue.value : undefined);
 			}}
 			
 			onCreateOption={(inputValue) => {
@@ -61,12 +74,13 @@ export default function(){
 				setValue(newOption);
 				setDataspaces(undefined);
 				setDestinationDataspace(newOption.value).then(getDataspaceList).then(setDataspaces);
+				if(props.onChange) props.onChange(newOption.value);
 			}}
 			
 			getOptionLabel={(v) => v.label}
 			getOptionValue={(v) => v.value}
 			getNewOptionData={(inputValue) => {
-				return {value:inputValue, label: `Creating dataspace "${inputValue}"...`}
+				return {value:inputValue, label: `Create dataspace "${inputValue}"...`}
 			}}
 			
 			isValidNewOption={(inputValue) => {

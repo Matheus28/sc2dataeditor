@@ -382,29 +382,100 @@ const messageHandlers:{
 		map.strings.set(link, value);
 	},
 	
-	async getEntriesOfCatalog(catalogName:CatalogName, parent?:string){
-		let ret:(CatalogEntry & {dataspace:string})[] = [];
+	async getSourceList(){
+		return map.index.dependencies.map(v => v.name);
+	},
+	
+	async getEntriesOfCatalog(catalogName:CatalogName|null, source?:string|null|undefined, dataspaceName?:string, parent?:string){
+		let ret:Awaited<ReturnType<WorkerClient["getEntriesOfCatalog"]>> = [];
 		
-		const iterateDataspace = (dataspace:Dataspace) => {
-			let catalog = dataspace.catalogs[catalogName];
-			
-			for(let entry of catalog.entries){
-				if(typeof parent != "undefined" && entry.attr["parent"] != parent){
-					continue;
+		if(catalogName != null){
+			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
+				let catalog = dataspace.catalogs[catalogName];
+				
+				for(let entry of catalog.entries){
+					if(typeof parent != "undefined" && entry.attr["parent"] != parent){
+						continue;
+					}
+					
+					if(!("id" in entry.attr)) continue;
+					
+					ret.push({
+						id: entry.attr["id"],
+						type: entry.tagname,
+						dataspace: dataspaceName,
+						source: dataspaceSource,
+					});
 				}
-				
-				if(!("id" in entry.attr)) continue;
-				
-				ret.push({
-					id: entry.attr["id"],
-					type: entry.tagname,
-					dataspace: dataspace.name,
-				});
+			};
+			
+			// This map
+			if(source == null){ // also checks for undefined
+				if(dataspaceName == null){
+					iterateDataspace(map.index.implicitDataspaces[catalogName], null, null);
+					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
+				}else{
+					for(let dataspace of map.index.dataspaces){
+						if(dataspace.name != dataspaceName) continue;
+						iterateDataspace(dataspace, dataspace.name, null);
+					}
+				}
 			}
-		};
-		
-		iterateDataspace(map.index.implicitDataspaces[catalogName]);
-		map.index.dataspaces.forEach(iterateDataspace);
+			
+			// Dependencies
+			if(dataspaceName == null){
+				for(let dep of map.index.dependencies){
+					if(source === undefined || dep.name == source){
+						iterateDataspace(dep.dataspace, null, dep.name);
+					}
+				}
+			}
+		}else{
+			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
+				for(let catalogName in dataspace.catalogs){
+					let catalog = dataspace.catalogs[catalogName as CatalogName];
+					for(let entry of catalog.entries){
+						if(typeof parent != "undefined" && entry.attr["parent"] != parent){
+							continue;
+						}
+						
+						if(!("id" in entry.attr)) continue;
+						
+						ret.push({
+							id: entry.attr["id"],
+							type: entry.tagname,
+							dataspace: dataspaceName,
+							source: dataspaceSource,
+						});
+					}
+				}
+			};
+			
+			// This map
+			if(source == null){ // also checks for undefined
+				if(dataspaceName == null){
+					for(let d in map.index.implicitDataspaces){
+						iterateDataspace(map.index.implicitDataspaces[d as CatalogName], null, null);
+					}
+					
+					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
+				}else{
+					for(let dataspace of map.index.dataspaces){
+						if(dataspace.name != dataspaceName) continue;
+						iterateDataspace(dataspace, dataspace.name, null);
+					}
+				}
+			}
+			
+			// Dependencies
+			if(dataspaceName == null){
+				for(let dep of map.index.dependencies){
+					if(source === undefined || dep.name == source){
+						iterateDataspace(dep.dataspace, null, dep.name);
+					}
+				}
+			}
+		}
 		
 		ret.sort(function(a, b){
 			if(a.id != b.id) return a.id < b.id ? -1 : 1;
