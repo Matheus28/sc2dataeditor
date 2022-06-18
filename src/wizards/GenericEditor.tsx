@@ -6,6 +6,7 @@ import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldStringLink from './components/CatalogFieldStringLink';
 import EntryParent from './components/ForceEntryParent';
 import SelectEntry, { SelectOption } from './components/SelectEntry';
+import SelectSubtype from './components/SelectSubtype';
 
 
 interface Props {
@@ -16,13 +17,20 @@ interface Props {
 
 export default function(props:Props){
 	const [entry, setEntry] = React.useState<SelectOption|null>(null);
+	const [hasValidSubtype, setValidSubtype] = React.useState(false);
 	
 	return <>
 		<Card>
 			<Card.Body>
 				<Form>
 					<SelectEntry value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={setEntry}/>
+					{entry && <>
+						<SelectSubtype entry={entry.value} onValidChange={setValidSubtype}/>
+					</>}
 					
+					{entry && hasValidSubtype && <>
+						TADA!
+					</>}
 				</Form>
 			</Card.Body>
 		</Card>

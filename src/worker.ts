@@ -1,5 +1,5 @@
 import assert from "assert";
-import { CatalogName } from "./lib/game_data";
+import { CatalogName, CatalogTypesInstance } from "./lib/game_data";
 import { accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
@@ -67,6 +67,10 @@ export interface CatalogField {
 	name:(string|[string, string|number])[];
 }
 
+function getDefaultTypeForCatalog(catalog:CatalogName):string {
+	return `C${catalog}`;
+}
+
 // Refactor: remove and inline into accessEntry
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
@@ -82,9 +86,7 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 			"id": entry.id,
 		};
 		
-		const initialTagname = `C${entry.catalog}`;
-		
-		let node = newNode(initialTagname, attrs);
+		let node = newNode(getDefaultTypeForCatalog(entry.catalog), attrs);
 		addDataspaceEntry(dataspace, node);
 		modifiedDataspace(dataspace);
 		return node;
@@ -357,6 +359,22 @@ const messageHandlers:{
 	
 	async entryExists(entry:CatalogEntry){
 		return accessEntry(entry, false) !== undefined;
+	},
+	
+	async getEntryType(entry:CatalogEntry){
+		let v = accessEntry(entry, false);
+		if(v === undefined) return undefined;
+		return v.node.tagname;
+	},
+	
+	async setEntryType(entry:CatalogEntry, value:string){
+		assert(value in CatalogTypesInstance[entry.catalog]);
+		
+		let v = accessEntry(entry, true);
+		if(v.node.tagname == value) return;
+		
+		v.node.tagname = value;
+		modifiedDataspace(v.dataspace);
 	},
 	
 	async getStringLink(link:string){

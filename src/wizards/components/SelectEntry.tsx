@@ -123,7 +123,7 @@ export default function(props:Props){
 			<Select
 				value={props.value}
 				isLoading={options === undefined}
-				placeholder="ID"
+				placeholder="Select entry"
 				options={options}
 				filterOption={filterOption}
 				onChange={props.onChange}

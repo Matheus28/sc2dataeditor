@@ -51,6 +51,14 @@ export function getEntries(_filterByCatalog:CatalogName|null, _filterBySource?:s
 	return sendMessage("getEntries", arguments);
 }
 
+export function getEntryType(_entry:CatalogEntry):Promise<string|undefined> {
+	return sendMessage("getEntryType", arguments);
+}
+
+export function setEntryType(_entry:CatalogEntry, _value:string):Promise<void> {
+	return sendMessage("setEntryType", arguments);
+}
+
 export function getSourceList():Promise<string[]> {
 	return sendMessage("getSourceList", arguments);
 }

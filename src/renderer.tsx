@@ -78,7 +78,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 				</Col>
 			</Row>
 			
-			<Row className="mb-3">
+			<Row>
 				<Col>
 					{
 						dataspace !== undefined || catalog != null || source !== undefined || true
