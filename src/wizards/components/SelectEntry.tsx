@@ -26,11 +26,11 @@ const createLabel = (label:string, value:Value, notExistsAsUnknown?:boolean) => 
 			{!value.exists && (
 				notExistsAsUnknown
 				?
-				<Badge bg="secondary" className="ms-1 align-text-bottom">Unknown</Badge>
+				<Badge bg="danger" className="ms-1 align-text-bottom">Unknown</Badge>
 				:
 				<Badge bg="success" className="ms-1 align-text-bottom">New</Badge>
 			)}
-			{value.catalog && <Badge bg="danger" className="ms-1 align-text-bottom">{value.catalog}</Badge>}
+			{value.catalog && <Badge bg="primary" className="ms-1 align-text-bottom">{value.catalog}</Badge>}
 			{value.dataspace && <Badge bg="warning" className="ms-1 align-text-bottom">{value.dataspace}</Badge>}
 			{value.source && <Badge bg="info" className="ms-1 align-text-bottom">{value.source}</Badge>}
 		</div>

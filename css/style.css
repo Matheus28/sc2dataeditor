@@ -46,6 +46,23 @@ a[href^="ftp://"] {
 	margin-bottom: 0.25rem;
 }
 
+.entry-fields>thead>tr>th, .entry-subfields>thead>tr>th {
+	padding-left: 0.25rem;
+	padding-right: 0.25rem;
+	text-align: center;
+}
+
+.entry-fields>tfoot>tr>th:first-child, .entry-fields>thead>tr>th:first-child, .entry-fields>tbody>tr>td:first-child,
+.entry-subfields>tfoot>tr>th:first-child, .entry-subfields>thead>tr>th:first-child, .entry-subfields>tbody>tr>td:first-child
+{
+	padding-left: 0.25rem;
+	padding-right: 0.25rem;
+}
+
+.entry-fields>tbody>tr>td:first-child, .entry-subfields>tbody>tr>td:first-child {
+	text-align: right;
+}
+
 .entry-fields>tbody>tr>td.entry-field-value, .entry-subfields>tbody>tr>td.entry-field-value {
 	width: 100%;
 }
