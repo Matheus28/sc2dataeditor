@@ -19,6 +19,39 @@ export interface SelectOption {
 	label:React.ReactNode;
 }
 
+const createLabel = (label:string, value:Value, notExistsAsUnknown?:boolean) => {
+	return <div style={{display: 'flex'}}>
+		<span>{label}</span>
+		<div style={{display:"inline-block", textAlign: "right", flex: 1}}>
+			{!value.exists && (
+				notExistsAsUnknown
+				?
+				<Badge bg="secondary" className="ms-1 align-text-bottom">Unknown</Badge>
+				:
+				<Badge bg="success" className="ms-1 align-text-bottom">New</Badge>
+			)}
+			{value.catalog && <Badge bg="danger" className="ms-1 align-text-bottom">{value.catalog}</Badge>}
+			{value.dataspace && <Badge bg="warning" className="ms-1 align-text-bottom">{value.dataspace}</Badge>}
+			{value.source && <Badge bg="info" className="ms-1 align-text-bottom">{value.source}</Badge>}
+		</div>
+	</div>;
+};
+
+export function makeSelectOption(value:Value, notExistsAsUnknown?:boolean):SelectOption {
+	return {
+		value: {
+			id: value.id,
+			catalog: value.catalog,
+			source: value.source,
+			dataspace: value.dataspace,
+			
+			exists: false,
+		},
+		
+		label: createLabel(value.id, value, notExistsAsUnknown),
+	};
+}
+
 interface Props {
 	value:SelectOption|null;
 	
@@ -26,6 +59,8 @@ interface Props {
 	source?:string|null|undefined;
 	dataspace?:string|undefined;
 	parent?:string;
+	
+	isLoading?:boolean;
 	
 	onChange:(v:null|SelectOption)=>void;
 }
@@ -37,22 +72,6 @@ const filterOption = createFilter<SelectOption>({
 export default function(props:Props){
 	const [inputValue, setInputValue] = React.useState<string>("");
 	const [options, setOptions] = React.useState<SelectOption[]|undefined>(undefined);
-	
-	const hideDataspace = false; //props.dataspace !== undefined;
-	const hideSource = false; // props.source !== undefined;
-	const hideCatalog = false; //props.catalog !== null;
-	
-	const createLabel = (label:string, value:Value) => {
-		return <div style={{display: 'flex'}}>
-			<span>{label}</span>
-			<div style={{display:"inline-block", textAlign: "right", flex: 1}}>
-				{!value.exists && <Badge bg="success" className="ms-1 align-text-bottom">New</Badge>}
-				{value.catalog && !hideCatalog && <Badge bg="danger" className="ms-1 align-text-bottom">{value.catalog}</Badge>}
-				{value.dataspace && !hideDataspace && <Badge bg="warning" className="ms-1 align-text-bottom">{value.dataspace}</Badge>}
-				{value.source && !hideSource && <Badge bg="info" className="ms-1 align-text-bottom">{value.source}</Badge>}
-			</div>
-		</div>;
-	};
 	
 	React.useEffect(() => {
 		if(props.value == null) return;
@@ -122,27 +141,18 @@ export default function(props:Props){
 	
 	return <Select
 		value={props.value}
-		isLoading={options === undefined}
+		isLoading={props.isLoading || options === undefined}
 		isClearable={true}
 		placeholder={placeholder}
 		options={options}
 		filterOption={filterOption}
 		onChange={props.onChange}
 		onCreateOption={(inputValue) => {
-			let value = makeNewOptionValue(inputValue);
-			
-			props.onChange({
-				value,
-				label: createLabel(value.id, value),
-			});
+			props.onChange(makeSelectOption(makeNewOptionValue(inputValue)));
 		}}
 		
 		getOptionValue={(option) => {
-			return (option.value.catalog||"")+
-				(option.value.id||"")+
-				(option.value.dataspace||"")+
-				(option.value.source||"")
-			;
+			return option.value.catalog+"::"+option.value.id;
 		}}
 		
 		isValidNewOption={(inputValue) => {

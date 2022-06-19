@@ -38,6 +38,9 @@ let map:{
 	
 	hotkeysModified:boolean;
 	hotkeys:Map<string,string>;
+	
+	objectStringsModified:boolean;
+	objectStrings:Map<string,string>;
 };
 
 function getDefaultTypeForCatalog(catalog:CatalogName):string {
@@ -89,20 +92,10 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithData
 	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
 }
 
-function getEntryToken(entry:CatalogEntry, key:string):string|undefined {
+function getEntryTokens(entry:CatalogEntry):Record<string,string>|undefined {
 	let cur = accessEntry(entry, false);
 	if(!cur) return undefined;
-	if(!cur.node.attr) return undefined;
-	return cur.node.attr[key];
-}
-
-function setEntryToken(entry:CatalogEntry, key:string, value:string) {
-	let cur = accessEntry(entry, true);
-	
-	if(cur.node.attr[key] === value) return;
-	
-	modifiedDataspace(cur.dataspace);
-	cur.node.attr[key] = value;
+	return cur.node.attr;
 }
 
 function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:true):XMLNode;
@@ -328,6 +321,9 @@ const messageHandlers:{
 			
 			hotkeysModified: false,
 			hotkeys: await importHotkeysFile(rootMapDir),
+			
+			objectStringsModified: false,
+			objectStrings: await importTxtFile(rootMapDir, "enUS", "ObjectStrings.txt"),
 		};
 	},
 	
@@ -358,6 +354,11 @@ const messageHandlers:{
 		if(map.hotkeysModified){
 			map.hotkeysModified = false;
 			await exportHotkeysFile(map.rootMapDir, map.hotkeys);
+		}
+		
+		if(map.objectStringsModified){
+			map.objectStringsModified = false;
+			await exportTxtFile(map.rootMapDir, "enUS", map.objectStrings, "GameStrings.txt");
 		}
 		
 		notifyChanges();
@@ -407,7 +408,7 @@ const messageHandlers:{
 		
 		map.hasIndexChanges = true;
 		map.destinationDataspace = map.index.dataspaces.length;
-		let dataspace = newDataspace(value);
+		let dataspace = newDataspace(value, false, null);
 		addDataspaceToIndex(map.index, dataspace);
 		modifiedDataspace(dataspace);
 	},
@@ -416,10 +417,40 @@ const messageHandlers:{
 		return accessEntry(entry, false) !== undefined;
 	},
 	
-	async getEntryType(entry:CatalogEntry){
+	async getEntry(entry:CatalogEntry){
 		let v = accessEntry(entry, false);
 		if(v === undefined) return undefined;
-		return v.node.tagname;
+		
+		let tokens = Object.assign({}, v.node.attr);
+		delete tokens["id"];
+		
+		let r:Awaited<ReturnType<WorkerClient["getEntry"]>> = {
+			type: v.node.tagname,
+			tokens,
+		};
+		
+		if(v.dataspace.source != null){
+			r.source = v.dataspace.source.name;
+		}else if(!v.dataspace.isImplicit){
+			r.dataspace = v.dataspace.name;
+		}
+		
+		return r;
+	},
+	
+	async resolveTokens(entry:CatalogEntry, value:string){
+		let tokens = getEntryTokens(entry);
+		if(tokens === undefined) return value;
+		
+		let tokens2 = tokens;
+		
+		return value.replaceAll(/##([a-z0-9_]+)##/gim, function(all, id){
+			if(id in tokens2){
+				return tokens2[id];
+			}else{
+				return all;
+			}
+		});
 	},
 	
 	async setEntryType(entry:CatalogEntry, value:string){
@@ -437,12 +468,28 @@ const messageHandlers:{
 	},
 	
 	async setStringLink(link:string, value:string){
+		if(map.strings.get(link) === value) return;
+		map.strings.set(link, value);
+		
 		if(!map.stringsModified){
 			map.stringsModified = true;
 			notifyChanges();
 		}
 		
-		map.strings.set(link, value);
+	},
+	
+	async getObjectStringLink(link:string){
+		return map.objectStrings.get(link);
+	},
+	
+	async setObjectStringLink(link:string, value:string){
+		if(map.objectStrings.get(link) === value) return;
+		map.objectStrings.set(link, value);
+		
+		if(!map.objectStringsModified){
+			map.objectStringsModified = true;
+			notifyChanges();
+		}
 	},
 	
 	async getSourceList(){

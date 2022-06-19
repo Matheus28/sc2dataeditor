@@ -4,7 +4,7 @@ import { Alert, Badge, Form } from 'react-bootstrap';
 import { createFilter } from 'react-select';
 import Select from "react-select";
 import { CatalogEntry } from '../../worker';
-import { getEntryType, setEntryType } from '../../worker_client';
+import { getEntry, setEntryType } from '../../worker_client';
 import { CatalogTypesInstance } from '../../lib/game_data';
 
 
@@ -28,11 +28,11 @@ export default function(props:Props){
 		let abort = false;
 		
 		setLoading(true);
-		getEntryType(props.entry).then((v) => {
+		getEntry(props.entry).then((v) => {
 			if(abort) return;
 			
 			setLoading(false);
-			props.onLoad(v);
+			props.onLoad(v === undefined ? undefined : v.type);
 		});
 		
 		return () => { abort = true; };

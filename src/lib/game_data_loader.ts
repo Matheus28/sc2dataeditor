@@ -96,9 +96,9 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		(async function(){
 			let implicits = await Promise.all((Object.keys(CatalogTypesInstance) as CatalogName[]).map(async function(catalog){
 				const filename = base + catalog + "Data.xml";
-				let v = await loadDataspace(rootMapDir, filename);
+				let v = await loadDataspace(rootMapDir, filename, true, null);
 				if(!v){
-					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename));
+					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename), true, null);
 				}
 				
 				return { dataspace: v, catalog };
@@ -174,7 +174,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 function flattenIndexIntoDependency(name:string, index:GameDataIndex):GameDataDependency[] {
 	let m = name.match(/\//)
 	
-	let dataspace = newDataspace(name);
+	let dataspace = newDataspace(name, false, null);
 	for(let i in index.implicitDataspaces){
 		dataspace = mergeDataspaces(name, dataspace, index.implicitDataspaces[i as CatalogName]);
 	}
@@ -183,13 +183,14 @@ function flattenIndexIntoDependency(name:string, index:GameDataIndex):GameDataDe
 		dataspace = mergeDataspaces(name, dataspace, d);
 	}
 	
-	return [
-		...index.dependencies,
-		{
-			name,
-			dataspace,
-		}
-	];
+	const d:GameDataDependency = {
+		name,
+		dataspace,
+	};
+	
+	d.dataspace.source = d;
+	
+	return index.dependencies.concat(d);
 }
 
 function getGameDataIndexFilename(rootMapDir:string):string {
@@ -215,7 +216,7 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 	});
 	
 	return await Promise.all(filenames.map(async filename => {
-		let v = await loadDataspace(index.rootMapDir, filename);
+		let v = await loadDataspace(index.rootMapDir, filename, false, null);
 		if(!v) throw new Error(`Couldn't open file for dataspace ${filename}`);
 		return v;
 	}));
@@ -223,6 +224,8 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 
 export interface Dataspace {
 	name:string;
+	isImplicit:boolean; // Or from a dependency
+	source:GameDataDependency|null;
 	
 	data_:XMLNode|null;
 	
@@ -267,7 +270,7 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 }
 
 
-async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspace|null>{
+async function loadDataspace(rootMapDir:string, filename:string, isImplicit:boolean, source:GameDataDependency|null):Promise<Dataspace|null>{
 	let str:string;
 	
 	try {
@@ -367,6 +370,8 @@ async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspa
 		name: dataspaceFilenameToName(rootMapDir, filename),
 		data_: data,
 		catalogs,
+		isImplicit,
+		source,
 	};
 }
 
@@ -473,14 +478,18 @@ function mergeDataspaces(name:string, a:Dataspace, b:Dataspace):Dataspace {
 		name,
 		catalogs,
 		data_: null, // Since this isn't meant to be saved
+		isImplicit: false,
+		source: null, // will be set by user
 	}
 }
 
-export function newDataspace(name:string):Dataspace {
+export function newDataspace(name:string, isImplicit:boolean, source:GameDataDependency|null):Dataspace {
 	return {
 		name,
 		catalogs: createEmptyDataspaceCatalogs(),
 		data_: newNode("Catalog"),
+		isImplicit,
+		source,
 	};
 }
 

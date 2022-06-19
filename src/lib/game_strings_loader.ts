@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 
-export async function importTxtFile(rootMapDir:string, lang:string):Promise<Map<string,string>>{
-	let contents = await fs.readFile(langCodeToGameStringFilename(rootMapDir, lang), "utf8");
+export async function importTxtFile(rootMapDir:string, lang:string, filename:string = "GameStrings.txt"):Promise<Map<string,string>>{
+	let contents = await fs.readFile(langCodeToGameStringFilename(rootMapDir, lang, filename), "utf8");
 	
 	// Strip BOM (editor adds it...)
 	if(contents.charCodeAt(0) == 0xFEFF){
@@ -28,8 +28,8 @@ export async function importTxtFile(rootMapDir:string, lang:string):Promise<Map<
 	return new Map(sortMapByKey(res));
 }
 
-export async function exportTxtFile(rootMapDir:string, lang:string, data:Map<string, string>){
-	await fs.writeFile(langCodeToGameStringFilename(rootMapDir, lang), "\uFEFF" + sortMapByKey(data).map(kv => kv[0] + "=" + kv[1]).join("\r\n") + "\r\n");
+export async function exportTxtFile(rootMapDir:string, lang:string, data:Map<string, string>, filename:string = "GameStrings.txt"){
+	await fs.writeFile(langCodeToGameStringFilename(rootMapDir, lang, filename), "\uFEFF" + sortMapByKey(data).map(kv => kv[0] + "=" + kv[1]).join("\r\n") + "\r\n");
 }
 
 function sortMapByKey<A, B>(m:Map<A,B>) : [A,B][] {
@@ -43,6 +43,6 @@ export function fixBadString(str:string){
 	return str.replace(/<\/n>/gmi, '<n/>');
 }
 
-function langCodeToGameStringFilename(rootMapDir:string, lang:string){
-	return rootMapDir + "/" + lang + '.SC2Data/LocalizedData/GameStrings.txt';
+function langCodeToGameStringFilename(rootMapDir:string, lang:string, filename:string){
+	return rootMapDir + "/" + lang + '.SC2Data/LocalizedData/' + filename;
 }

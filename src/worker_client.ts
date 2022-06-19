@@ -51,8 +51,18 @@ export function getEntries(_filterByCatalog:CatalogName|null, _filterBySource?:s
 	return sendMessage("getEntries", arguments);
 }
 
-export function getEntryType(_entry:CatalogEntry):Promise<string|undefined> {
-	return sendMessage("getEntryType", arguments);
+export function getEntry(_entry:CatalogEntry):Promise<{
+	dataspace?:string;
+	source?:string;
+	type:string;
+	tokens:Record<string,string>;
+}|undefined> {
+	return sendMessage("getEntry", arguments);
+}
+
+export function resolveTokens(_entry:CatalogEntry, value:string):Promise<string>{
+	if(value.indexOf("##") == -1) return Promise.resolve(value);
+	return sendMessage("resolveTokens", arguments);
 }
 
 export function setEntryType(_entry:CatalogEntry, _value:string):Promise<void> {
@@ -69,6 +79,14 @@ export function getStringLink(_link:string):Promise<string|undefined> {
 
 export function setStringLink(_link:string, _value:string):Promise<void> {
 	return sendMessage("setStringLink", arguments);
+}
+
+export function getObjectStringLink(_link:string):Promise<string|undefined> {
+	return sendMessage("getObjectStringLink", arguments);
+}
+
+export function setObjectStringLink(_link:string, _value:string):Promise<void> {
+	return sendMessage("setObjectStringLink", arguments);
 }
 
 export function getEntryParent(_entry:CatalogEntry):Promise<string|undefined> {

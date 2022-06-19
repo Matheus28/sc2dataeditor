@@ -1,10 +1,13 @@
 import assert from 'assert';
 import * as React from 'react';
-import { Accordion, Card, Form, Table } from 'react-bootstrap';
+import { Accordion, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
+import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
 import { CatalogEntry, CatalogField } from '../worker';
+import { getArrayFieldIndexes } from '../worker_client';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldLink from './components/CatalogFieldLink';
+import CatalogFieldObjectStringLink from './components/CatalogFieldObjectStringLink';
 import CatalogFieldReal from './components/CatalogFieldReal';
 import CatalogFieldString from './components/CatalogFieldString';
 import SelectEntry, { SelectOption } from './components/SelectEntry';
@@ -45,7 +48,7 @@ export default function(props:Props){
 					name: [name]
 				};
 				
-				return <FieldComponent key={`${entryType}::${name}`} name={name} field={field} meta={meta}/>
+				return <FieldComponent endOfRow={null} key={`${entryType}::${name}`} name={name} field={field} meta={meta}/>
 			}
 		);
 	};
@@ -73,7 +76,7 @@ export default function(props:Props){
 					{(()=>{
 						if(!entry || entryType === undefined) return null;
 						
-						return <Table striped bordered size="sm">
+						return <Table className="entry-fields" striped bordered size="sm">
 							<thead>
 								<tr>
 									<th>Property</th>
@@ -89,45 +92,57 @@ export default function(props:Props){
 	</>;
 }
 
+interface FieldComponentSharedProps {
+	name:string;
+	field:CatalogField;
+	
+	endOfRow:React.ReactNode;
+}
 
-function FieldComponent(props:{name:string, field:CatalogField, meta:FieldType}){
+function FieldComponent(props:FieldComponentSharedProps & {meta:FieldType}){
 	return <>
-		{props.meta.value && <FieldComponentValue name={props.name} field={props.field} desc={props.meta.value} /> }
-		{'struct' in props.meta && <FieldComponentStruct name={props.name} field={props.field} desc={props.meta.struct} alsoHasValue={props.meta.value !== undefined} /> }
-		{'array' in props.meta && <FieldComponentArray name={props.name} field={props.field} desc={props.meta.array} /> }
-		{'namedArray' in props.meta && <FieldComponentNamedArray name={props.name} field={props.field} desc={props.meta.namedArray} /> }
+		{props.meta.value && <FieldComponentValue {...props} desc={props.meta.value} /> }
+		{'struct' in props.meta && <FieldComponentStruct {...props} desc={props.meta.struct} alsoHasValue={props.meta.value !== undefined} /> }
+		{'array' in props.meta && <FieldComponentArray {...props} desc={props.meta.array} /> }
+		{'namedArray' in props.meta && <FieldComponentNamedArray {...props} desc={props.meta.namedArray} /> }
 	</>;
 }
 
-type ComponentFromTypeFunc = React.FC<{name:string, field:CatalogField, def:any}>; //fixme: any
+type ComponentFromTypeFunc = React.FC<FieldComponentSharedProps & {def:any}>; //fixme: any
 
-const simpleValueWrapper = (name:string, node:React.ReactNode) => {
+const simpleValueWrapper = (props:FieldComponentSharedProps, node:React.ReactNode) => {
 	return <tr>
-		<td>{name}</td>
-		<td>{node}</td>
+		<td>{props.name}</td>
+		<td className="entry-field-value">{node}</td>
+		{props.endOfRow}
 	</tr>;
 };
 
-const boolType:ComponentFromTypeFunc = ({name, field, def}) => {
-	return simpleValueWrapper(name, <Form.Check style={{paddingLeft: '0.5rem'}} type="checkbox"/>);
+const boolType:ComponentFromTypeFunc = (props) => {
+	return simpleValueWrapper(props, <Form.Check style={{paddingLeft: '0.5rem'}} type="checkbox"/>);
 };
 
-const intType:ComponentFromTypeFunc = ({name, field, def}) => {
-	return simpleValueWrapper(name, <CatalogFieldInt field={field} default={def}/>);
+const intType:ComponentFromTypeFunc = (props) => {
+	return simpleValueWrapper(props, <CatalogFieldInt field={props.field} default={props.def}/>);
 };
 
-const realType:ComponentFromTypeFunc = ({name, field, def}) => {
-	return simpleValueWrapper(name, <CatalogFieldReal field={field} default={def}/>);
+const realType:ComponentFromTypeFunc = (props) => {
+	return simpleValueWrapper(props, <CatalogFieldReal field={props.field} default={props.def}/>);
 };
 
 
 const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
-	CString: ({name, field, def}) => {
-		return simpleValueWrapper(name, <CatalogFieldString field={field} default={def}/>);
+	CString: (props) => {
+		return simpleValueWrapper(props, <CatalogFieldString field={props.field} default={props.def}/>);
 	},
 	
 	CStringLink: () => {
 		return null;
+	},
+	
+	CObjectStringLink: (props) => {
+		const link = props.def.replace(/##id##/gm, props.field.entry.id);
+		return simpleValueWrapper(props, <CatalogFieldObjectStringLink link={link} default={""} oneLine={true}/>);
 	},
 	
 	CHotkeyLink: () => { return null; },
@@ -150,8 +165,8 @@ const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
 	...(():Record<keyof CatalogLinks, ComponentFromTypeFunc> => {
 		let v = {} as Record<keyof CatalogLinks, ComponentFromTypeFunc>;
 		for(let catalogName of CatalogNameArray){
-			v[`C${catalogName}Link`] = ({name, field, def}) => {
-				return simpleValueWrapper(name, <CatalogFieldLink field={field} catalog={catalogName} default={def} />);
+			v[`C${catalogName}Link`] = (props) => {
+				return simpleValueWrapper(props, <CatalogFieldLink field={props.field} catalog={catalogName} default={props.def} />);
 			};
 		}
 		
@@ -159,12 +174,12 @@ const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
 	})()
 };
 
-function FieldComponentValue(props:{name:string, field:CatalogField, desc:FieldValue}){
+function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}){
 	let x:React.FC;
 	if(props.desc.type == "CEnum"){
 		let values = props.desc.values;
 		
-		return simpleValueWrapper(props.name, <Form.Select>
+		return simpleValueWrapper(props, <Form.Select>
 			{values.map(v => <option key={v}>{v}</option>)}
 		</Form.Select>);
 	}
@@ -172,10 +187,10 @@ function FieldComponentValue(props:{name:string, field:CatalogField, desc:FieldV
 	const def = typeof props.desc.default == "undefined" ? DataFieldDefaults[props.desc.type] : props.desc.default;
 	
 	const C = componentFromType[props.desc.type];
-	return <C name={props.name} field={props.field} def={def} />
+	return <C {...props} def={def} />
 }
 
-function FieldComponentStruct(props:{name:string, field:CatalogField, desc:FieldTypeStruct, alsoHasValue:boolean}){
+function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeStruct, alsoHasValue:boolean}){
 	// This is used for accumulator fields
 	if(props.alsoHasValue && Object.keys(props.desc).length == 1){
 		for(let subname in props.desc){
@@ -187,13 +202,13 @@ function FieldComponentStruct(props:{name:string, field:CatalogField, desc:Field
 				name: props.field.name.concat(subname),
 			};
 			
-			return <FieldComponent name={prettyName} field={subfield} meta={sub}/>;
+			return <FieldComponent {...props} name={prettyName} field={subfield} meta={sub}/>;
 		}
 	}
 	
 	return simpleValueWrapper(
-		props.name,
-		<Table striped size="sm">
+		props,
+		<Table striped size="sm" className="entry-subfields" >
 			<tbody>
 				{mapObject(
 					props.desc,
@@ -203,7 +218,7 @@ function FieldComponentStruct(props:{name:string, field:CatalogField, desc:Field
 							name: props.field.name.concat(name),
 						};
 						
-						return <FieldComponent key={name} name={name} field={subfield} meta={meta}/>
+						return <FieldComponent endOfRow={null} key={name} name={name} field={subfield} meta={meta}/>
 					}
 				)}
 			</tbody>
@@ -211,27 +226,97 @@ function FieldComponentStruct(props:{name:string, field:CatalogField, desc:Field
 	);
 }
 
-function FieldComponentArray(props:{name:string, field:CatalogField, desc:FieldType}){
-	return simpleValueWrapper(props.name, <>
-		Array goes here
+function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType}){
+	const [indexes, setIndexes] = React.useState<undefined|string[]>(undefined);
+	
+	useDeepCompareEffect(() => {
+		setIndexes(undefined);
+		
+		let abort = false;
+		
+		getArrayFieldIndexes(props.field).then((v) => {
+			if(abort) return;
+			
+			if(v === undefined) v = [];
+			setIndexes(v);
+		});
+		
+		return function(){
+			abort = true;
+		}
+	}, [props.field]);
+	
+	
+	return simpleValueWrapper(props, <>
+		{
+			indexes === undefined
+			?
+			<Spinner animation="border" />
+			:
+			(() => {
+				// Since arrays always have numeric indices... we can parse treat them to numbers
+				const indexes2 = indexes.map(v => {
+					let vv = parseInt(v, 10);
+					if(!isFinite(vv) || !/^[0-9]+$/.test(v)){
+						console.error(`Invalid index ${v} in ${JSON.stringify(props.field)}. Must be an integer.`);
+						return null;
+					}
+					
+					return vv;
+				}).filter(notNull);
+				
+				const newIndexValue = indexes2.reduce((acc, v) => Math.max(acc, v + 1), 0);
+				
+				return <Table striped size="sm" className="entry-subfields">
+					<tbody>
+						{range(newIndexValue, index => {
+							const subfield:CatalogField = {
+								entry: props.field.entry,
+								name: props.field.name.slice(0, -1).concat([[props.name, index]]),
+							};
+							
+							return <FieldComponent
+								key={index}
+								name={index.toString()}
+								field={subfield}
+								meta={props.desc}
+								endOfRow={
+									<td style={{verticalAlign: 'middle'}}>
+										<Button variant="danger">Delete</Button>
+									</td>
+								}
+							/>;
+						})}
+						<tr>
+							<td>{newIndexValue}</td>
+							<td className="entry-field-value"></td>
+							<td style={{textAlign: 'end'}}>
+								<Button variant="success">New</Button>
+							</td>
+						</tr>
+					</tbody>
+				</Table>
+			})()
+		}
 	</>);
 }
 
-function FieldComponentNamedArray(props:{name:string, field:CatalogField, desc:FieldTypeNamedArray}){
+function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldTypeNamedArray}){
 	let isFlagArray = true;
 	for(let i in props.desc){
 		let v = props.desc[i].value;
 		if(v === undefined || v.type !== 'bool'){
 			isFlagArray = false;
+			break;
 		}
 	}
 	
 	if(isFlagArray){
-		return simpleValueWrapper(props.name, <div style={{padding: '0.5rem 0.5rem 0 0.5rem'}}>
+		return simpleValueWrapper(props, <div style={{padding: '0.5rem 0.5rem 0 0.5rem'}}>
 			{mapObject(props.desc, (index, v) => {
 				let subfield = {
 					entry: props.field.entry,
-					name: props.field.name.slice(0, -1).concat([props.name, index]),
+					name: props.field.name.slice(0, -1).concat([[props.name, index]]),
 				};
 				
 				assert(v.value !== undefined);
@@ -241,8 +326,25 @@ function FieldComponentNamedArray(props:{name:string, field:CatalogField, desc:F
 			})}
 		</div>);
 	}else{
-		return simpleValueWrapper(props.name, <>
-			Named array goes here
+		return simpleValueWrapper(props, <>
+			<Table striped size="sm" className="entry-subfields">
+				<tbody>
+					{mapObject(props.desc, (index, v) => {
+						const subfield:CatalogField = {
+							entry: props.field.entry,
+							name: props.field.name.slice(0, -1).concat([[props.name, index]]),
+						};
+						
+						return <FieldComponent
+							endOfRow={null}
+							key={index}
+							name={index.toString()}
+							field={subfield}
+							meta={v}
+						/>;
+					})}
+				</tbody>
+			</Table>
 		</>);
 	}
 }
@@ -255,4 +357,15 @@ function mapObject<T, U>(obj:T, fn:(key:string, value:T[keyof T])=>U):U[] {
 	}
 	
 	return arr;
+}
+
+
+function range<T>(n:number, fn:(i:number)=>T):T[] {
+	let arr = new Array<T>(n);
+	for(let i = 0; i < n; ++i) arr[i] = fn(i);
+	return arr;
+}
+
+function notNull<T>(v:T|null):v is T {
+	return v !== null;
 }

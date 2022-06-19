@@ -89,9 +89,6 @@ function combine(...args:FieldType[]):FieldType {
 function editorFields(catalogName: CatalogName): Record<string, FieldType> {
 	return {
 		"EditorCategories": simpleType("CString"),
-		"EditorDescription": simpleType("CStringLink", `${catalogName}/EditorDescription/##id##`),
-		"EditorPrefix": simpleType("CStringLink", `${catalogName}/EditorPrefix/##id##`),
-		"EditorSuffix": simpleType("CStringLink", `${catalogName}/EditorSuffix/##id##`),
 
 		"Name": simpleType("CStringLink", `${catalogName}/Name/##id##`),
 
@@ -100,6 +97,11 @@ function editorFields(catalogName: CatalogName): Record<string, FieldType> {
 		// This is done when we load the xml, it inserts the value as a tag when parsing,
 		// and transforms it into a comment when encoding
 		"EditorComment": simpleType("CString"),
+		
+		// These are edited like normal fields but actually get loaded/saved to ObjectStrings.txt
+		"EditorDescription": simpleType("CObjectStringLink", `${catalogName}/EditorDescription/##id##`),
+		"EditorPrefix": simpleType("CObjectStringLink", `${catalogName}/EditorPrefix/##id##`),
+		"EditorSuffix": simpleType("CObjectStringLink", `${catalogName}/EditorSuffix/##id##`),
 	};
 }
 
@@ -259,6 +261,7 @@ export type CatalogLinks = {
 export const DataFieldDefaults = {
 	"CString": "",
 	"CStringLink": "",
+	"CObjectStringLink": "",
 	"CHotkeyLink": "",
 	"TMarkerLink": "Effect/##id##",
 	"TCooldownLink": "Abil/##id##",
@@ -381,7 +384,13 @@ const SEffectWhichLocation = struct({
 
 export const CatalogTypesInstance = {
 	"Abil": {
-		"CAbil": unspecifiedSubtype(),
+		"CAbil": subtype("Abil", {
+			parent: null,
+			abstract: true,
+			fields: {
+				//FIXME
+			},
+		}),
 		"CAbilArmMagazine": unspecifiedSubtype(),
 		"CAbilAttack": unspecifiedSubtype(),
 		"CAbilAttackModifier": unspecifiedSubtype(),
@@ -405,7 +414,12 @@ export const CatalogTypesInstance = {
 		"CAbilMove": unspecifiedSubtype(),
 		"CAbilPawn": unspecifiedSubtype(),
 		"CAbilProgress": unspecifiedSubtype(),
-		"CAbilQueue": unspecifiedSubtype(),
+		"CAbilQueue": subtype("Abil", {
+			parent: "CAbil",
+			fields: {
+				//FIXME
+			},
+		}),
 		"CAbilQueueable": unspecifiedSubtype(),
 		"CAbilRally": unspecifiedSubtype(),
 		"CAbilRedirect": unspecifiedSubtype(),
