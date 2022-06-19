@@ -72,3 +72,16 @@ a[href^="ftp://"] {
 	padding-left: 0.5rem;
 	padding-right: 0.5rem;
 }
+
+
+.source-self {
+	--falcon-input-bg: var(--falcon-table-success-bg);
+}
+
+.source-parent {
+	--falcon-input-bg: var(--falcon-table-warning-bg);
+}
+
+.source-default {
+	--falcon-input-bg: var(--falcon-table-primary-bg);
+}

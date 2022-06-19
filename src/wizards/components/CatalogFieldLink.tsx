@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { CatalogEntry, CatalogField } from '../../worker';
+import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getEntries, getEntry, getFieldValue, resolveTokens, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
@@ -16,17 +16,24 @@ interface Props {
 export default function(props:Props){
 	const [value, setValue] = React.useState<SelectOption|null>(null);
 	const [isLoading, setLoading] = React.useState(true);
+	const [source, setSource] = React.useState<ValueSource|undefined>();
 	
 	React.useEffect(() => {
 		setLoading(true);
+		setSource(undefined);
 		
 		let abort = false;
 		
-		getFieldValue(props.field).then(async (v) => {
+		getFieldValue(props.field).then(async (vv) => {
 			if(abort) return;
 			
-			if(typeof v == "undefined"){
+			let v:string;
+			if(typeof vv == "undefined"){
 				v = props.default || "";
+				setSource(ValueSource.Default);
+			}else{
+				v = vv.value;
+				setSource(vv.source);
 			}
 			
 			if(v === ""){
@@ -60,7 +67,8 @@ export default function(props:Props){
 	
 	const onChange = (newValue:SelectOption|null) => {
 		setValue(newValue);
+		setSource(ValueSource.Self);
 	};
 	
-	return <SelectEntry isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
+	return <SelectEntry className={source} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
 };

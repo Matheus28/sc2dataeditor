@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Accordion, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
-import { CatalogEntry, CatalogField } from '../worker';
+import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldLink from './components/CatalogFieldLink';
@@ -226,7 +226,7 @@ function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeS
 }
 
 function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType}){
-	const [indexes, setIndexes] = React.useState<undefined|string[]>(undefined);
+	const [indexes, setIndexes] = React.useState<undefined|Awaited<ReturnType<typeof getArrayFieldIndexes>>>(undefined);
 	
 	useDeepCompareEffect(() => {
 		setIndexes(undefined);
@@ -236,7 +236,7 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 		getArrayFieldIndexes(props.field).then((v) => {
 			if(abort) return;
 			
-			if(v === undefined) v = [];
+			if(v === undefined) v = {};
 			setIndexes(v);
 		});
 		
@@ -254,7 +254,8 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 			:
 			(() => {
 				// Since arrays always have numeric indices... we can parse treat them to numbers
-				const indexes2 = indexes.map(v => {
+				// and find out the length
+				const arrayLen = Object.keys(indexes).map(v => {
 					let vv = parseInt(v, 10);
 					if(!isFinite(vv) || !/^[0-9]+$/.test(v)){
 						console.error(`Invalid index ${v} in ${JSON.stringify(props.field)}. Must be an integer.`);
@@ -262,13 +263,25 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 					}
 					
 					return vv;
-				}).filter(notNull);
-				
-				const newIndexValue = indexes2.reduce((acc, v) => Math.max(acc, v + 1), 0);
+				}).filter(notNull).reduce((acc, v) => Math.max(acc, v + 1), 0);
 				
 				return <Table striped size="sm" className="entry-subfields">
 					<tbody>
-						{range(newIndexValue, index => {
+						{range(arrayLen, index => {
+							assert(indexes);
+							
+							/*
+							// In case we want to know the origin of this row...
+							let tmp:undefined|((typeof indexes)[number]) = indexes[index];
+							
+							// So this happens if we have something like
+							// <B index="0"/>
+							// <B index="2"/>
+							// Index 1 will show up here but it doesn't exist anywhere...
+							// We consider that we created it ourselves then
+							if(tmp === undefined) tmp = { source: ValueSource.Self, removed: false };
+							*/
+							
 							const subfield:CatalogField = {
 								entry: props.field.entry,
 								name: props.field.name.slice(0, -1).concat([[props.name, index]]),
@@ -287,7 +300,7 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 							/>;
 						})}
 						<tr>
-							<td>{newIndexValue}</td>
+							<td>{arrayLen}</td>
 							<td className="entry-field-value"></td>
 							<td style={{textAlign: 'end'}}>
 								<Button variant="success">New</Button>

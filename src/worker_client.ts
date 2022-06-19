@@ -1,6 +1,6 @@
 import assert from "assert";
 import { CatalogName } from "./lib/game_data";
-import { CatalogEntry, CatalogField, Message, MessageResponse } from "./worker";
+import { CatalogEntry, CatalogField, Message, MessageResponse, ValueSource } from "./worker";
 
 const worker = new Worker("./out/worker_wrapper.js");
 
@@ -15,7 +15,7 @@ export function loadMap(_value:string):Promise<void> {
 	return sendMessage("loadMap", arguments);
 }
 
-export function getFieldValue(_field:CatalogField):Promise<string|undefined>{
+export function getFieldValue(_field:CatalogField):Promise<{ value:string; source:ValueSource; }|undefined>{
 	return sendMessage("getFieldValue", arguments);
 }
 
@@ -101,7 +101,7 @@ export function setFieldValue(_field:CatalogField, _value:string):Promise<void> 
 	return sendMessage("setFieldValue", arguments);
 }
 
-export function getArrayFieldIndexes(_field:CatalogField):Promise<string[]|undefined> {
+export function getArrayFieldIndexes(_field:CatalogField):Promise<Record<string,{removed:boolean;source:ValueSource}>|undefined> {
 	return sendMessage("getArrayFieldIndexes", arguments);
 }
 

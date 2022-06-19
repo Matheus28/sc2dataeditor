@@ -10,6 +10,12 @@ type WorkerClient = typeof worker_client;
 //FIXME: remove this and make stuff import it from there instead
 export { CatalogEntry, CatalogField };
 
+export const enum ValueSource {
+	Default = "source-default",
+	Parent = "source-parent",
+	Self = "source-self",
+};
+
 export interface Message {
 	id:number;
 	data:{
@@ -121,72 +127,160 @@ function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:
 	return entry;
 }
 
-function getFieldValue(field:CatalogField):string|undefined {
+function getFieldValueSpecific(node:XMLNode, field:CatalogField):{ value:string; source:ValueSource; }|undefined {
 	assert(field.name.length >= 1);
 	
-	let vv = accessEntry(field.entry, false);
-	if(!vv) return undefined;
+	let cur = getFieldContainer(field, node, false);
+	if(cur){
+		let name = field.name[field.name.length - 1];
+		if(typeof name == 'string'){
+			// There are two ways this could be defined, say we're accessing "Row"
+			// 1. <DefaultButtonLayout Row="1"/>
+			// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+			
+			// Check the first form
+			if(name in cur.attr){
+				return { value: cur.attr[name], source: ValueSource.Self };
+			}
+			
+			// Then check the second form
+			let subnodes = getChildrenByTagName(cur, name);
+			if(!subnodes || subnodes.length == 0) return undefined;
+			return { value: subnodes[0].attr["value"], source: ValueSource.Self };
+		}else{
+			// This is an array of simple values, such as
+			// <Resource index="Minerals" value="100"/>
+			let [arrayName, arrayIndex] = name;
+			
+			let v = accessArray(cur, arrayName, arrayIndex, false);
+			if(!v) return undefined;
+			
+			return { value: v.attr["value"], source: ValueSource.Self };
+		}
+	}
 	
-	let cur = getFieldContainer(field, vv.node, false);
-	if(!cur) return undefined;
-	
-	let name = field.name[field.name.length - 1];
-	if(typeof name == 'string'){
-		// There are two ways this could be defined, say we're accessing "Row"
-		// 1. <DefaultButtonLayout Row="1"/>
-		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
-		
-		// Check the first form
-		if(name in cur.attr){
-			return cur.attr[name];
+	let tmp = getParentNodeFor(node);
+	if(tmp !== undefined){
+		let {parent, isDefault} = tmp;
+		let ret = getFieldValueSpecific(parent, field);
+		if(ret){
+			if(isDefault){
+				ret.source = ValueSource.Default;
+			}else{
+				ret.source = ValueSource.Parent;
+			}
 		}
 		
-		// Then check the second form
-		let subnodes = getChildrenByTagName(cur, name);
-		if(!subnodes || subnodes.length == 0) return undefined;
-		return subnodes[0].attr["value"];
-	}else{
-		// This is an array of simple values, such as
-		// <Resource index="Minerals" value="100"/>
-		let [arrayName, arrayIndex] = name;
-		
-		let v = accessArray(cur, arrayName, arrayIndex, false);
-		if(!v) return undefined;
-		
-		return v.attr["value"];
+		return ret;
 	}
+	
+	return undefined;
 }
 
-function getArrayFieldIndexes(field:CatalogField):string[]|undefined {
+function getParentNodeFor(node:XMLNode):{parent: XMLNode, isDefault:boolean}|undefined{
+	let def = getDefaultEntryForType(node.tagname);
+	let parent = def;
+	if(parent === node) return undefined;
+	
+	if(node.attr["parent"]){
+		let vv = accessEntry({
+			id: node.attr["parent"],
+			catalog: getCatalogNameByTagname(node.tagname),
+		}, false);
+		
+		if(vv){
+			if(vv.node.tagname == node.tagname){
+				parent = vv.node;
+			}else{
+				console.error(`Invalid parent for ${node["attr"]["id"]}. Type doesn't match`);
+			}
+		}else{
+			console.error(`Invalid parent for ${node["attr"]["id"]}. It doesn't exist`);
+		}
+	}
+	
+	if(parent === undefined) return undefined;
+	return {parent, isDefault: parent === def};
+}
+
+function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; }|undefined {
+	let vv = accessEntry(field.entry, false);
+	if(!vv) return undefined;
+	
+	return getFieldValueSpecific(vv.node, field);
+}
+
+function getDefaultEntryForType(tagname:string):XMLNode|undefined {
+	let catalogName = getCatalogNameByTagname(tagname);
+	
+	return (map.index.catalogDefaults[catalogName] as Record<string,XMLNode>)[tagname];
+}
+
+function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean;source:ValueSource}>|undefined {
 	let vv = accessEntry(field.entry, false);
 	if(!vv) return undefined;
 	
 	
-	let cur = getFieldContainer(field, vv.node, false);
-	if(!cur) return undefined;
+	let entry = getFieldContainer(field, vv.node, false);
+	if(!entry) return undefined;
 	
-	let arrName = field.name[field.name.length - 1];
+	let arrName2 = field.name[field.name.length - 1];
 	
-	if(typeof arrName != 'string'){
+	if(typeof arrName2 != 'string'){
 		throw new Error("You must refer to the array without an index");
 	}
 	
-	return getArrayFieldIndexesInternal(cur, arrName);
-}
-
-function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):string[]|undefined {
-	let subnodes = getChildrenByTagName(cur, arrName);
-	if(!subnodes || subnodes.length == 0){
-		return [];
+	let arrName = arrName2;
+	
+	let ret:Record<string,{removed:boolean;source:ValueSource}> = {}
+	
+	function addEntryIndexes(entry:XMLNode, source:ValueSource){
+		let tmp = getArrayFieldIndexesInternal(entry, arrName);
+		if(tmp){
+			for(let [index, exists] of tmp){
+				if(!(index in ret)){
+					ret[index] = {
+						removed: !exists,
+						source,
+					};
+				}
+			}
+		}
 	}
 	
-	let taken = new Set<string>();
+	addEntryIndexes(entry, ValueSource.Self);
+	
+	for(;;){
+		let tmp = getParentNodeFor(entry);
+		if(tmp !== undefined){
+			let {parent, isDefault} = tmp;
+			
+			entry = parent;
+			addEntryIndexes(entry, isDefault ? ValueSource.Default : ValueSource.Parent);
+		}
+	}
+	
+	return ret;
+}
+
+function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):Map<string,boolean>|undefined {
+	let subnodes = getChildrenByTagName(cur, arrName);
+	if(!subnodes || subnodes.length == 0){
+		return new Map();
+	}
+	
+	let ret = new Map<string,boolean>();
 	
 	let lastIndex:number = -1;
 	for(let sub of subnodes){
-		if(sub.attr && typeof sub.attr["index"] != 'undefined'){
+		if(typeof sub.attr["index"] != 'undefined'){
 			let vv = sub.attr["index"];
-			taken.add(vv);
+			
+			if(sub.attr["removed"] === "1"){
+				ret.set(vv, false);
+			}else{
+				ret.set(vv, true);
+			}
 			
 			let num:number;
 			if(/^[0-9]+$/.test(vv)){
@@ -200,13 +294,16 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 			
 			lastIndex = Math.max(lastIndex, num);
 			continue;
+		}else{
+			// Can't remove without an index
+			assert(sub.attr["removed"] !== "1");
+			
+			ret.set((lastIndex+1).toString(), true);
+			++lastIndex;
 		}
-		
-		taken.add((lastIndex+1).toString());
-		++lastIndex;
 	}
 	
-	return Array.from(taken);
+	return ret;
 }
 
 function test_getArrayFieldIndexesInternal(xml:string, arr:string[], mapping?:Record<string, number>){

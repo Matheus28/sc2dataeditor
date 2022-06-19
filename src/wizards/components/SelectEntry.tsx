@@ -63,6 +63,8 @@ interface Props {
 	isLoading?:boolean;
 	
 	onChange:(v:null|SelectOption)=>void;
+	
+	className?:string|undefined;
 }
 
 const filterOption = createFilter<SelectOption>({
@@ -140,6 +142,7 @@ export default function(props:Props){
 	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
 	
 	return <Select
+		className={props.className||""}
 		value={props.value}
 		isLoading={props.isLoading || options === undefined}
 		isClearable={true}

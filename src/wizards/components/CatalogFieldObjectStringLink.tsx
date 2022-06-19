@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
+import { ValueSource } from '../../worker';
 import { getObjectStringLink, setObjectStringLink } from '../../worker_client';
 
 type Props = {
@@ -7,6 +8,8 @@ type Props = {
 	
 	default?:string;
 	placeholder?:string;
+	
+	source?:ValueSource;
 } & ({
 	oneLine:true;
 } | {
@@ -45,6 +48,7 @@ export default function(props:Props){
 		value,
 		disabled: isDisabled,
 		placeholder: props.placeholder,
+		className: props.source,
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){
 			if(e.target.validity.valid){
 				setValue(e.target.value)

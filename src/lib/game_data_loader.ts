@@ -2,7 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
-import { CatalogTypes, CatalogTypesInstance, CatalogName, CatalogNameArray } from "./game_data";
+import { CatalogTypes, CatalogTypesInstance, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric } from "./game_data";
 
 export type XMLNode = ({
 	tagname:string;
@@ -35,6 +35,12 @@ export type GameDataIndex = {
 	
 	implicitDataspaces:Record<CatalogName, Dataspace>;
 	dataspaces:Dataspace[];
+	
+	catalogDefaults:{
+		[Catalog in CatalogName]:{
+			[K in keyof CatalogTypes[Catalog]]?:XMLNode & { tagname: K };
+		}
+	};
 };
 
 export async function loadDependency(name:string, rootMapDir:string):Promise<GameDataDependency[]>{
@@ -88,6 +94,17 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		implicitDataspaces: {} as any,
 		dependencies: [],
 		dataspaces: [],
+		catalogDefaults: {
+			...(() => {
+				let v = {} as GameDataIndex["catalogDefaults"];
+				
+				for(let catalogName of CatalogNameArray){
+					v[catalogName] = {};
+				}
+				
+				return v;
+			})()
+		},
 	};
 	
 	const base = getGameDataFilenameBase(rootMapDir);
@@ -167,6 +184,35 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		})(),
 	]);
 	
+	{ // Find default field values
+		function findDefaults(dataspace:Dataspace){
+			for(let catalogName in dataspace.catalogs){
+				let catalog = dataspace.catalogs[catalogName as CatalogName];
+				for(let entry of catalog.entries){
+					if('id' in entry.attr) continue;
+					
+					if(entry.attr["default"] !== "1"){
+						console.error(`Default entry for ${entry.tagname} in ${dataspace.name} is lacking default="1"`);
+						continue;
+					}
+					
+					(index.catalogDefaults[catalogName as CatalogName] as Record<string, XMLNode>)[entry.tagname] = entry;
+				}
+			}
+		}
+		
+		for(let d of index.dependencies){
+			findDefaults(d.dataspace);
+		}
+		
+		for(let catalogName in index.implicitDataspaces){
+			findDefaults(index.implicitDataspaces[catalogName as CatalogName]);
+		}
+		
+		for(let dataspace of index.dataspaces){
+			findDefaults(dataspace);
+		}
+	}
 	
 	return index;
 }
@@ -233,9 +279,6 @@ export interface Dataspace {
 		[Catalog in CatalogName]:{
 			entries:XMLNode[];
 			entryByID:Record<string, XMLNode & {tagname:keyof CatalogTypes[Catalog]}>;
-			default:{
-				[K in keyof CatalogTypes[Catalog]]?:XMLNode & { tagname: K};
-			};
 		}
 	};
 };
@@ -262,7 +305,6 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 		catalogs[catalog] = {
 			entries: [],
 			entryByID: {},
-			default: {},
 		}
 	}
 	
@@ -355,12 +397,6 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 			}
 			
 			catalog.entryByID[id] = v as any;
-		}else{
-			if(v.tagname in catalog.default){
-				throw new Error("More than one default for " + v.tagname + " in " + catalogName + " catalog");
-			}else{
-				(catalog.default as Record<string, XMLNode>)[v.tagname] = v;
-			}
 		}
 		
 		catalog.entries.push(v);
