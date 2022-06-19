@@ -76,12 +76,18 @@ a[href^="ftp://"] {
 
 .source-self {
 	--falcon-input-bg: var(--falcon-table-success-bg);
+	--falcon-input-color: var(--falcon-table-success-color);
+	--falcon-input-border-color: var(--falcon-table-success-border-color);
 }
 
 .source-parent {
 	--falcon-input-bg: var(--falcon-table-warning-bg);
+	--falcon-input-color: var(--falcon-table-warning-color);
+	--falcon-input-border-color: var(--falcon-table-warning-border-color);
 }
 
 .source-default {
 	--falcon-input-bg: var(--falcon-table-primary-bg);
+	--falcon-input-color: var(--falcon-table-primary-color);
+	--falcon-input-border-color: var(--falcon-table-primary-border-color);
 }

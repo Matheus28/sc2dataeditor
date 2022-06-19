@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Alert, Badge, Form } from 'react-bootstrap';
 import { createFilter } from 'react-select';
 import Select from "react-select/creatable";
+import { components } from "react-select";
 import { CatalogName } from '../../lib/game_data';
 import { getEntries } from '../../worker_client';
 
@@ -172,5 +173,43 @@ export default function(props:Props){
 		}}
 		
 		onInputChange={setInputValue}
+		
+		styles={{
+			control: (base) => {
+				return {
+					...base,
+					backgroundColor: 'var(--falcon-input-bg)',
+					borderColor: 'var(--falcon-input-border-color)',
+				};
+			},
+			
+			placeholder: (base) => {
+				return {
+					...base,
+					color: 'var(--falcon-input-color)',
+				};
+			},
+			
+			dropdownIndicator: (base) => {
+				return {
+					...base,
+					color: 'var(--falcon-input-color)',
+				};
+			},
+			
+			clearIndicator: (base) => {
+				return {
+					...base,
+					color: 'var(--falcon-input-color)',
+				};
+			},
+			
+			indicatorSeparator: (base) => {
+				return {
+					...base,
+					backgroundColor: 'var(--falcon-input-color)',
+				};
+			},
+		}}
 	/>
 }

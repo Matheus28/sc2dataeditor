@@ -237,8 +237,9 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	function addEntryIndexes(entry:XMLNode, source:ValueSource){
 		let tmp = getArrayFieldIndexesInternal(entry, arrName);
 		if(tmp){
-			for(let [index, exists] of tmp){
+			for(let index in tmp){
 				if(!(index in ret)){
+					let exists = tmp[index];
 					ret[index] = {
 						removed: !exists,
 						source,
@@ -263,13 +264,13 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	return ret;
 }
 
-function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):Map<string,boolean>|undefined {
+function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):Record<string,boolean>|undefined {
 	let subnodes = getChildrenByTagName(cur, arrName);
 	if(!subnodes || subnodes.length == 0){
-		return new Map();
+		return {};
 	}
 	
-	let ret = new Map<string,boolean>();
+	let ret:Record<string,boolean> = {};
 	
 	let lastIndex:number = -1;
 	for(let sub of subnodes){
@@ -277,9 +278,9 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 			let vv = sub.attr["index"];
 			
 			if(sub.attr["removed"] === "1"){
-				ret.set(vv, false);
+				ret[vv] = false;
 			}else{
-				ret.set(vv, true);
+				ret[vv] = true;
 			}
 			
 			let num:number;
@@ -298,7 +299,7 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 			// Can't remove without an index
 			assert(sub.attr["removed"] !== "1");
 			
-			ret.set((lastIndex+1).toString(), true);
+			ret[(lastIndex+1).toString()] = true;
 			++lastIndex;
 		}
 	}
@@ -306,20 +307,20 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 	return ret;
 }
 
-function test_getArrayFieldIndexesInternal(xml:string, arr:string[], mapping?:Record<string, number>){
+function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,boolean>, mapping?:Record<string, number>){
 	let vv = getArrayFieldIndexesInternal(parseXML(`<A>${xml}</A>`)["A"], 'B', mapping);
 	assert.deepStrictEqual(
 		vv,
-		arr,
-		`${xml} has bad getArrayFieldIndexesInternal.\nGot: ${JSON.stringify(vv)}\nExpected: ${JSON.stringify(arr)}`
+		expected,
+		`${xml} has bad getArrayFieldIndexesInternal.\nGot: ${JSON.stringify(vv)}\nExpected: ${JSON.stringify(expected)}`
 	);
 }
 
 {
-	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, ['0', '1', '2', '3']);
-	test_getArrayFieldIndexesInternal(`<B/><B/><B index="0"/><B/>`, ['0', '1', '2']);
-	test_getArrayFieldIndexesInternal(`<B index="0"/><B/><B index="0"/><B/>`, ['0', '1', '2']);
-	test_getArrayFieldIndexesInternal(`<B index="2"/><B/><B/><B/>`, ['2', '3', '4', '5']);
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {'0':true, '1':true, '2':true, '3':true});
+	test_getArrayFieldIndexesInternal(`<B/><B/><B index="0"/><B/>`, {'0':true, '1':true, '2':true});
+	test_getArrayFieldIndexesInternal(`<B index="0"/><B/><B index="0"/><B/>`, {'0':true, '1':true, '2':true});
+	test_getArrayFieldIndexesInternal(`<B index="2"/><B/><B/><B/>`, {'2':true, '3':true, '4':true, '5':true});
 	
 	let mapping = {
 		Research1: 0,
@@ -328,8 +329,8 @@ function test_getArrayFieldIndexesInternal(xml:string, arr:string[], mapping?:Re
 		Research4: 3,
 	};
 	
-	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, ['0', '1', '2', '3'], mapping);
-	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, ['Research1', '1', 'Research3', 'Research4'], mapping);
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {'0':true, '1':true, '2':true, '3':true}, mapping);
+	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {'Research1':true, '1':true, 'Research3':true, 'Research4':true}, mapping);
 }
 
 
