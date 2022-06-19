@@ -7,13 +7,11 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 interface Props {
 	field:CatalogField;
 	
-	default:number;
-	min?:number;
-	max?:number;
+	default:string;
 }
 
 export default function(props:Props){
-	const [value, setValue] = React.useState<string>(props.default.toString());
+	const [value, setValue] = React.useState(props.default);
 	const [isDisabled, setDisabled] = React.useState(true);
 	
 	// Try to load field from dataspace
@@ -31,7 +29,7 @@ export default function(props:Props){
 			if(typeof v != "undefined"){
 				setValue(v);
 			}else{
-				setValue(props.default.toString());
+				setValue(props.default);
 			}
 		});
 		
@@ -42,20 +40,15 @@ export default function(props:Props){
 	}, [props.field]);
 	
 	return <Form.Control
-		type="number"
+		required
 		disabled={isDisabled}
-		min={props.min}
-		max={props.max}
-		step={0}
 		value={value}
 		onChange={(e) => {
-			setValue(e.target.value);
-			if(e.target.validity.valid){
-				let v = parseInt(e.target.value, 10);
-				if(isFinite(v)){
-					setFieldValue(props.field, e.target.value);
-				}
-			}
+			if(!e.target.validity.valid) return;
+			
+			let v = e.target.value;
+			setValue(v);
+			setFieldValue(props.field, v.toString());
 		}}
 	/>;
 };

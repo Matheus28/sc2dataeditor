@@ -1,7 +1,7 @@
 import assert from "assert";
 
-type DataFieldDefaults = typeof DataFieldDefaults;
-type DataFieldTypes = keyof DataFieldDefaults;
+export type DataFieldDefaults = typeof DataFieldDefaults;
+export type DataFieldTypes = keyof DataFieldDefaults;
 
 type SimpleFieldValue = {
 	[Type in DataFieldTypes]: {
@@ -14,31 +14,34 @@ type SimpleFieldValue = {
 
 type NonEmptyArray<T> = [T, ...T[]];
 
-type FieldValue = SimpleFieldValue  | {
+export type FieldValue = SimpleFieldValue  | {
 	type:"CEnum";
 	// Default value is implied to be the first one
 	values:NonEmptyArray<string>;
 };
 
-type FieldType = {
+export type FieldType = {
 	value?:FieldValue;
 } & (
 	{}
 	|
 	{
-		struct:Record<string, FieldType>;
+		struct:FieldTypeStruct;
 	}
 	|
 	{
 		// This differs from struct because they're stored a lot like arrays
 		// like <Name index="..." value="..."/>
-		namedArray:Record<string, FieldType>;
+		namedArray:FieldTypeNamedArray;
 	}
 	|
 	{
 		array:FieldType;
 	}
 );
+
+export type FieldTypeStruct = Record<string, FieldType>;
+export type FieldTypeNamedArray = Record<string, FieldType>;
 
 function simpleType<T extends SimpleFieldValue["type"]>(type: T, def?: DataFieldDefaults[T], restrictions?:T extends keyof DataFieldRestrictions ? DataFieldRestrictions[T]:undefined): FieldType {
 	return { value: {type, default: def, restrictions} as SimpleFieldValue }; // `as` needed to help compiler...
@@ -102,7 +105,7 @@ function editorFields(catalogName: CatalogName): Record<string, FieldType> {
 
 // i18n key (for example, name = CEffectCreep):
 // EDSTR_ENTRYTYPE_${name}
-interface CatalogSubtype {
+export interface CatalogSubtype {
 	parent: string | null;
 	abstract?: boolean;
 	
@@ -126,7 +129,9 @@ const unspecifiedSubtype = (): CatalogSubtype => ({
 });
 
 function subtype(catalogName: CatalogName, v: CatalogSubtype): CatalogSubtype {
-	v.fields = {...editorFields(catalogName), ...v.fields};
+	if(v.parent == null){
+		v.fields = {...editorFields(catalogName), ...v.fields};
+	}
 	
 	return v;
 }
@@ -245,22 +250,19 @@ export const CatalogNameArray = [
 
 export type CatalogName = (typeof CatalogNameArray)[number];
 
-type CatalogLinks = {
+export type CatalogLinks = {
 	[Key in CatalogName as `C${Key}Link`]:Key;
 }
 
 // It seems we can find most types by adding a token and looking through the available types
 // Mapping to their default value
-const DataFieldDefaults = {
+export const DataFieldDefaults = {
 	"CString": "",
 	"CStringLink": "",
 	"CHotkeyLink": "",
 	"TMarkerLink": "Effect/##id##",
 	"TCooldownLink": "Abil/##id##",
 	"bool": 0,
-	"bool8": 0,
-	"bool16": 0,
-	"bool32": 0,
 	"int8": 0,
 	"int16": 0,
 	"int32": 0,
@@ -368,7 +370,7 @@ const e_effectLocation = simpleEnum([
 	"TargetUnitOrPoint",
 ]);
 
-const e_effectPlayer = simpleEnum(["Unknown", "Caster", "CasterOuter", "Creator", "Hostile", "Neutral", "Outer", "Origin", "Source", "Target", "TargetOuter", "Origin"]);
+const e_effectPlayer = simpleEnum(["Unknown", "Caster", "CasterOuter", "Creator", "Hostile", "Neutral", "Outer", "Origin", "Source", "Target", "TargetOuter"]);
 const e_effectUnit = simpleEnum(["Unknown", "Caster", "CasterOuter", "Outer", "Source", "Target", "TargetOuter", "Origin"]);
 
 const SEffectWhichLocation = struct({
@@ -1373,6 +1375,7 @@ export const CatalogTypesInstance = {
 	},
 };
 
+export const CatalogTypesInstanceGeneric:Record<CatalogName, Record<string, CatalogSubtype>> = CatalogTypesInstance;
 export type CatalogTypes = typeof CatalogTypesInstance;
 
 {

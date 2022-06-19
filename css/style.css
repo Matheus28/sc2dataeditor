@@ -1,3 +1,22 @@
+:not(input):not(textarea),
+:not(input):not(textarea)::after,
+:not(input):not(textarea)::before {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+a:not([draggable=true]), img:not([draggable=true]) {
+    -webkit-user-drag: none;
+    user-drag: none; /* Technically not supported in Electron yet */
+}
+a[href^="http://"],
+a[href^="https://"],
+a[href^="ftp://"] {
+    -webkit-user-drag: auto;
+    user-drag: auto; /* Technically not supported in Electron yet */
+}
+
 .spinner {
 	width: 88px;
 	height: 88px;
@@ -12,4 +31,8 @@
 	100% {
 	   transform: rotate(1turn);
 	}
+ }
+
+ .accordion-button:not(.collapsed) {
+	color: #5e6e82;
  }

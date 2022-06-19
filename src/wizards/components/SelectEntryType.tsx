@@ -10,7 +10,10 @@ import { CatalogTypesInstance } from '../../lib/game_data';
 
 interface Props {
 	entry:CatalogEntry;
-	onValidChange:(x:boolean)=>void;
+	
+	value:string|undefined;
+	onLoad:(v:string|undefined)=>void;
+	onChange:(v:string)=>void;
 }
 
 interface SelectOption {
@@ -19,22 +22,17 @@ interface SelectOption {
 }
 
 export default function(props:Props){
-	const [value, setValue] = React.useState<string|undefined>();
 	const [isLoading, setLoading] = React.useState(true);
 	
 	React.useEffect(() => {
 		let abort = false;
 		
 		setLoading(true);
-		setValue(undefined);
-		props.onValidChange(false);
-		
 		getEntryType(props.entry).then((v) => {
 			if(abort) return;
 			
 			setLoading(false);
-			setValue(v);
-			if(v !== undefined) props.onValidChange(true);
+			props.onLoad(v);
 		});
 		
 		return () => { abort = true; };
@@ -51,24 +49,21 @@ export default function(props:Props){
 		});
 	}, [props.entry.catalog]);
 	
-	const selectedOption = value === undefined ? null : options.filter(v => v.value == value)[0];
-	assert(selectedOption !== undefined);
+	let selectedOption = isLoading || props.value === undefined ? null : options.filter(v => v.value == props.value)[0];
+	if(selectedOption === undefined) selectedOption = null;
 	
-	return <Form.Group className="mb-3"><Select
+	return <Select
 		placeholder="Type"
 		isLoading={isLoading}
 		value={selectedOption}
 		options={options}
 		isClearable={false}
 		onChange={(option) => {
-			if(option != null){
-				setValue(option.value);
-				setEntryType(props.entry, option.value);
-				props.onValidChange(true);
-			}else{
-				setValue(undefined);
-				props.onValidChange(false);
-			}
+			assert(option != null);
+			if(option == null) return;
+			
+			setEntryType(props.entry, option.value);
+			props.onChange(option.value);
 		}}
-	/></Form.Group>;
+	/>;
 }

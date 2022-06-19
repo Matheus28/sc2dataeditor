@@ -53,19 +53,15 @@ export default function(props:Props){
 		},
 	};
 	
-	return <>
-		{
-			props.oneLine
-			?
-			<Form.Control
-				{...sharedProps}
-			/>
-			:
-			<Form.Control
-				{...sharedProps}
-				as="textarea"
-				rows={typeof props.rows == "undefined" ? 4 : props.rows}
-			/>
-		}
-	</>;
+	if(props.oneLine){
+		return <Form.Control
+			{...sharedProps}
+		/>;
+	}else{
+		return <Form.Control
+			{...sharedProps}
+			as="textarea"
+			rows={typeof props.rows == "undefined" ? 4 : props.rows}
+		/>;
+	}
 };

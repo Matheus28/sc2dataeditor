@@ -118,12 +118,15 @@ export default function(props:Props){
 		};
 	};
 	
+	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
+	
 	return <>
 		<Form.Group className="mb-3">
 			<Select
 				value={props.value}
 				isLoading={options === undefined}
-				placeholder="Select entry"
+				isClearable={true}
+				placeholder={placeholder}
 				options={options}
 				filterOption={filterOption}
 				onChange={props.onChange}

@@ -51,7 +51,7 @@ export default function(props:Props){
 		onChange={(e) => {
 			setValue(e.target.value);
 			if(e.target.validity.valid){
-				let v = parseInt(e.target.value, 10);
+				let v = parseFloat(e.target.value);
 				if(isFinite(v)){
 					setFieldValue(props.field, e.target.value);
 				}
