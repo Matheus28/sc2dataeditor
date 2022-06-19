@@ -1,6 +1,6 @@
 import assert from "assert";
 import { CatalogName, CatalogTypesInstance, CatalogTypesInstanceGeneric } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML } from './lib/game_data_loader';
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import * as worker_client from "./worker_client";
@@ -76,11 +76,11 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 	}
 }
 
-type NodeWithDataspace = { node:XMLNode, dataspace:Dataspace };
+type EntryNodeWithDataspace = { node:XMLNodeEntry, dataspace:Dataspace };
 
-function accessEntry(entry:CatalogEntry, createIfNotExists:true):NodeWithDataspace;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):NodeWithDataspace|undefined {
+function accessEntry(entry:CatalogEntry, createIfNotExists:true):EntryNodeWithDataspace;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined;
+function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined {
 	{
 		let dataspace = map.index.implicitDataspaces[entry.catalog];
 		let cur = accessDataspaceEntry(dataspace, entry, false);
@@ -590,6 +590,21 @@ const messageHandlers:{
 		}
 	},
 	
+	async getEntryComment(entry:CatalogEntry) {
+		let v = accessEntry(entry, false);
+		if(!v) return undefined;
+		
+		return v.node.editorComment;
+	},
+
+	async setEntryComment(entry:CatalogEntry, value:string) {
+		let v = accessEntry(entry, true);
+		
+		if(v.node.editorComment === value) return;
+		v.node.editorComment = value;
+		modifiedDataspace(v.dataspace);
+	},
+
 	async getSourceList(){
 		return map.index.dependencies.map(v => v.name);
 	},
@@ -814,4 +829,8 @@ onmessage = function(e){
 	onMessage(msg).then(function(value:any){
 		postMessage(<MessageResponse>{ id: msg.id, value });
 	});
+}
+
+function delay(ms:number):Promise<void>{
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -7,8 +7,8 @@ interface Props {
 	field:CatalogField;
 	
 	default:number;
-	min?:number;
-	max?:number;
+	min?:number|undefined;
+	max?:number|undefined;
 }
 
 export default function(props:Props){

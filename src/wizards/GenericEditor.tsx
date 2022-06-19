@@ -5,6 +5,7 @@ import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
+import CatalogEditorComment from './components/CatalogEditorComment';
 import CatalogFieldEnum from './components/CatalogFieldEnum';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldLink from './components/CatalogFieldLink';
@@ -96,11 +97,12 @@ export default function(props:Props){
 interface FieldComponentSharedProps {
 	name:string;
 	field:CatalogField;
+	meta:FieldType;
 	
 	endOfRow:React.ReactNode;
 }
 
-function FieldComponent(props:FieldComponentSharedProps & {meta:FieldType}){
+function FieldComponent(props:FieldComponentSharedProps){
 	return <>
 		{props.meta.value && <FieldComponentValue {...props} desc={props.meta.value} /> }
 		{'struct' in props.meta && <FieldComponentStruct {...props} desc={props.meta.struct} alsoHasValue={props.meta.value !== undefined} /> }
@@ -123,12 +125,28 @@ const boolType:ComponentFromTypeFunc = (props) => {
 	return <SimpleValueWrapper {...props}><Form.Check style={{paddingLeft: '0.5rem'}} type="checkbox"/></SimpleValueWrapper>;
 };
 
-const intType:ComponentFromTypeFunc = (props) => {
-	return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={props.def}/></SimpleValueWrapper>;
+const intType = (type:"int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64"):ComponentFromTypeFunc =>{
+	return (props) => {
+		let mv = props.meta.value;
+		assert(mv);
+		assert(mv.type == type);
+		let min = mv.restrictions ? mv.restrictions.min : undefined;
+		let max = mv.restrictions ? mv.restrictions.max : undefined;
+		
+		return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={props.def} min={min} max={max}/></SimpleValueWrapper>;
+	}
 };
 
-const realType:ComponentFromTypeFunc = (props) => {
-	return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={props.def}/></SimpleValueWrapper>;
+const realType = (type:"CFixed"|"real32"):ComponentFromTypeFunc =>{
+	return (props) => {
+		let mv = props.meta.value;
+		assert(mv);
+		assert(mv.type == type);
+		let min = mv.restrictions ? mv.restrictions.min : undefined;
+		let max = mv.restrictions ? mv.restrictions.max : undefined;
+		
+		return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={props.def} min={min} max={max}/></SimpleValueWrapper>;
+	}
 };
 
 
@@ -146,22 +164,26 @@ const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
 		return <SimpleValueWrapper {...props}><CatalogFieldObjectStringLink link={link} default={""} oneLine={true}/></SimpleValueWrapper>;
 	},
 	
+	CEditorComment: (props) => {
+		return <SimpleValueWrapper {...props}><CatalogEditorComment entry={props.field.entry}/></SimpleValueWrapper>
+	},
+	
 	CHotkeyLink: () => { return null; },
 	TMarkerLink: () => { return null; },
 	TCooldownLink: () => { return null; },
 	bool: boolType,
 	
-	int8: intType,
-	int16: intType,
-	int32: intType,
-	int64: intType,
-	uint8: intType,
-	uint16: intType,
-	uint32: intType,
-	uint64: intType,
+	int8: intType("int8"),
+	int16: intType("int16"),
+	int32: intType("int32"),
+	int64: intType("int64"),
+	uint8: intType("uint8"),
+	uint16: intType("uint16"),
+	uint32: intType("uint32"),
+	uint64: intType("uint64"),
 	
-	CFixed: realType,
-	real32: realType,
+	CFixed: realType("CFixed"),
+	real32: realType("real32"),
 	
 	...(():Record<keyof CatalogLinks, ComponentFromTypeFunc> => {
 		let v = {} as Record<keyof CatalogLinks, ComponentFromTypeFunc>;

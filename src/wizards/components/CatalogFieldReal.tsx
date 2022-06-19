@@ -7,8 +7,8 @@ interface Props {
 	field:CatalogField;
 	
 	default:number;
-	min?:number;
-	max?:number;
+	min?:number|undefined;
+	max?:number|undefined;
 }
 
 export default function(props:Props){
@@ -20,7 +20,9 @@ export default function(props:Props){
 			type="number"
 			min={props.min}
 			max={props.max}
-			step={0}
+			step="any"
+			className="entry-field-value-real"
+			onScroll={(e) => { e.preventDefault(); }}
 		/>}
 	/>;
 };

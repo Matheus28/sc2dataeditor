@@ -89,6 +89,14 @@ export function setObjectStringLink(_link:string, _value:string):Promise<void> {
 	return sendMessage("setObjectStringLink", arguments);
 }
 
+export function getEntryComment(_entry:CatalogEntry):Promise<string|undefined> {
+	return sendMessage("getEntryComment", arguments);
+}
+
+export function setEntryComment(_entry:CatalogEntry, _value:string):Promise<void> {
+	return sendMessage("setEntryComment", arguments);
+}
+
 export function getEntryParent(_entry:CatalogEntry):Promise<string|undefined> {
 	return sendMessage("getEntryParent", arguments);
 }

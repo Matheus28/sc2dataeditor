@@ -4,17 +4,33 @@ import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
 import { CatalogTypes, CatalogTypesInstance, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric } from "./game_data";
 
-export type XMLNode = ({
+
+interface XMLNodeBase<ChildType> {
 	tagname:string;
-} | {
-	tagname:"#text"|"#comment";
-	text:string;
-}) & {
-	children:XMLNode[];
+	children:ChildType[];
 	attr:Record<string, string>;
-	childrenByTagname:Record<string,XMLNode[]>;
+	childrenByTagname:Record<string,ChildType[]>;
 	doNotEncode?:boolean;
-};
+}
+
+interface XMLNodeComment<ChildType> extends XMLNodeBase<ChildType> {
+	tagname:"#comment";
+	text:string;
+}
+
+interface XMLNodeText<ChildType> extends XMLNodeBase<ChildType> {
+	tagname:"#text";
+	text:string;
+}
+
+export interface XMLNode extends XMLNodeBase<XMLNode> {
+	
+}
+
+export interface XMLNodeCatalog extends XMLNodeBase<XMLNodeEntry> {};
+export interface XMLNodeEntry extends XMLNodeBase<XMLNode> {
+	editorComment?:string;
+}
 
 type XMLParseResult = Record<string, XMLNode>;
 
@@ -154,8 +170,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				assert(node.children.length == 1);
 				
 				let textNode = node.children[0];
-				assert(textNode.tagname == "#text");
-				assert('text' in textNode);
+				assert(isTextNode(textNode));
 				
 				deps.push(textNode.text);
 			}
@@ -273,7 +288,7 @@ export interface Dataspace {
 	isImplicit:boolean; // Or from a dependency
 	source:GameDataDependency|null;
 	
-	data_:XMLNode|null;
+	data_:XMLNodeCatalog|null;
 	
 	catalogs:{
 		[Catalog in CatalogName]:{
@@ -321,25 +336,22 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		return null;
 	}
 	
-	let data = (await parseXML(str))["Catalog"];
+	let data:XMLNodeCatalog = (await parseXML(str))["Catalog"];
 	let catalogs = createEmptyDataspaceCatalogs();
 	
 	{
 		// Special handling for editor comments (any xml comment node before a catalog entry)
-		// the way they're handled is by putting them in a fake <EditorComment> field inside the entry
-		// this way they're carried around with it, like the editor does, and we can edit it like any other field
+		// the way they're handled is attaching them to the node for that entry
 		const comments:string[] = [];
 		for(let i = 0; i < data.children.length; ++i){
 			let v = data.children[i];
 			
-			if(v.tagname == "#text"){
-				assert("text" in v);
+			if(isTextNode(v)){
 				console.error("Text node found in xml, this isn't okay: " + v.text + "\nEditor will delete it when it open this, I'm ignoring it");
 				continue;
 			}
 			
-			if(v.tagname == "#comment"){
-				assert("text" in v);
+			if(isCommentNode(v)){
 				comments.push(v.text);
 				data.children.splice(i, 1);
 				--i;
@@ -353,12 +365,8 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 			
 			// All comments before this get attached to the node
 			if(comments.length == 0) continue;
-			
-			let editorComment = comments.join("\n");
+			v.editorComment = comments.join("\n");
 			comments.length = 0;
-			let node = newNode("EditorComment", { value: editorComment });
-			node.doNotEncode = true; // Prevent this from ever getting encoded
-			appendChildToEnd(v, node);
 		}
 		
 		delete data.childrenByTagname["#comment"];
@@ -546,13 +554,7 @@ type RawNode = {
 export function parseXML(str:string):XMLParseResult {
 	function normalizeNode(node:RawNode):XMLNode|undefined {
 		if("$comment" in node){
-			return {
-				tagname: "#comment",
-				children: [],
-				childrenByTagname: {},
-				text: node.$comment[0]["#text"],
-				attr: {},
-			};
+			return newCommentNode(node.$comment[0]["#text"]);
 		}
 		
 		if("#text" in node){
@@ -560,13 +562,7 @@ export function parseXML(str:string):XMLParseResult {
 				return undefined;
 			}
 			
-			return {
-				tagname: "#text",
-				children: [],
-				childrenByTagname: {},
-				text: node["#text"],
-				attr: {},
-			};
+			return newTextNode(node["#text"]);
 		}
 		
 		let tagname:string|undefined;
@@ -649,13 +645,11 @@ function encodeXML(root:XMLNode){
 	function encodeNode(node:XMLNode):RawNode|undefined {
 		if(node.doNotEncode) return undefined;
 		
-		if(node.tagname == "#comment"){
-			assert('text' in node);
+		if(isCommentNode(node)){
 			return { $comment: [{"#text": node.text}] };
 		}
 		
-		if(node.tagname == "#text"){
-			assert('text' in node);
+		if(isTextNode(node)){
 			return { "#text": node.text };
 		}
 		
@@ -687,33 +681,24 @@ function notUndefined<T>(v:T|undefined): v is T {
 export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
 		assert(data.data_ != null);
-		let xml:XMLNode = shallowCopyNode(null, data.data_);
+		let xml = shallowCopyNode(null, data.data_);
 		
-		// We need to make some changes to pull <EditorComment> out to an actual xml comment
+		// We need to make some changes to pull editorComment out to an actual xml comment
 		xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"] || [];
 		
 		for(let i = 0; i < xml.children.length; ++i){
 			let v = xml.children[i];
-			let subnodes = v.childrenByTagname["EditorComment"];
 			
-			if(!subnodes || subnodes.length == 0) continue;
-			assert(subnodes.length == 1);
+			if(!v.editorComment) continue;
 			
-			// Create comment nodes
-			let editorComment = subnodes[0].attr["value"];
-			if(editorComment){
-				let nodes = editorComment.split(/\r?\n/).map(function(line){
-					return newCommentNode(line);
-				});
-				
-				xml.children.splice(i, 0, ...nodes);
-				xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"].concat(nodes);
-				i += nodes.length;
-			}
+			let nodes = v.editorComment.split(/\r?\n/).map(function(line){
+				return newCommentNode(line);
+			});
 			
-			// <EditorComment> must have doNotEncode set to true, so we don't need to clone this entry and remove it
-			// It's okay to modify the original node anyway
-			subnodes[0].doNotEncode = true;
+			// Insert comment nodes
+			xml.children.splice(i, 0, ...nodes);
+			xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"].concat(nodes);
+			i += nodes.length;
 		}
 		
 		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(xml), "utf8");
@@ -876,9 +861,19 @@ export function newNode<Tag extends string>(tag:Tag, attrs?:Record<string, strin
 	};
 }
 
+
+function isCommentNode<T>(x:XMLNodeBase<T>):x is XMLNodeComment<T> {
+	return x.tagname == "#comment";
+}
+
+function isTextNode<T>(x:XMLNodeBase<T>):x is XMLNodeComment<T> {
+	return x.tagname == "#text";
+}
+
 // If parent is not null, also change the parent to point to this new node
-function shallowCopyNode(parent:XMLNode|null, node:XMLNode, childIndexHint?:number, childIndexInTagnamesHint?:number):XMLNode {
-	let copy:XMLNode = {
+function shallowCopyNode<T extends XMLNodeBase<U>, U extends XMLNodeBase<V>, V>(parent:XMLNodeBase<T>|null, node:T, childIndexHint?:number, childIndexInTagnamesHint?:number):T {
+	let copy:T = {
+		...node,
 		tagname: node.tagname,
 		children: node.children.concat(),
 		childrenByTagname: {}, // done below
@@ -892,7 +887,7 @@ function shallowCopyNode(parent:XMLNode|null, node:XMLNode, childIndexHint?:numb
 	}
 	
 	if(parent != null){
-		let arr:XMLNode[];
+		let arr:T[];
 		
 		arr = parent.children;
 		if(childIndexHint !== undefined && parent.children[childIndexHint] === node){
@@ -918,9 +913,19 @@ function shallowCopyNode(parent:XMLNode|null, node:XMLNode, childIndexHint?:numb
 	return copy;
 }
 
-function newCommentNode(value:string):XMLNode {
+function newCommentNode(value:string):XMLNodeComment<XMLNode> {
 	return {
 		tagname: "#comment",
+		children: [],
+		childrenByTagname: {},
+		attr: {},
+		text: value,
+	};
+}
+
+function newTextNode(value:string):XMLNodeText<XMLNode> {
+	return {
+		tagname: "#text",
 		children: [],
 		childrenByTagname: {},
 		attr: {},

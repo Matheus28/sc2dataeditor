@@ -3,9 +3,10 @@ import * as React from 'react';
 import { Alert, Badge, Form } from 'react-bootstrap';
 import { createFilter } from 'react-select';
 import Select from "react-select/creatable";
-import { components } from "react-select";
+import ActualSelect from "react-select";
 import { CatalogName } from '../../lib/game_data';
 import { getEntries } from '../../worker_client';
+import useDeepCompareEffect, { useDeepCompareEffectNoCheck } from 'use-deep-compare-effect';
 
 export type Value = {
 	id:string;
@@ -75,6 +76,34 @@ const filterOption = createFilter<SelectOption>({
 export default function(props:Props){
 	const [inputValue, setInputValue] = React.useState<string>("");
 	const [options, setOptions] = React.useState<SelectOption[]|undefined>(undefined);
+	const [menuIsOpen, setMenuIsOpen] = React.useState(false);
+	
+	const canCreate = props.catalog !== null;
+	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
+	
+	let currentValueIsNew:boolean|undefined;
+	if(options !== undefined){
+		currentValueIsNew = false;
+		if(canCreate && props.value != null){
+			
+			let id = props.value.value.id;
+			let catalog = props.value.value.catalog;
+			if(!options.some(v => v.value.id == id && v.value.catalog == catalog)){
+				currentValueIsNew = true;
+			}
+		}
+	}
+	
+	let keepSameValueOnOpen:boolean;
+	if(props.value == null){
+		keepSameValueOnOpen = false;
+	}else if(currentValueIsNew === undefined || currentValueIsNew === true){
+		keepSameValueOnOpen = true;
+	}else{
+		keepSameValueOnOpen = false;
+	}
+	
+	const defaultInputValue = props.value && keepSameValueOnOpen ? props.value.value.id : "";
 	
 	React.useEffect(() => {
 		if(props.value == null) return;
@@ -86,7 +115,7 @@ export default function(props:Props){
 		}
 	}, [props.catalog, props.source, props.dataspace, props.parent]);
 	
-	React.useEffect(() => {
+	useDeepCompareEffectNoCheck(() => {
 		setOptions(undefined);
 		
 		let abort = false;
@@ -124,9 +153,7 @@ export default function(props:Props){
 		return () => {
 			abort = true;
 		};
-	}, [inputValue, props.catalog, props.source, props.dataspace, props.parent]);
-	
-	const canCreate = props.catalog !== null;
+	}, [menuIsOpen ? inputValue : defaultInputValue, props.catalog, props.source, props.dataspace, props.parent]);
 	
 	const makeNewOptionValue = (inputValue:string):Value => {
 		if(props.catalog === null) throw new Error("can't create");
@@ -140,16 +167,27 @@ export default function(props:Props){
 		};
 	};
 	
-	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
-	
 	return <Select
 		className={props.className||""}
+		// This doesn't work because props.value might not be in options...
+		// defaultValue={keepSameValueOnOpen ? props.value : null}
+		
 		value={props.value}
 		isLoading={props.isLoading || options === undefined}
+		createOptionPosition={keepSameValueOnOpen ? "first" : "last"}
 		isClearable={true}
 		placeholder={placeholder}
 		options={options}
 		filterOption={filterOption}
+		inputValue={inputValue}
+		menuIsOpen={menuIsOpen}
+		allowCreateWhileLoading={false}
+		onMenuOpen={() => {
+			setMenuIsOpen(true);
+			setInputValue(defaultInputValue);
+		}}
+		defaultInputValue={defaultInputValue}
+		onMenuClose={() => setMenuIsOpen(false)}
 		onChange={props.onChange}
 		onCreateOption={(inputValue) => {
 			props.onChange(makeSelectOption(makeNewOptionValue(inputValue)));
@@ -160,7 +198,17 @@ export default function(props:Props){
 		}}
 		
 		isValidNewOption={(inputValue) => {
-			return canCreate && /^[a-z][a-z_0-9@]*$/i.test(inputValue);
+			if(!options) return false;
+			if(!canCreate) return false;
+			assert(props.catalog != null); // Implied by canCreate
+			
+			if(!/^[a-z][a-z_0-9@]*$/i.test(inputValue)) return false;
+			
+			// Can't create if duplicate
+			let inputValueLower = inputValue.toLowerCase();
+			if(options.some(v => v.value.id.toLowerCase() == inputValueLower)) return false;
+			
+			return true;
 		}}
 		
 		getNewOptionData={(inputValue) => {

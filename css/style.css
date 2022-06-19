@@ -73,6 +73,11 @@ a[href^="ftp://"] {
 	padding-right: 0.5rem;
 }
 
+.entry-field-value-real::-webkit-inner-spin-button, 
+.entry-field-value-real::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
 
 .source-self {
 	--falcon-input-bg: var(--falcon-table-success-bg);
@@ -90,4 +95,10 @@ a[href^="ftp://"] {
 	--falcon-input-bg: var(--falcon-table-primary-bg);
 	--falcon-input-color: var(--falcon-table-primary-color);
 	--falcon-input-border-color: var(--falcon-table-primary-border-color);
+}
+
+.source-self.is-invalid {
+	--falcon-input-bg: var(--falcon-table-danger-bg);
+	--falcon-input-color: var(--falcon-table-danger-color);
+	--falcon-input-border-color: var(--falcon-table-danger-border-color);
 }

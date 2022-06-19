@@ -69,5 +69,10 @@ export default function(props:Props){
 		setSource(ValueSource.Self);
 	};
 	
-	return <SelectEntry className={source} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
+	let className = "";
+	if(source) className += " " + source;
+	if(value && !value.value.exists) className += " is-invalid";
+	
+	
+	return <SelectEntry className={className} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
 };

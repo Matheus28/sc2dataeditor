@@ -17,11 +17,14 @@ import useDeepCompareEffect from "use-deep-compare-effect";
     isInvalid?: boolean;
 */
 
+type SubElements = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
 interface ControlProps {
 	className?:string;
 	disabled:boolean;
 	value:string;
-	onChange:React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+	onChange:React.ChangeEventHandler<SubElements>;
+	isInvalid:boolean;
 }
 
 export default function<
@@ -39,6 +42,7 @@ export default function<
 	const [value, setValue] = React.useState<string>(props.default.toString());
 	const [source, setSource] = React.useState<ValueSource|undefined>();
 	const [isDisabled, setDisabled] = React.useState(true);
+	const ref = React.useRef<SubElements>();
 	
 	// Try to load field from dataspace
 	useDeepCompareEffect(() => {
@@ -68,9 +72,24 @@ export default function<
 		}
 	}, [props.field]);
 	
+	let isValid:boolean;
+	if(isDisabled){
+		isValid = true;
+	}else{
+		if(props.isValid != null && !props.isValid(value)){
+			isValid = false;
+		}else if(ref.current && !ref.current.validity.valid){
+			isValid = false;
+		}else{
+			isValid = true;
+		}
+	}
+	
 	const extraProps:ControlProps = {
+		className: props.control.props.className||"",
 		disabled: isDisabled,
 		value: value,
+		isInvalid: !isValid,
 		onChange: (e) => {
 			setValue(e.target.value);
 			setSource(ValueSource.Self);
@@ -82,7 +101,8 @@ export default function<
 		}
 	};
 	
-	if(source !== undefined) extraProps.className = source;
+	if(source !== undefined) extraProps.className += " entry-field-value";
+	if(source !== undefined) extraProps.className += " " + source;
 	
-	return React.cloneElement<P>(props.control, extraProps as any); // FIXME: what is this type bug?
+	return React.cloneElement<P>(props.control, {...extraProps as any, ref}); // FIXME: what is this type bug?
 };

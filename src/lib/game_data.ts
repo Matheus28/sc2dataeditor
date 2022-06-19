@@ -94,9 +94,7 @@ function editorFields(catalogName: CatalogName): Record<string, FieldType> {
 
 		// This is stored as a xml comment just before the entry in the xml.
 		// But also means we'll need special handling to do it properly.
-		// This is done when we load the xml, it inserts the value as a tag when parsing,
-		// and transforms it into a comment when encoding
-		"EditorComment": simpleType("CString"),
+		"EditorComment": simpleType("CEditorComment"),
 		
 		// These are edited like normal fields but actually get loaded/saved to ObjectStrings.txt
 		"EditorDescription": simpleType("CObjectStringLink", `${catalogName}/EditorDescription/##id##`),
@@ -261,6 +259,7 @@ export type CatalogLinks = {
 export const DataFieldDefaults = {
 	"CString": "",
 	"CStringLink": "",
+	"CEditorComment": "",
 	"CObjectStringLink": "",
 	"CHotkeyLink": "",
 	"TMarkerLink": "Effect/##id##",
