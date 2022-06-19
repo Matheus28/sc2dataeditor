@@ -21,7 +21,7 @@ interface ControlProps {
 	className?:string;
 	disabled:boolean;
 	value:string;
-	onChange:React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
+	onChange:React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
 }
 
 export default function<

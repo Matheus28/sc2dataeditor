@@ -5,6 +5,7 @@ import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
+import CatalogFieldEnum from './components/CatalogFieldEnum';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldLink from './components/CatalogFieldLink';
 import CatalogFieldObjectStringLink from './components/CatalogFieldObjectStringLink';
@@ -179,9 +180,7 @@ function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}
 	if(props.desc.type == "CEnum"){
 		let values = props.desc.values;
 		
-		return <SimpleValueWrapper {...props}><Form.Select>
-			{values.map(v => <option key={v}>{v}</option>)}
-		</Form.Select></SimpleValueWrapper>;
+		return <SimpleValueWrapper {...props}><CatalogFieldEnum field={props.field} values={values}/></SimpleValueWrapper>;
 	}
 	
 	const def = typeof props.desc.default == "undefined" ? DataFieldDefaults[props.desc.type] : props.desc.default;
