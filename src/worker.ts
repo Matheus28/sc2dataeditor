@@ -252,12 +252,12 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	
 	for(;;){
 		let tmp = getParentNodeFor(entry);
-		if(tmp !== undefined){
-			let {parent, isDefault} = tmp;
-			
-			entry = parent;
-			addEntryIndexes(entry, isDefault ? ValueSource.Default : ValueSource.Parent);
-		}
+		if(tmp === undefined) break;
+		
+		let {parent, isDefault} = tmp;
+		
+		entry = parent;
+		addEntryIndexes(entry, isDefault ? ValueSource.Default : ValueSource.Parent);
 	}
 	
 	return ret;
