@@ -48,7 +48,6 @@ export default function(props:Props){
 			})
 			
 			if(abort) return;
-			console.log(props, entry);
 			
 			setLoading(false);
 			setValue(makeSelectOption({
