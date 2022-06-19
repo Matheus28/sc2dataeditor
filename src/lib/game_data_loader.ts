@@ -230,6 +230,9 @@ export interface Dataspace {
 		[Catalog in CatalogName]:{
 			entries:XMLNode[];
 			entryByID:Record<string, XMLNode & {tagname:keyof CatalogTypes[Catalog]}>;
+			default:{
+				[K in keyof CatalogTypes[Catalog]]?:XMLNode & { tagname: K};
+			};
 		}
 	};
 };
@@ -256,6 +259,7 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 		catalogs[catalog] = {
 			entries: [],
 			entryByID: {},
+			default: {},
 		}
 	}
 	
@@ -348,6 +352,12 @@ async function loadDataspace(rootMapDir:string, filename:string):Promise<Dataspa
 			}
 			
 			catalog.entryByID[id] = v as any;
+		}else{
+			if(v.tagname in catalog.default){
+				throw new Error("More than one default for " + v.tagname + " in " + catalogName + " catalog");
+			}else{
+				(catalog.default as Record<string, XMLNode>)[v.tagname] = v;
+			}
 		}
 		
 		catalog.entries.push(v);
@@ -488,7 +498,7 @@ type RawNode = {
 	":@"?:Record<string,string>;
 } | {"#text":string} | {"$comment":[{"#text":string}]};
 
-async function parseXML(str:string):Promise<XMLParseResult> {
+export function parseXML(str:string):XMLParseResult {
 	function normalizeNode(node:RawNode):XMLNode|undefined {
 		if("$comment" in node){
 			return {
@@ -663,6 +673,36 @@ export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 		
 		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(xml), "utf8");
 	}));
+}
+
+export interface CatalogEntry {
+	id:string;
+	catalog:CatalogName;
+}
+
+export interface CatalogField {
+	entry:CatalogEntry;
+	
+	// For example, for:
+	//
+	//  <CAbilResearch id="EnergizerSightUpgrade" parent="CommonUpgrade">
+    //  <InfoArray index="Research1" Time="15">
+    //      <Resource index="Minerals" value="50"/>
+    //      <Resource index="Vespene" value="15"/>
+    //      <Vital index="Energy" value="50"/>
+    //  </InfoArray>
+	//
+	// To access Minerals there, you'd have:
+	//   name = [["InfoArray", "Research1"], ["Resource", "Minerals"]]
+	// Because InfoArray is an array, and Resource is an array inside an item in that array
+	//
+	// To access Time there, you'd have:
+	//   name = [["InfoArray", "Research1"], "Time"]
+	// Because InfoArray is an array, but Time is just a value inside an item in that array
+	// 
+	// Note that in both cases, string indexes are just aliases for a number. Research1 is 0. Minerals is 0.
+	
+	name:(string|[string, string|number])[];
 }
 
 // Some arrays can be accessed through constants, which map simply to a number (Research3 -> 2, Minerals -> 0)

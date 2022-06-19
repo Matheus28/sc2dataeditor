@@ -24,23 +24,25 @@ export default function(props:Props){
 		return dataspaces.map(makeOption);
 	}, [dataspaces])
 	
-	if('value' in props){
-		if(props.value === undefined){
-			if(value != null){
-				setDestinationDataspace(null);
-				setValue(null);
-			}
-		}else if(options !== undefined){
-			let desired = props.value;
-			if(value == null || value.value != desired){
-				let v = options.filter(v => v.value === desired)[0];
-				if(v !== undefined){
-					setDestinationDataspace(desired);
-					setValue(v);
+	React.useEffect(() => {
+		if('value' in props){
+			if(props.value === undefined){
+				if(value != null){
+					setDestinationDataspace(null);
+					setValue(null);
+				}
+			}else if(options !== undefined){
+				let desired = props.value;
+				if(value == null || value.value != desired){
+					let v = options.filter(v => v.value === desired)[0];
+					if(v !== undefined){
+						setDestinationDataspace(desired);
+						setValue(v);
+					}
 				}
 			}
 		}
-	}
+	}, [props.value, options]);
 	
 	React.useEffect(() => {
 		let abort = false;

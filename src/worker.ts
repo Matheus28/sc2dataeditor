@@ -1,11 +1,14 @@
 import assert from "assert";
-import { CatalogName, CatalogTypesInstance } from "./lib/game_data";
-import { accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode } from './lib/game_data_loader';
+import { CatalogName, CatalogTypesInstance, CatalogTypesInstanceGeneric } from "./lib/game_data";
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
 import * as worker_client from "./worker_client";
 
 type WorkerClient = typeof worker_client;
+
+//FIXME: remove this and make stuff import it from there instead
+export { CatalogEntry, CatalogField };
 
 export interface Message {
 	id:number;
@@ -37,41 +40,10 @@ let map:{
 	hotkeys:Map<string,string>;
 };
 
-export interface CatalogEntry {
-	id:string;
-	catalog:CatalogName;
-}
-
-export interface CatalogField {
-	entry:CatalogEntry;
-	
-	// For example, for:
-	//
-	//  <CAbilResearch id="EnergizerSightUpgrade" parent="CommonUpgrade">
-    //  <InfoArray index="Research1" Time="15">
-    //      <Resource index="Minerals" value="50"/>
-    //      <Resource index="Vespene" value="15"/>
-    //      <Vital index="Energy" value="50"/>
-    //  </InfoArray>
-	//
-	// To access Minerals there, you'd have:
-	//   name = [["InfoArray", "Research1"], ["Resource", "Minerals"]]
-	// Because InfoArray is an array, and Resource is an array inside an item in that array
-	//
-	// To access Time there, you'd have:
-	//   name = [["InfoArray", "Research1"], "Time"]
-	// Because InfoArray is an array, but Time is just a value inside an item in that array
-	// 
-	// Note that in both cases, string indexes are just aliases for a number. Research1 is 0. Minerals is 0.
-	
-	name:(string|[string, string|number])[];
-}
-
 function getDefaultTypeForCatalog(catalog:CatalogName):string {
 	return `C${catalog}`;
 }
 
-// Refactor: remove and inline into accessEntry
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
 function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
@@ -133,27 +105,27 @@ function setEntryToken(entry:CatalogEntry, key:string, value:string) {
 	cur.node.attr[key] = value;
 }
 
-function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:true):XMLNode;
-function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:boolean):XMLNode|undefined;
-function getFieldContainer(field:CatalogField, cur:XMLNode, createIfNotExists:boolean):XMLNode|undefined {
+function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:true):XMLNode;
+function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:boolean):XMLNode|undefined;
+function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:boolean):XMLNode|undefined {
 	for(let i = 0; i < field.name.length-1; ++i){
 		let name = field.name[i];
 		if(typeof name == 'string'){
-			let tmp = accessStruct(cur, name, createIfNotExists);
+			let tmp = accessStruct(entry, name, createIfNotExists);
 			if(!tmp) return undefined;
 			
-			cur = tmp;
+			entry = tmp;
 		}else{
 			let [arrayName, arrayIndex] = name;
 			
-			let tmp = accessArray(cur, arrayName, arrayIndex, createIfNotExists);
+			let tmp = accessArray(entry, arrayName, arrayIndex, createIfNotExists);
 			if(!tmp) return undefined;
 			
-			cur = tmp;
+			entry = tmp;
 		}
 	}
 	
-	return cur;
+	return entry;
 }
 
 function getFieldValue(field:CatalogField):string|undefined {
@@ -191,6 +163,85 @@ function getFieldValue(field:CatalogField):string|undefined {
 		return v.attr["value"];
 	}
 }
+
+function getArrayFieldIndexes(field:CatalogField):string[]|undefined {
+	let vv = accessEntry(field.entry, false);
+	if(!vv) return undefined;
+	
+	
+	let cur = getFieldContainer(field, vv.node, false);
+	if(!cur) return undefined;
+	
+	let arrName = field.name[field.name.length - 1];
+	
+	if(typeof arrName != 'string'){
+		throw new Error("You must refer to the array without an index");
+	}
+	
+	return getArrayFieldIndexesInternal(cur, arrName);
+}
+
+function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):string[]|undefined {
+	let subnodes = getChildrenByTagName(cur, arrName);
+	if(!subnodes || subnodes.length == 0){
+		return [];
+	}
+	
+	let taken = new Set<string>();
+	
+	let lastIndex:number = -1;
+	for(let sub of subnodes){
+		if(sub.attr && typeof sub.attr["index"] != 'undefined'){
+			let vv = sub.attr["index"];
+			taken.add(vv);
+			
+			let num:number;
+			if(/^[0-9]+$/.test(vv)){
+				num = parseInt(vv, 10);
+			}else{
+				if(mapping === undefined) throw new Error("Invalid index type, expected only numbers");
+				
+				if(!(vv in mapping)) throw new Error("Invalid index: " + vv);
+				num = mapping[vv];
+			}
+			
+			lastIndex = Math.max(lastIndex, num);
+			continue;
+		}
+		
+		taken.add((lastIndex+1).toString());
+		++lastIndex;
+	}
+	
+	return Array.from(taken);
+}
+
+function test_getArrayFieldIndexesInternal(xml:string, arr:string[], mapping?:Record<string, number>){
+	let vv = getArrayFieldIndexesInternal(parseXML(`<A>${xml}</A>`)["A"], 'B', mapping);
+	assert.deepStrictEqual(
+		vv,
+		arr,
+		`${xml} has bad getArrayFieldIndexesInternal.\nGot: ${JSON.stringify(vv)}\nExpected: ${JSON.stringify(arr)}`
+	);
+}
+
+{
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, ['0', '1', '2', '3']);
+	test_getArrayFieldIndexesInternal(`<B/><B/><B index="0"/><B/>`, ['0', '1', '2']);
+	test_getArrayFieldIndexesInternal(`<B index="0"/><B/><B index="0"/><B/>`, ['0', '1', '2']);
+	test_getArrayFieldIndexesInternal(`<B index="2"/><B/><B/><B/>`, ['2', '3', '4', '5']);
+	
+	let mapping = {
+		Research1: 0,
+		Research2: 1,
+		Research3: 2,
+		Research4: 3,
+	};
+	
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, ['0', '1', '2', '3'], mapping);
+	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, ['Research1', '1', 'Research3', 'Research4'], mapping);
+}
+
 
 function setFieldValue(field:CatalogField, newValue:string){
 	assert(field.name.length >= 1);
@@ -282,6 +333,10 @@ const messageHandlers:{
 	
 	async getFieldValue(field){
 		return getFieldValue(field);
+	},
+	
+	async getArrayFieldIndexes(field){
+		return getArrayFieldIndexes(field);
 	},
 	
 	async save(){

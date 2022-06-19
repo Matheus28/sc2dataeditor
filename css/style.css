@@ -1,20 +1,20 @@
 :not(input):not(textarea),
 :not(input):not(textarea)::after,
 :not(input):not(textarea)::before {
-    -webkit-user-select: none;
-    user-select: none;
-    cursor: default;
+	-webkit-user-select: none;
+	user-select: none;
+	cursor: default;
 }
 
 a:not([draggable=true]), img:not([draggable=true]) {
-    -webkit-user-drag: none;
-    user-drag: none; /* Technically not supported in Electron yet */
+	-webkit-user-drag: none;
+	user-drag: none; /* Technically not supported in Electron yet */
 }
 a[href^="http://"],
 a[href^="https://"],
 a[href^="ftp://"] {
-    -webkit-user-drag: auto;
-    user-drag: auto; /* Technically not supported in Electron yet */
+	-webkit-user-drag: auto;
+	user-drag: auto; /* Technically not supported in Electron yet */
 }
 
 .spinner {
@@ -22,17 +22,26 @@ a[href^="ftp://"] {
 	height: 88px;
 	border-radius: 50%;
 	background: radial-gradient(farthest-side,#474bff 94%,#0000) top/14.1px 14.1px no-repeat,
-		   conic-gradient(#0000 30%,#474bff);
+	            conic-gradient(#0000 30%,#474bff);
 	-webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 14.1px),#000 0);
 	animation: spinner-c7wet2 0.6s infinite linear;
- }
- 
- @keyframes spinner-c7wet2 {
-	100% {
-	   transform: rotate(1turn);
-	}
- }
+}
 
- .accordion-button:not(.collapsed) {
+@keyframes spinner-c7wet2 {
+	100% {
+		transform: rotate(1turn);
+	}
+}
+
+.accordion-button:not(.collapsed) {
 	color: #5e6e82;
- }
+}
+
+/* Restore this value to default */
+.table tfoot>tr>th:last-child, .table thead>tr>th:last-child, .table tr td:last-child, .table tr th:last-child {
+	padding-right: 0.25rem;
+}
+
+.table {
+	margin-bottom: 0.25rem;
+}

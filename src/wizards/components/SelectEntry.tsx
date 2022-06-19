@@ -38,9 +38,9 @@ export default function(props:Props){
 	const [inputValue, setInputValue] = React.useState<string>("");
 	const [options, setOptions] = React.useState<SelectOption[]|undefined>(undefined);
 	
-	const hideDataspace = props.dataspace !== undefined;
-	const hideSource = props.source !== undefined;
-	const hideCatalog = props.catalog !== null;
+	const hideDataspace = false; //props.dataspace !== undefined;
+	const hideSource = false; // props.source !== undefined;
+	const hideCatalog = false; //props.catalog !== null;
 	
 	const createLabel = (label:string, value:Value) => {
 		return <div style={{display: 'flex'}}>
@@ -120,48 +120,44 @@ export default function(props:Props){
 	
 	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
 	
-	return <>
-		<Form.Group className="mb-3">
-			<Select
-				value={props.value}
-				isLoading={options === undefined}
-				isClearable={true}
-				placeholder={placeholder}
-				options={options}
-				filterOption={filterOption}
-				onChange={props.onChange}
-				onCreateOption={(inputValue) => {
-					let value = makeNewOptionValue(inputValue);
-					
-					props.onChange({
-						value,
-						label: createLabel(value.id, value),
-					});
-				}}
-				
-				getOptionValue={(option) => {
-					return (option.value.catalog||"")+
-						(option.value.id||"")+
-						(option.value.dataspace||"")+
-						(option.value.source||"")
-					;
-				}}
-				
-				isValidNewOption={(inputValue) => {
-					return canCreate && /^[a-z][a-z_0-9@]*$/i.test(inputValue);
-				}}
-				
-				getNewOptionData={(inputValue) => {
-					let value = makeNewOptionValue(inputValue);
-					
-					return {
-						value,
-						label: createLabel(`Create "${value.id}"...`, value)
-					};
-				}}
-				
-				onInputChange={setInputValue}
-			/>
-		</Form.Group>
-	</>;
+	return <Select
+		value={props.value}
+		isLoading={options === undefined}
+		isClearable={true}
+		placeholder={placeholder}
+		options={options}
+		filterOption={filterOption}
+		onChange={props.onChange}
+		onCreateOption={(inputValue) => {
+			let value = makeNewOptionValue(inputValue);
+			
+			props.onChange({
+				value,
+				label: createLabel(value.id, value),
+			});
+		}}
+		
+		getOptionValue={(option) => {
+			return (option.value.catalog||"")+
+				(option.value.id||"")+
+				(option.value.dataspace||"")+
+				(option.value.source||"")
+			;
+		}}
+		
+		isValidNewOption={(inputValue) => {
+			return canCreate && /^[a-z][a-z_0-9@]*$/i.test(inputValue);
+		}}
+		
+		getNewOptionData={(inputValue) => {
+			let value = makeNewOptionValue(inputValue);
+			
+			return {
+				value,
+				label: createLabel(`Create "${value.id}"...`, value)
+			};
+		}}
+		
+		onInputChange={setInputValue}
+	/>
 }

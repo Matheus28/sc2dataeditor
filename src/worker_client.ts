@@ -83,6 +83,10 @@ export function setFieldValue(_field:CatalogField, _value:string):Promise<void> 
 	return sendMessage("setFieldValue", arguments);
 }
 
+export function getArrayFieldIndexes(_field:CatalogField):Promise<string[]|undefined> {
+	return sendMessage("getArrayFieldIndexes", arguments);
+}
+
 export function getPendingChangesList():Promise<{ dataspaces:string[]; hotkeys:boolean; strings:boolean; }> {
 	return sendMessage("getPendingChangesList", arguments);
 }
