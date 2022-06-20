@@ -2,7 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
-import { CatalogTypes, CatalogTypesInstance, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric } from "./game_data";
+import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames } from "./game_data";
 
 
 interface XMLNodeBase<ChildType> {
@@ -38,35 +38,34 @@ export function getGameDataFilenameBase(rootMapDir:string){
 	return rootMapDir + "/Base.SC2Data/GameData/";
 }
 
-interface GameDataDependency {
-	name:string;
-	dataspace:Dataspace; // We just merge all dataspaces together for that dependency :D
-}
-
 export type GameDataIndex = {
+	name:string|null; // null for the main file
 	rootMapDir:string;
 	includes:XMLNode;
 	
-	dependencies:GameDataDependency[];
+	dependencies:GameDataIndex[];
 	
 	implicitDataspaces:Record<CatalogName, Dataspace>;
 	dataspaces:Dataspace[];
 	
 	catalogDefaults:{
 		[Catalog in CatalogName]:{
-			[K in keyof CatalogTypes[Catalog]]?:XMLNode & { tagname: K };
+			[K in keyof CatalogTypes[Catalog]]?:{
+				node: XMLNode & { tagname: K };
+				dataspace:Dataspace;
+			}
 		}
 	};
 };
 
-export async function loadDependency(name:string, rootMapDir:string):Promise<GameDataDependency[]>{
-	return await flattenIndexIntoDependency(name, await loadGameDataIndex(rootMapDir));
+export async function loadDependency(rootMapDir:string):Promise<GameDataIndex>{
+	return await loadGameDataIndex(rootMapDir);
 }
 
-function loadDependencyInWorker(name:string, rootMapDir:string):Promise<GameDataDependency[]> {
+function loadDependencyInWorker(rootMapDir:string):Promise<GameDataIndex> {
 	return new Promise((resolve) => {
 		let worker = new Worker(__dirname + "/game_data_loader_worker_wrapper.js");
-		worker.postMessage([name, rootMapDir]);
+		worker.postMessage([rootMapDir]);
 		worker.onmessage = function(e){
 			resolve(e.data);
 			worker.terminate();
@@ -105,6 +104,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 	}
 	
 	let index:GameDataIndex = {
+		name: null,
 		rootMapDir,
 		includes: includes,
 		implicitDataspaces: {} as any,
@@ -131,13 +131,14 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				const filename = base + catalog + "Data.xml";
 				let v = await loadDataspace(rootMapDir, filename, true, null);
 				if(!v){
-					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename), true, null);
+					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename), true);
 				}
 				
 				return { dataspace: v, catalog };
 			}));
 			
 			for(let {dataspace, catalog} of implicits){
+				dataspace.index = index;
 				index.implicitDataspaces[catalog] = dataspace;
 			}
 		})(),
@@ -185,7 +186,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				if(!dep.startsWith("bnet:")) throw new Error("No idea how to handle this");
 			}
 			
-			let depsDataspaces = await Promise.all(deps.map(async (dep:string) => {
+			index.dependencies = await Promise.all(deps.map(async (dep:string) => {
 				let r = /,file:([a-z0-9_\.]+(?:\/[a-z0-9_\.]+)*)$/i;
 				let m = dep.match(r);
 				if(m == null) throw new Error("Invalid dep line: " + dep);
@@ -196,12 +197,11 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				
 				let filename = "deps/SC2GameData/" + m[1].toLowerCase();
 				console.time(filename);
-				let v = await loadDependencyInWorker(name, filename);
+				let v = await loadDependencyInWorker(filename);
+				v.name = name;
 				console.timeEnd(filename);
 				return v;
 			}));
-			
-			index.dependencies = depsDataspaces.reduce((previous, cur) => previous.concat(cur), []);
 		})(),
 	]);
 	
@@ -211,52 +211,62 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				let catalog = dataspace.catalogs[catalogName as CatalogName];
 				for(let entry of catalog.entries){
 					if('id' in entry.attr) continue;
+					if(entry.tagname in index.catalogDefaults[catalogName as CatalogName]) continue;
 					
 					if(entry.attr["default"] !== "1"){
 						console.warn(`Default entry for ${entry.tagname} in ${dataspace.name} is lacking default="1"`);
 					}
 					
-					(index.catalogDefaults[catalogName as CatalogName] as Record<string, XMLNode>)[entry.tagname] = entry;
+					index.catalogDefaults[catalogName as CatalogName][entry.tagname] = {
+						node: entry,
+						dataspace: dataspace,
+					};
 				}
 			}
 		}
 		
-		for(let d of index.dependencies){
-			findDefaults(d.dataspace);
-		}
-		
-		for(let catalogName in index.implicitDataspaces){
-			findDefaults(index.implicitDataspaces[catalogName as CatalogName]);
-		}
-		
-		for(let dataspace of index.dataspaces){
-			findDefaults(dataspace);
-		}
+		forEachDataspace(index, true, true, findDefaults);
 	}
 	
 	return index;
 }
 
-function flattenIndexIntoDependency(name:string, index:GameDataIndex):GameDataDependency[] {
-	let m = name.match(/\//)
-	
-	let dataspace = newDataspace(name, false, null);
-	for(let i in index.implicitDataspaces){
-		dataspace = mergeDataspaces(name, dataspace, index.implicitDataspaces[i as CatalogName]);
+// If any callback returns false, stops iterating and returns false
+// If all callbacks return true or undefined, returns true
+export function forEachDataspace(index:GameDataIndex, self:boolean, dependencies:boolean, fn:(v:Dataspace)=>boolean|void):boolean {
+	if(self){
+		for(let catalog in index.implicitDataspaces){
+			if(fn(index.implicitDataspaces[catalog as CatalogName]) === false) return false;
+		}
+		
+		for(let dataspace of index.dataspaces){
+			if(fn(dataspace) === false) return false;
+		}
 	}
 	
-	for(let d of index.dataspaces){
-		dataspace = mergeDataspaces(name, dataspace, d);
+	if(dependencies){
+		for(let i = index.dependencies.length - 1; i >= 0; --i){
+			if(forEachDataspace(index.dependencies[i], true, dependencies, fn) === false) return false;
+		}
 	}
 	
-	const d:GameDataDependency = {
-		name,
-		dataspace,
-	};
+	return true;
+}
+
+// If any callback returns false, stops iterating and returns false
+// If all callbacks return true or undefined, returns true
+export function forEachIndex(index:GameDataIndex, self:boolean, dependencies:boolean, fn:(v:GameDataIndex)=>boolean|void):boolean {
+	if(self){
+		if(fn(index) === false) return false;
+	}
 	
-	d.dataspace.source = d;
+	if(dependencies){
+		for(let i = index.dependencies.length - 1; i >= 0; --i){
+			if(forEachIndex(index.dependencies[i], true, dependencies, fn) === false) return false;
+		}
+	}
 	
-	return index.dependencies.concat(d);
+	return true;
 }
 
 function getGameDataIndexFilename(rootMapDir:string):string {
@@ -291,9 +301,10 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 export interface Dataspace {
 	name:string;
 	isImplicit:boolean; // Or from a dependency
-	source:GameDataDependency|null;
+	index:GameDataIndex|null;
 	
 	data_:XMLNodeCatalog|null;
+	structDefaults:StructDefaults;
 	
 	catalogs:{
 		[Catalog in CatalogName]:{
@@ -303,6 +314,8 @@ export interface Dataspace {
 	};
 };
 
+type StructDefaults = Record<string,XMLNode>;
+
 const tagnameToCatalog:Record<string, CatalogName> = {};
 for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
 	for(let type of Object.keys(CatalogTypesInstance[catalog])){
@@ -311,6 +324,10 @@ for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
 		}
 		tagnameToCatalog[type] = catalog;
 	}
+}
+
+export function isValidTagname(tagname:string):boolean {
+	return tagname in tagnameToCatalog;
 }
 
 export function getCatalogNameByTagname(tagname:string):CatalogName {
@@ -332,7 +349,7 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 }
 
 
-async function loadDataspace(rootMapDir:string, filename:string, isImplicit:boolean, source:GameDataDependency|null):Promise<Dataspace|null>{
+async function loadDataspace(rootMapDir:string, filename:string, isImplicit:boolean, index:GameDataIndex|null):Promise<Dataspace|null>{
 	let str:string;
 	
 	try {
@@ -343,6 +360,8 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 	
 	let data:XMLNodeCatalog = (await parseXML(str))["Catalog"];
 	let catalogs = createEmptyDataspaceCatalogs();
+	
+	let structDefaults:Dataspace["structDefaults"] = {};
 	
 	{
 		// Special handling for editor comments (any xml comment node before a catalog entry)
@@ -396,7 +415,11 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		}
 		
 		if(!(v.tagname in tagnameToCatalog)){
-			console.warn(`Unknown catalog entry tagname: ${v.tagname} in ${filename}`);
+			if(structNames.has(v.tagname)){
+				structDefaults[v.tagname] = v;
+			}else{
+				console.warn(`Unknown catalog entry tagname: ${v.tagname} in ${filename}`);
+			}
 			continue;
 		}
 		
@@ -420,7 +443,8 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		data_: data,
 		catalogs,
 		isImplicit,
-		source,
+		index,
+		structDefaults,
 	};
 }
 
@@ -521,6 +545,7 @@ function mergeDataspaces(name:string, a:Dataspace, b:Dataspace):Dataspace {
 		}
 		
 		catalogs[j].entries = arr.concat(catalogs[j].entries);
+		
 	}
 	
 	return {
@@ -528,17 +553,19 @@ function mergeDataspaces(name:string, a:Dataspace, b:Dataspace):Dataspace {
 		catalogs,
 		data_: null, // Since this isn't meant to be saved
 		isImplicit: false,
-		source: null, // will be set by user
+		index: null, // will be set by user,
+		structDefaults: Object.assign({}, a.structDefaults, b.structDefaults),
 	}
 }
 
-export function newDataspace(name:string, isImplicit:boolean, source:GameDataDependency|null):Dataspace {
+export function newDataspace(name:string, isImplicit:boolean):Dataspace {
 	return {
 		name,
 		catalogs: createEmptyDataspaceCatalogs(),
 		data_: newNode("Catalog"),
 		isImplicit,
-		source,
+		index: null,
+		structDefaults: {},
 	};
 }
 
@@ -546,6 +573,7 @@ export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
 	const base = getGameDataFilenameBase(index.rootMapDir);
 	let filename = dataspaceNameToFilename(index.rootMapDir, dataspace.name);
 	
+	dataspace.index = index;
 	index.dataspaces.push(dataspace);
 	const includesFilename = "GameData/" + filename.slice(base.length);
 	addChild(index.includes, newNode("Catalog", { path: includesFilename }));

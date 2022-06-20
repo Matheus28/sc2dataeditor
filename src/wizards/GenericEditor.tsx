@@ -2,7 +2,7 @@ import assert from 'assert';
 import * as React from 'react';
 import { Accordion, Alert, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
-import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType } from '../lib/game_data';
+import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstance, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType } from '../lib/game_data';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
 import CatalogEditorComment from './components/CatalogEditorComment';
@@ -38,8 +38,8 @@ export default function(props:Props){
 		if(entryType == null) return null;
 		
 		return [
-			addFieldsAndParent(entry, catalog, CatalogTypesInstanceGeneric[catalog][entryType].parent),
-			addFields(entry, entryType, CatalogTypesInstanceGeneric[catalog][entryType].fields)
+			addFieldsAndParent(entry, catalog, CatalogTypesInstance[catalog][entryType].parent),
+			addFields(entry, entryType, CatalogTypesInstance[catalog][entryType].fields)
 		];
 	};
 	
@@ -126,7 +126,14 @@ const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.Re
 	</tr>;
 };
 
-function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64">():ComponentFromTypeFunc<T> {
+function stringType<T extends "CString"|"CHotkeyLink"|"TMarkerLink"|"TCooldownLink">():ComponentFromTypeFunc<T> {
+	return (props) => {
+		const def = DataFieldDefaults[props.meta.value.type];
+		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
+	};
+}
+
+function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64"|"TMarkerCount">():ComponentFromTypeFunc<T> {
 	return (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
 		let mv = props.meta.value;
@@ -152,10 +159,7 @@ function realType<T extends "CFixed"|"real32">():ComponentFromTypeFunc<T>{
 const componentFromType:{
 	[K in DataFieldSimpleTypes]:ComponentFromTypeFunc<K>;
 } = {
-	CString: (props) => {
-		const def = DataFieldDefaults[props.meta.value.type];
-		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
-	},
+	CString: stringType<"CString">(),
 	
 	CStringLink: () => {
 		return null;
@@ -172,9 +176,9 @@ const componentFromType:{
 		return <SimpleValueWrapper {...props}><CatalogEditorComment entry={props.field.entry}/></SimpleValueWrapper>
 	},
 	
-	CHotkeyLink: () => { return null; },
-	TMarkerLink: () => { return null; },
-	TCooldownLink: () => { return null; },
+	CHotkeyLink: stringType<"CHotkeyLink">(),
+	TMarkerLink: stringType<"TMarkerLink">(),
+	TCooldownLink: stringType<"TCooldownLink">(),
 	bool: (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldBool field={props.field} default={def}/></SimpleValueWrapper>;
@@ -188,6 +192,7 @@ const componentFromType:{
 	uint16: intType<"uint16">(),
 	uint32: intType<"uint32">(),
 	uint64: intType<"uint64">(),
+	TMarkerCount: intType<"TMarkerCount">(),
 	
 	CFixed: realType<"CFixed">(),
 	real32: realType<"real32">(),

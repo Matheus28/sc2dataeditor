@@ -1,6 +1,6 @@
 import assert from "assert";
-import { CatalogName, CatalogTypesInstance, CatalogTypesInstanceGeneric } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry } from './lib/game_data_loader';
+import { CatalogName, CatalogSubtype, CatalogTypesInstance, FieldType } from "./lib/game_data";
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import * as worker_client from "./worker_client";
@@ -127,36 +127,41 @@ function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:
 	return entry;
 }
 
+function getFieldValueLast(cur:XMLNode, name:string|[string,string|number]):{ value:string; source:ValueSource; }|undefined {
+	if(typeof name == 'string'){
+		// There are two ways this could be defined, say we're accessing "Row"
+		// 1. <DefaultButtonLayout Row="1"/>
+		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+		
+		// Check the first form
+		if(name in cur.attr){
+			return { value: cur.attr[name], source: ValueSource.Self };
+		}
+		
+		// Then check the second form
+		let subnodes = getChildrenByTagName(cur, name);
+		if(!subnodes || subnodes.length == 0) return undefined;
+		return { value: subnodes[0].attr["value"], source: ValueSource.Self };
+	}else{
+		// This is an array of simple values, such as
+		// <Resource index="Minerals" value="100"/>
+		let [arrayName, arrayIndex] = name;
+		
+		let v = accessArray(cur, arrayName, arrayIndex, false);
+		if(!v) return undefined;
+		
+		return { value: v.attr["value"], source: ValueSource.Self };
+	}
+}
+
+// If not found on this node, will navigate to the parent to try to find it there
 function getFieldValueSpecific(node:XMLNode, field:CatalogField):{ value:string; source:ValueSource; }|undefined {
 	assert(field.name.length >= 1);
 	
 	let cur = getFieldContainer(field, node, false);
 	if(cur){
-		let name = field.name[field.name.length - 1];
-		if(typeof name == 'string'){
-			// There are two ways this could be defined, say we're accessing "Row"
-			// 1. <DefaultButtonLayout Row="1"/>
-			// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
-			
-			// Check the first form
-			if(name in cur.attr){
-				return { value: cur.attr[name], source: ValueSource.Self };
-			}
-			
-			// Then check the second form
-			let subnodes = getChildrenByTagName(cur, name);
-			if(!subnodes || subnodes.length == 0) return undefined;
-			return { value: subnodes[0].attr["value"], source: ValueSource.Self };
-		}else{
-			// This is an array of simple values, such as
-			// <Resource index="Minerals" value="100"/>
-			let [arrayName, arrayIndex] = name;
-			
-			let v = accessArray(cur, arrayName, arrayIndex, false);
-			if(!v) return undefined;
-			
-			return { value: v.attr["value"], source: ValueSource.Self };
-		}
+		let vv = getFieldValueLast(cur, field.name[field.name.length - 1]);
+		if(vv !== undefined) return vv;
 	}
 	
 	let tmp = getParentNodeFor(node);
@@ -164,23 +169,37 @@ function getFieldValueSpecific(node:XMLNode, field:CatalogField):{ value:string;
 		let {parent, isDefault} = tmp;
 		let ret = getFieldValueSpecific(parent, field);
 		if(ret){
-			if(isDefault){
-				ret.source = ValueSource.Default;
-			}else{
-				ret.source = ValueSource.Parent;
+			if(ret.source == ValueSource.Self){
+				if(isDefault){
+					ret.source = ValueSource.Default;
+				}else{
+					ret.source = ValueSource.Parent;
+				}
 			}
+			
+			return ret;
 		}
-		
-		return ret;
 	}
 	
 	return undefined;
 }
 
-function getParentNodeFor(node:XMLNode):{parent: XMLNode, isDefault:boolean}|undefined{
+function getParentNodeFor(node:XMLNode):{parent: XMLNode, dataspace:Dataspace, isDefault:boolean}|undefined{
 	let def = getDefaultEntryForType(node.tagname);
-	let parent = def;
-	if(parent === node) return undefined;
+	if(def === undefined) return undefined;
+	
+	if(def.node === node){
+		// We have reached the top of the chain, like CEffectCreep and we want its parent
+		// Now we check the meta parent for that (CEffect)
+		let meta = CatalogTypesInstance[getCatalogNameByTagname(node.tagname)][node.tagname];
+		if(meta.parent == null) return undefined;
+		
+		def = getDefaultEntryForType(meta.parent);
+		if(def === undefined) return undefined;
+		return { parent: def.node, dataspace: def.dataspace, isDefault: true };
+	}
+	
+	let parent = def; // This will be our fallback parent
 	
 	if(node.attr["parent"]){
 		let vv = accessEntry({
@@ -190,7 +209,7 @@ function getParentNodeFor(node:XMLNode):{parent: XMLNode, isDefault:boolean}|und
 		
 		if(vv){
 			if(vv.node.tagname == node.tagname){
-				parent = vv.node;
+				parent = vv;
 			}else{
 				console.error(`Invalid parent for ${node["attr"]["id"]}. Type doesn't match`);
 			}
@@ -200,20 +219,90 @@ function getParentNodeFor(node:XMLNode):{parent: XMLNode, isDefault:boolean}|und
 	}
 	
 	if(parent === undefined) return undefined;
-	return {parent, isDefault: parent === def};
+	return {parent: parent.node, dataspace: parent.dataspace, isDefault: parent === def};
+}
+
+function getStructDefaultValue(tagname:string, field:CatalogField):string|undefined {
+	if(field.name.length < 2) return undefined;
+	
+	let tmp = getDefaultEntryForType(tagname);
+	if(tmp === undefined) return undefined;
+	let dataspace = tmp.dataspace;
+	
+	const catalog = getCatalogNameByTagname(tagname);
+	let meta:CatalogSubtype = CatalogTypesInstance[catalog][tagname];
+	assert(meta);
+	
+	
+	for(;;){
+		const removeIndex = (x:string|[string,string|number]) => {
+			if(typeof x == 'string') return x;
+			return x[0];
+		}
+		
+		let metaf:FieldType|undefined = meta.fields[removeIndex(field.name[0])];
+		for(let i = 1; metaf && i < field.name.length-1; ++i){
+			let name = field.name[i];
+			if(typeof name == 'string'){
+				assert('struct' in metaf);
+				metaf = metaf.struct[name];
+			}else{
+				name = name[0]; // Remove index, we don't care
+				if('namedArray' in metaf){
+					metaf = metaf.namedArray.value;
+				}else if('array' in metaf){
+					metaf = metaf.array;
+				}else{
+					assert(false);
+				}
+			}
+		}
+		
+		// We still have one more level to go down. We should be at the struct containing our value now
+		if(metaf !== undefined){
+			if('struct' in metaf){
+				let defs = dataspace.structDefaults[metaf.structTypename];
+				if(defs !== undefined){
+					let vv = getFieldValueLast(defs, field.name[field.name.length - 1]);
+					if(vv !== undefined) return vv.value;
+				}
+			}
+		}
+		
+		// Look in the parent meta
+		if(meta.parent != null){
+			let tmp = getDefaultEntryForType(meta.parent);
+			if(tmp === undefined) return undefined;
+			dataspace = tmp.dataspace;
+			
+			meta = CatalogTypesInstance[catalog][meta.parent];
+			assert(meta);
+		}else{
+			break;
+		}
+	}
+	
+	return undefined;
 }
 
 function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; }|undefined {
-	let vv = accessEntry(field.entry, false);
-	if(!vv) return undefined;
+	let v = accessEntry(field.entry, false);
+	if(!v) return undefined;
 	
-	return getFieldValueSpecific(vv.node, field);
+	let vv = getFieldValueSpecific(v.node, field);
+	if(vv !== undefined) return vv;
+	
+	let tmp = getStructDefaultValue(v.node.tagname, field);
+	if(tmp !== undefined){
+		return { value: tmp, source: ValueSource.Default };
+	}
+	
+	return undefined;
 }
 
-function getDefaultEntryForType(tagname:string):XMLNode|undefined {
+function getDefaultEntryForType(tagname:string):{node: XMLNode, dataspace:Dataspace }|undefined {
 	let catalogName = getCatalogNameByTagname(tagname);
-	
-	return (map.index.catalogDefaults[catalogName] as Record<string,XMLNode>)[tagname];
+	return map.index.catalogDefaults[catalogName][tagname];
 }
 
 function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean;source:ValueSource}>|undefined {
@@ -506,7 +595,7 @@ const messageHandlers:{
 		
 		map.hasIndexChanges = true;
 		map.destinationDataspace = map.index.dataspaces.length;
-		let dataspace = newDataspace(value, false, null);
+		let dataspace = newDataspace(value, false);
 		addDataspaceToIndex(map.index, dataspace);
 		modifiedDataspace(dataspace);
 	},
@@ -527,8 +616,9 @@ const messageHandlers:{
 			tokens,
 		};
 		
-		if(v.dataspace.source != null){
-			r.source = v.dataspace.source.name;
+		assert(v.dataspace.index != null);
+		if(v.dataspace.index.name != null){
+			r.source = v.dataspace.index.name;
 		}else if(!v.dataspace.isImplicit){
 			r.dataspace = v.dataspace.name;
 		}
@@ -606,10 +696,11 @@ const messageHandlers:{
 	},
 
 	async getSourceList(){
-		return map.index.dependencies.map(v => v.name);
+		return map.index.dependencies.map(v => { assert(v.name != null); return v.name; });
 	},
 	
 	async getEntries(filterByCatalog:CatalogName|null, filterBySource?:string|null|undefined, filterByDataspace?:string, filterByParent?:string, partialMatch?:string, limit?:number){
+		//FIXME: duplicates
 		let ret:Awaited<ReturnType<WorkerClient["getEntries"]>> = {
 			items: [],
 			totalCount: 0,
@@ -648,27 +739,19 @@ const messageHandlers:{
 				iterateEntries(dataspace.catalogs[filterByCatalog].entries, null, dataspaceName, dataspaceSource);
 			};
 			
-			// This map
-			if(filterBySource == null){ // also checks for undefined
-				if(filterByDataspace == null){
-					iterateDataspace(map.index.implicitDataspaces[filterByCatalog], null, null);
-					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
-				}else{
-					for(let dataspace of map.index.dataspaces){
-						if(dataspace.name != filterByDataspace) continue;
-						iterateDataspace(dataspace, dataspace.name, null);
+			forEachIndex(map.index, filterBySource == null /* or undefined */, filterByDataspace == null && filterBySource !== null, (index) => {
+				if(filterBySource === undefined || index.name == filterBySource){
+					if(filterByDataspace == null){
+						iterateDataspace(index.implicitDataspaces[filterByCatalog], null, index.name);
+						index.dataspaces.forEach((d) => iterateDataspace(d, index.name == null ? d.name : null, index.name));
+					}else if(index.name == null){ // Main index
+						for(let dataspace of index.dataspaces){
+							if(dataspace.name != filterByDataspace) continue;
+							iterateDataspace(dataspace, null, null);
+						}
 					}
 				}
-			}
-			
-			// Dependencies
-			if(filterByDataspace == null){
-				for(let dep of map.index.dependencies){
-					if(filterBySource === undefined || dep.name == filterBySource){
-						iterateDataspace(dep.dataspace, null, dep.name);
-					}
-				}
-			}
+			});
 		}else{
 			const iterateDataspace = (dataspace:Dataspace, dataspaceName:string|null, dataspaceSource:string|null) => {
 				for(let catalogName in dataspace.catalogs){
@@ -677,30 +760,22 @@ const messageHandlers:{
 				}
 			};
 			
-			// This map
-			if(filterBySource == null){ // also checks for undefined
-				if(filterByDataspace == null){
-					for(let d in map.index.implicitDataspaces){
-						iterateDataspace(map.index.implicitDataspaces[d as CatalogName], null, null);
-					}
-					
-					map.index.dataspaces.forEach((d) => iterateDataspace(d, d.name, null));
-				}else{
-					for(let dataspace of map.index.dataspaces){
-						if(dataspace.name != filterByDataspace) continue;
-						iterateDataspace(dataspace, dataspace.name, null);
-					}
-				}
-			}
-			
-			// Dependencies
-			if(filterByDataspace == null){
-				for(let dep of map.index.dependencies){
-					if(filterBySource === undefined || dep.name == filterBySource){
-						iterateDataspace(dep.dataspace, null, dep.name);
+			forEachIndex(map.index, filterBySource == null /* or undefined */, filterByDataspace == null && filterBySource !== null, (index) => {
+				if(filterBySource === undefined || index.name == filterBySource){
+					if(filterByDataspace == null){
+						for(let i in index.implicitDataspaces){
+							iterateDataspace(index.implicitDataspaces[i as CatalogName], null, index.name);
+						}
+						
+						index.dataspaces.forEach((d) => iterateDataspace(d, index.name == null ? d.name : null, index.name));
+					}else if(index.name == null){ // Main index
+						for(let dataspace of index.dataspaces){
+							if(dataspace.name != filterByDataspace) continue;
+							iterateDataspace(dataspace, null, null);
+						}
 					}
 				}
-			}
+			});
 		}
 		
 		ret.items.sort(function(a, b){

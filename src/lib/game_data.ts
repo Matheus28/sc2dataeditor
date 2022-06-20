@@ -30,6 +30,7 @@ export type FieldType = {
 	|
 	{
 		struct:FieldTypeStruct;
+		structTypename:string;
 	}
 	|
 	{
@@ -60,7 +61,7 @@ function array(subtype:FieldType){
 }
 
 function struct(fields:Record<string, FieldType>){
-	return { struct: fields };
+	return { struct: fields, structTypename: "FIXME" };
 }
 
 function namedArray(e:{value:EnumType}, value:FieldType): FieldType {
@@ -271,6 +272,7 @@ export const DataFieldDefaults = {
 	"CObjectStringLink": "",
 	"CHotkeyLink": "",
 	"TMarkerLink": "Effect/##id##",
+	"TMarkerCount": 1,
 	"TCooldownLink": "Abil/##id##",
 	"bool": false,
 	"int8": 0,
@@ -403,7 +405,7 @@ const structs = {
 	}),
 	
 	SMarker: struct({
-		"Count": simpleType("int32"),
+		"Count": simpleType("TMarkerCount"),
 		"Duration": simpleType("CFixed"),
 		"Link": simpleType("TMarkerLink"),
 		"MatchFlags": namedArray(enums.e_markerMatch, simpleType("bool")),
@@ -437,7 +439,16 @@ const structs = {
 	}),
 };
 
-export const CatalogTypesInstance = {
+// Fill in their name
+for(let i in structs){
+	let vv = structs[i as keyof typeof structs];
+	assert('struct' in vv)
+	vv.structTypename = i;
+}
+
+export const structNames = new Set(Object.keys(structs));
+
+export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubtype>> = {
 	"Abil": {
 		"CAbil": subtype({
 			parent: null,
@@ -455,9 +466,26 @@ export const CatalogTypesInstance = {
 		"CAbilBehavior": unspecifiedSubtype(),
 		"CAbilBuild": unspecifiedSubtype(),
 		"CAbilBuildable": unspecifiedSubtype(),
-		"CAbilEffect": unspecifiedSubtype(),
-		"CAbilEffectInstant": unspecifiedSubtype(),
-		"CAbilEffectTarget": unspecifiedSubtype(),
+		"CAbilEffect": subtype({
+			parent: "CAbil",
+			abstract: true,
+			fields: {
+				//FIXME
+				"Marker": structs.SMarker,
+			},
+		}),
+		"CAbilEffectInstant": subtype({
+			parent: "CAbilEffect",
+			fields: {
+				//FIXME
+			},
+		}),
+		"CAbilEffectTarget": subtype({
+			parent: "CAbilEffect",
+			fields: {
+				//FIXME
+			},
+		}),
 		"CAbilHarvest": unspecifiedSubtype(),
 		"CAbilInteract": unspecifiedSubtype(),
 		"CAbilInventory": unspecifiedSubtype(),
@@ -1397,7 +1425,6 @@ export const CatalogTypesInstance = {
 	},
 };
 
-export const CatalogTypesInstanceGeneric:Record<CatalogName, Record<string, CatalogSubtype>> = CatalogTypesInstance;
 export type CatalogTypes = typeof CatalogTypesInstance;
 
 {
