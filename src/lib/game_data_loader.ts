@@ -156,23 +156,29 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				return; // No dependencies
 			}
 			
-			let docInfo = (await parseXML(docInfoStr))["DocInfo"];
-			let depsRoot = docInfo.childrenByTagname["Dependencies"];
-			if(!depsRoot || depsRoot.length == 0) return;
-			assert(depsRoot.length == 1);
+			let deps:string[] = [
+				"bnet:Core (Mod)/0.0/999,file:Mods/Core.SC2Mod",
+			];
 			
-			let depsArr = depsRoot[0].childrenByTagname["Value"];
-			if(!depsArr) return;
-			
-			let deps:string[] = [];
-			for(let node of depsArr){
-				if(node.children.length == 0) continue; // Empty <Value />... skip
-				assert(node.children.length == 1);
-				
-				let textNode = node.children[0];
-				assert(isTextNode(textNode));
-				
-				deps.push(textNode.text);
+			{
+				let docInfo = (await parseXML(docInfoStr))["DocInfo"];
+				let depsRoot = docInfo.childrenByTagname["Dependencies"];
+				if(depsRoot && depsRoot.length > 0){
+					assert(depsRoot.length == 1);
+					
+					let depsArr = depsRoot[0].childrenByTagname["Value"];
+					if(depsArr){
+						for(let node of depsArr){
+							if(node.children.length == 0) continue; // Empty <Value />... skip
+							assert(node.children.length == 1);
+							
+							let textNode = node.children[0];
+							assert(isTextNode(textNode));
+							
+							deps.push(textNode.text);
+						}
+					}
+				}
 			}
 			
 			for(let dep of deps){
@@ -207,8 +213,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 					if('id' in entry.attr) continue;
 					
 					if(entry.attr["default"] !== "1"){
-						console.error(`Default entry for ${entry.tagname} in ${dataspace.name} is lacking default="1"`);
-						continue;
+						console.warn(`Default entry for ${entry.tagname} in ${dataspace.name} is lacking default="1"`);
 					}
 					
 					(index.catalogDefaults[catalogName as CatalogName] as Record<string, XMLNode>)[entry.tagname] = entry;
@@ -391,7 +396,7 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		}
 		
 		if(!(v.tagname in tagnameToCatalog)){
-			console.warn("Unknown catalog entry tagname: " + v.tagname);
+			console.warn(`Unknown catalog entry tagname: ${v.tagname} in ${filename}`);
 			continue;
 		}
 		

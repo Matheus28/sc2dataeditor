@@ -9,6 +9,7 @@ import SelectCatalog from './components/SelectCatalog';
 import GenericEditor from './wizards/GenericEditor';
 import { CatalogName } from './lib/game_data';
 import SelectSource from './components/SelectSource';
+import * as editorStrings from "./lib/editor_strings";
 
 const mainElement = document.getElementById("main");
 assert(mainElement);
@@ -16,10 +17,23 @@ const root = ReactDOM.createRoot(mainElement);
 
 
 const CatalogBrowser = function(props:{rootDir:string}){
-	const [isLoaded, setLoaded] = React.useState(false);
+	const [isMapLoaded, setLoaded] = React.useState(false);
 	const [catalog, setCatalog] = React.useState<CatalogName|null>(null);
 	const [source, setSource] = React.useState<string|null|undefined>(undefined);
 	const [dataspace, setDataspace] = React.useState<string|undefined>(undefined);
+	
+	const [editorStringsLoaded, setEditorStringsLoaded] = React.useState(false);
+	
+	React.useEffect(() => {
+		let abort = false;
+		
+		editorStrings.promise().then(() => {
+			if(abort) return;
+			setEditorStringsLoaded(true);
+		});
+		
+		return () => { abort = true; }
+	}, []);
 	
 	React.useEffect(() => {
 		let abort = false;
@@ -51,12 +65,20 @@ const CatalogBrowser = function(props:{rootDir:string}){
 		}
 	};
 	
-	if(!isLoaded){
+	const isAllLoaded = isMapLoaded && editorStringsLoaded;
+	
+	if(!isAllLoaded){
 		return <>
 			<div style={{position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)"}}>
 				<div style={{display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
 					<div className="spinner" />
-					<div className="mt-3">Loading map...</div>
+					<div className="mt-3">{
+						isMapLoaded
+						?
+						"Loading editor..."
+						:
+						"Loading map..."
+					}</div>
 				</div>
 			</div>
 		</>;

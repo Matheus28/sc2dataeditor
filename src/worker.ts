@@ -2,7 +2,7 @@ import assert from "assert";
 import { CatalogName, CatalogTypesInstance, CatalogTypesInstanceGeneric } from "./lib/game_data";
 import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
-import { exportTxtFile, importTxtFile } from "./lib/game_strings_loader";
+import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import * as worker_client from "./worker_client";
 
 type WorkerClient = typeof worker_client;
@@ -415,13 +415,13 @@ const messageHandlers:{
 			hasIndexChanges: false,
 			
 			stringsModified: false,
-			strings: await importTxtFile(rootMapDir, "enUS"),
+			strings: await importStringsFile(getTxtFileName(rootMapDir, "enUS")),
 			
 			hotkeysModified: false,
 			hotkeys: await importHotkeysFile(rootMapDir),
 			
 			objectStringsModified: false,
-			objectStrings: await importTxtFile(rootMapDir, "enUS", "ObjectStrings.txt"),
+			objectStrings: await importStringsFile(getTxtFileName(rootMapDir, "enUS", "ObjectStrings.txt")),
 		};
 	},
 	
@@ -446,7 +446,7 @@ const messageHandlers:{
 		
 		if(map.stringsModified){
 			map.stringsModified = false;
-			await exportTxtFile(map.rootMapDir, "enUS", map.strings);
+			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS"), map.strings);
 		}
 		
 		if(map.hotkeysModified){
@@ -456,7 +456,7 @@ const messageHandlers:{
 		
 		if(map.objectStringsModified){
 			map.objectStringsModified = false;
-			await exportTxtFile(map.rootMapDir, "enUS", map.objectStrings, "GameStrings.txt");
+			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS", "GameStrings.txt"), map.objectStrings);
 		}
 		
 		notifyChanges();
@@ -828,6 +828,8 @@ onmessage = function(e){
 	const msg:Message = e.data;
 	onMessage(msg).then(function(value:any){
 		postMessage(<MessageResponse>{ id: msg.id, value });
+	}).catch(e => {
+		setTimeout(() => { throw e; });
 	});
 }
 

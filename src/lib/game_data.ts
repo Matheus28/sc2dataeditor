@@ -7,7 +7,6 @@ export type SimpleFieldValueByType = {
 	[Type in DataFieldSimpleTypes]: {
 		// Values dependent on type
 		type: Type;
-		default?: DataFieldDefaults[Type]|undefined;
 		restrictions?: Type extends keyof DataFieldRestrictions ? DataFieldRestrictions[Type]|undefined : undefined;
 	}
 };
@@ -16,11 +15,13 @@ export type SimpleFieldValue = SimpleFieldValueByType[DataFieldSimpleTypes];
 
 type NonEmptyArray<T> = [T, ...T[]];
 
-export type FieldValue = SimpleFieldValue  | {
+export type EnumType = {
 	type:"CEnum";
 	// Default value is implied to be the first one
 	values:NonEmptyArray<string>;
 };
+
+export type FieldValue = SimpleFieldValue  | EnumType;
 
 export type FieldType = {
 	value?:FieldValue;
@@ -45,10 +46,13 @@ export type FieldType = {
 export type FieldTypeWithSimpleValue<T extends DataFieldSimpleTypes> = {value:SimpleFieldValueByType[T]};
 
 export type FieldTypeStruct = Record<string, FieldType>;
-export type FieldTypeNamedArray = Record<string, FieldType>;
+export type FieldTypeNamedArray = {
+	keys:EnumType;
+	value:FieldType;
+};
 
-function simpleType<T extends SimpleFieldValue["type"]>(type: T, def?: DataFieldDefaults[T], restrictions?:T extends keyof DataFieldRestrictions ? DataFieldRestrictions[T]:undefined): FieldType {
-	return { value: {type, default: def, restrictions} as SimpleFieldValue }; // `as` needed to help compiler...
+function simpleType<T extends SimpleFieldValue["type"]>(type: T, restrictions?:T extends keyof DataFieldRestrictions ? DataFieldRestrictions[T]:undefined): FieldType {
+	return { value: {type, restrictions} as SimpleFieldValue }; // `as` needed to help compiler...
 }
 
 function array(subtype:FieldType){
@@ -59,14 +63,14 @@ function struct(fields:Record<string, FieldType>){
 	return { struct: fields };
 }
 
-function namedArray(values: Record<string, FieldType>): FieldType {
+function namedArray(e:{value:EnumType}, value:FieldType): FieldType {
 	return {
-		namedArray: values,
+		namedArray: { keys: e.value, value },
 	};
 }
 
 // First value is implied to be the default
-function simpleEnum(values:NonEmptyArray<string>): FieldType {
+function simpleEnum(values:NonEmptyArray<string>): {value:EnumType} {
 	return { value: { type: "CEnum", values } }
 }
 
@@ -90,20 +94,20 @@ function combine(...args:FieldType[]):FieldType {
 }
 
 // Anything that is shared for absolutely everything in the editor
-function editorFields(catalogName: CatalogName): Record<string, FieldType> {
+function editorFields(): Record<string, FieldType> {
 	return {
 		"EditorCategories": simpleType("CString"),
 
-		"Name": simpleType("CStringLink", `${catalogName}/Name/##id##`),
+		"Name": simpleType("CStringLink"),
 
 		// This is stored as a xml comment just before the entry in the xml.
 		// But also means we'll need special handling to do it properly.
 		"EditorComment": simpleType("CEditorComment"),
 		
 		// These are edited like normal fields but actually get loaded/saved to ObjectStrings.txt
-		"EditorDescription": simpleType("CObjectStringLink", `${catalogName}/EditorDescription/##id##`),
-		"EditorPrefix": simpleType("CObjectStringLink", `${catalogName}/EditorPrefix/##id##`),
-		"EditorSuffix": simpleType("CObjectStringLink", `${catalogName}/EditorSuffix/##id##`),
+		"EditorDescription": simpleType("CObjectStringLink"),
+		"EditorPrefix": simpleType("CObjectStringLink"),
+		"EditorSuffix": simpleType("CObjectStringLink"),
 	};
 }
 
@@ -132,9 +136,9 @@ const unspecifiedSubtype = (): CatalogSubtype => ({
 	abstract: true,
 });
 
-function subtype(catalogName: CatalogName, v: CatalogSubtype): CatalogSubtype {
+function subtype(v: CatalogSubtype): CatalogSubtype {
 	if(v.parent == null){
-		v.fields = {...editorFields(catalogName), ...v.fields};
+		v.fields = {...editorFields(), ...v.fields};
 	}
 	
 	return v;
@@ -351,43 +355,91 @@ type DataFieldRestrictions = typeof DataFieldRestrictions;
 	CWeapon
 */
 
-const e_effectHistory = simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]);
-const e_effectLocation = simpleEnum([
-	"TargetPoint", // Is this the default for every use?
-	"CasterOuterPoint",
-	"CasterOuterUnit",
-	"CasterOuterUnitOrPoint",
-	"CasterPoint",
-	"CasterUnit",
-	"CasterUnitOrPoint",
-	"OriginPoint",
-	"OriginUnit",
-	"OriginUnitOrPoint",
-	"OuterPoint",
-	"OuterUnit",
-	"OuterUnitOrPoint",
-	"SourcePoint",
-	"SourceUnit",
-	"SourceUnitOrPoint",
-	"TargetOuterPoint",
-	"TargetOuterUnit",
-	"TargetOuterUnitOrPoint",
-	"TargetUnit",
-	"TargetUnitOrPoint",
-]);
+const enums = {
+	e_effectHistory: simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]),
+	
+	e_effectLocation: simpleEnum([
+		"TargetPoint",
+		"CasterOuterPoint",
+		"CasterOuterUnit",
+		"CasterOuterUnitOrPoint",
+		"CasterPoint",
+		"CasterUnit",
+		"CasterUnitOrPoint",
+		"OriginPoint",
+		"OriginUnit",
+		"OriginUnitOrPoint",
+		"OuterPoint",
+		"OuterUnit",
+		"OuterUnitOrPoint",
+		"SourcePoint",
+		"SourceUnit",
+		"SourceUnitOrPoint",
+		"TargetOuterPoint",
+		"TargetOuterUnit",
+		"TargetOuterUnitOrPoint",
+		"TargetUnit",
+		"TargetUnitOrPoint",
+	]),
+	
+	e_effectPlayer: simpleEnum(["Unknown", "Caster", "CasterOuter", "Creator", "Hostile", "Neutral", "Outer", "Origin", "Source", "Target", "TargetOuter"]),
+	e_effectUnit: simpleEnum(["Unknown", "Caster", "CasterOuter", "Outer", "Source", "Target", "TargetOuter", "Origin"]),
+	e_markerMatch: simpleEnum(["Id", "Link", "CasterPlayer", "CasterUnit"]),
+	e_notifyAreaFlag: simpleEnum(["HelpFriend", "HurtFriend", "HurtEnemy", "OnlyWorkers", "MinorDanger", "MajorDanger"]),
+	e_effectCreepFlag: simpleEnum(["RemoveCreep", "Permanent", "Immediate", "Ideal"]),
+};
 
-const e_effectPlayer = simpleEnum(["Unknown", "Caster", "CasterOuter", "Creator", "Hostile", "Neutral", "Outer", "Origin", "Source", "Target", "TargetOuter"]);
-const e_effectUnit = simpleEnum(["Unknown", "Caster", "CasterOuter", "Outer", "Source", "Target", "TargetOuter", "Origin"]);
-
-const SEffectWhichLocation = struct({
-	"Effect": simpleType("CEffectLink"),
-	"History": simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]),
-	"Value": e_effectLocation,
-});
+const structs = {
+	SEffectWhichLocation: struct({
+		"Effect": simpleType("CEffectLink"),
+		"History": enums.e_effectHistory,
+		"Value": enums.e_effectLocation,
+	}),
+	
+	SEffectWhichUnit: struct({
+		"Effect": simpleType("CEffectLink"),
+		"History": enums.e_effectHistory,
+		"Value": enums.e_effectUnit,
+	}),
+	
+	SMarker: struct({
+		"Count": simpleType("int32"),
+		"Duration": simpleType("CFixed"),
+		"Link": simpleType("TMarkerLink"),
+		"MatchFlags": namedArray(enums.e_markerMatch, simpleType("bool")),
+		"MismatchFlags": namedArray(enums.e_markerMatch, simpleType("bool")),
+	}),
+	
+	SAccumulatedFixed: combine(
+		simpleType("CFixed"),
+		struct({
+			"AccumulatorArray": array(simpleType("CAccumulatorLink")),
+		}),
+	),
+	
+	SAccumulatedInt32: combine(
+		simpleType("int32"),
+		struct({
+			"AccumulatorArray": array(simpleType("CAccumulatorLink")),
+		}),
+	),
+	
+	SAccumulatedUInt32: combine(
+		simpleType("uint32"),
+		struct({
+			"AccumulatorArray": array(simpleType("CAccumulatorLink")),
+		}),
+	),
+	
+	SEffectWhichPlayer: struct({
+		"Effect": simpleType("CEffectLink"),
+		"Value": enums.e_effectPlayer,
+	}),
+};
 
 export const CatalogTypesInstance = {
 	"Abil": {
-		"CAbil": subtype("Abil", {
+		"CAbil": subtype({
 			parent: null,
 			abstract: true,
 			fields: {
@@ -417,7 +469,7 @@ export const CatalogTypesInstance = {
 		"CAbilMove": unspecifiedSubtype(),
 		"CAbilPawn": unspecifiedSubtype(),
 		"CAbilProgress": unspecifiedSubtype(),
-		"CAbilQueue": subtype("Abil", {
+		"CAbilQueue": subtype({
 			parent: "CAbil",
 			fields: {
 				//FIXME
@@ -487,53 +539,18 @@ export const CatalogTypesInstance = {
 	},
 
 	"Effect": {
-		"CEffect": subtype("Effect", {
+		"CEffect": subtype({
 			parent: null,
 			abstract: true,
 			fields: {
-				"AINotifyFlags": namedArray({
-					"HelpFriend": simpleType("bool"),
-					"HurtFriend": simpleType("bool"),
-					"HurtEnemy": simpleType("bool"),
-					"OnlyWorkers": simpleType("bool"),
-					"MinorDanger": simpleType("bool"),
-					"MajorDanger": simpleType("bool"),
-				}),
-				
+				"AINotifyFlags": namedArray(enums.e_notifyAreaFlag, simpleType("bool")),
 				"Alert": simpleType("CAlertLink"),
 				"CanBeBlocked": simpleType("bool"),
-				"CasterHistory": e_effectHistory,
-				"Chance": simpleType("CFixed", 1, {min:0, max:1}),
-				"DamageModifierSource": struct({
-					"Effect": simpleType("CEffectLink"),
-					"History": e_effectHistory,
-					"Value": e_effectUnit,
-				}),
-				
-				"Marker": struct({
-					"Count": simpleType("int32", 1),
-					"Duration": simpleType("CFixed", 0),
-					"Link": simpleType("TMarkerLink", "Effect/##id##"),
-					"MatchFlags": namedArray({
-						"Id": simpleType("bool"),
-						"Link": simpleType("bool"),
-						"CasterPlayer": simpleType("bool"),
-						"CasterUnit": simpleType("bool"),
-					}),
-					
-					"MismatchFlags": namedArray({
-						"Id": simpleType("bool"),
-						"Link": simpleType("bool"),
-						"CasterPlayer": simpleType("bool"),
-						"CasterUnit": simpleType("bool"),
-					}),
-				}),
-				
-				"OwningPlayer": struct({
-					"Effect": simpleType("CEffectLink"),
-					"Value": e_effectPlayer,
-				}),
-				
+				"CasterHistory": enums.e_effectHistory,
+				"Chance": simpleType("CFixed", {min:0, max:1}),
+				"DamageModifierSource": structs.SEffectWhichUnit,
+				"Marker": structs.SMarker,
+				"OwningPlayer": structs.SEffectWhichPlayer,
 				"PreloadValidatorArray": array(simpleType("CValidatorLink")),
 				"TechAliasArray": array(simpleType("CString")),
 				"ValidatorArray": array(simpleType("CValidatorLink")),
@@ -551,24 +568,12 @@ export const CatalogTypesInstance = {
 		"CEffectCreatePersistent": unspecifiedSubtype(),
 		"CEffectCreateUnit": unspecifiedSubtype(),
 		
-		"CEffectCreep": subtype("Effect", {
+		"CEffectCreep": subtype({
 			parent: "CEffect",
 			fields: {
-				"CreepFlags": namedArray({
-					"RemoveCreep": simpleType("bool"),
-					"Permanent": simpleType("bool", true),
-					"Immediate": simpleType("bool"),
-					"Ideal": simpleType("bool"),
-				}),
-				
-				"Radius": combine(
-					simpleType("CFixed", 1),
-					struct({
-						"AccumulatorArray": array(simpleType("CAccumulatorLink")),
-					}),
-				),
-				
-				"WhichLocation": SEffectWhichLocation,
+				"CreepFlags": namedArray(enums.e_effectCreepFlag, simpleType("bool")),
+				"Radius": structs.SAccumulatedFixed,
+				"WhichLocation": structs.SEffectWhichLocation,
 			},
 		}),
 		

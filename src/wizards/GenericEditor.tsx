@@ -128,7 +128,7 @@ const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.Re
 
 function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64">():ComponentFromTypeFunc<T> {
 	return (props) => {
-		const def = getDefaultValue(props.meta.value);
+		const def = DataFieldDefaults[props.meta.value.type];
 		let mv = props.meta.value;
 		let min = mv.restrictions ? mv.restrictions.min : undefined;
 		let max = mv.restrictions ? mv.restrictions.max : undefined;
@@ -139,7 +139,7 @@ function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint
 
 function realType<T extends "CFixed"|"real32">():ComponentFromTypeFunc<T>{
 	return (props) => {
-		const def = getDefaultValue(props.meta.value);
+		const def = DataFieldDefaults[props.meta.value.type];
 		let mv = props.meta.value;
 		let min = mv.restrictions ? mv.restrictions.min : undefined;
 		let max = mv.restrictions ? mv.restrictions.max : undefined;
@@ -153,7 +153,7 @@ const componentFromType:{
 	[K in DataFieldSimpleTypes]:ComponentFromTypeFunc<K>;
 } = {
 	CString: (props) => {
-		const def = getDefaultValue(props.meta.value);
+		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
 	},
 	
@@ -162,8 +162,9 @@ const componentFromType:{
 	},
 	
 	CObjectStringLink: (props) => {
-		const def = getDefaultValue(props.meta.value);
-		const link = def.replace(/##id##/gm, props.field.entry.id);
+		let name = props.field.name[0];
+		assert(typeof name == "string");
+		const link = props.field.entry.catalog + "/" + name + "/" + props.field.entry.id;
 		return <SimpleValueWrapper {...props}><CatalogFieldObjectStringLink link={link} default={""} oneLine={true}/></SimpleValueWrapper>;
 	},
 	
@@ -175,7 +176,7 @@ const componentFromType:{
 	TMarkerLink: () => { return null; },
 	TCooldownLink: () => { return null; },
 	bool: (props) => {
-		const def = getDefaultValue(props.meta.value);
+		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldBool field={props.field} default={def}/></SimpleValueWrapper>;
 	},
 	
@@ -195,7 +196,7 @@ const componentFromType:{
 		let v = {} as LinksHelper;
 		for(let catalogName of CatalogNameArray){
 			v[`C${catalogName}Link`] = (props) => {
-				const def = getDefaultValue(props.meta.value);
+				const def = DataFieldDefaults[props.meta.value.type];
 				return <SimpleValueWrapper {...props}><CatalogFieldLink field={props.field} catalog={catalogName} default={def} /></SimpleValueWrapper>;
 			};
 		}
@@ -218,12 +219,6 @@ function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}
 	
 	const C = componentFromType[props.desc.type] as any; // Too lazy to get the types checked here... just trust :D
 	return <C {...props} />
-}
-
-
-function getDefaultValue<T extends SimpleFieldValue>(desc:T):Exclude<T["default"], undefined>;
-function getDefaultValue(desc:SimpleFieldValue):Exclude<DataFieldDefaults[keyof DataFieldDefaults], undefined>{
-	return typeof desc.default == "undefined" ? DataFieldDefaults[desc.type] : desc.default;
 }
 
 function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeStruct, alsoHasValue:boolean}){
@@ -361,18 +356,12 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 }
 
 function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldTypeNamedArray}){
-	let isFlagArray = true;
-	for(let i in props.desc){
-		let v = props.desc[i].value;
-		if(v === undefined || v.type !== 'bool'){
-			isFlagArray = false;
-			break;
-		}
-	}
+	const isFlagArray = props.desc.value.value !== undefined && props.desc.value.value.type == 'bool';
+	let v = props.desc.value;
 	
 	if(isFlagArray){
 		return <SimpleValueWrapper {...props}><div style={{padding: '0.5rem 0.5rem 0 0.5rem'}}>
-			{mapObject(props.desc, (index, v) => {
+			{props.desc.keys.values.map((index) => {
 				let subfield = {
 					entry: props.field.entry,
 					name: props.field.name.slice(0, -1).concat([[props.name, index]]),
@@ -381,7 +370,7 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 				assert(v.value !== undefined);
 				assert(v.value.type === 'bool');
 				
-				const def = getDefaultValue(v.value);
+				const def = DataFieldDefaults[v.value.type];
 				
 				return <CatalogFieldBool key={index} label={index} field={subfield} default={def}/>;
 			})}
@@ -390,7 +379,7 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 		return <SimpleValueWrapper {...props}>
 			<Table striped size="sm" className="entry-subfields">
 				<tbody>
-					{mapObject(props.desc, (index, v) => {
+					{props.desc.keys.values.map((index) => {
 						const subfield:CatalogField = {
 							entry: props.field.entry,
 							name: props.field.name.slice(0, -1).concat([[props.name, index]]),
