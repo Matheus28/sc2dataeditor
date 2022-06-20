@@ -5,6 +5,7 @@ import { getEntries, getEntry, getFieldValue, resolveTokens, setFieldValue } fro
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
 import SelectEntry, { makeSelectOption, SelectOption } from './SelectEntry';
+import { valueSourceToClassName } from './utils';
 
 interface Props {
 	field:CatalogField;
@@ -70,7 +71,7 @@ export default function(props:Props){
 	};
 	
 	let className = "";
-	if(source) className += " " + source;
+	if(source) className += " " + valueSourceToClassName(source);
 	if(value && !value.value.exists) className += " is-invalid";
 	
 	

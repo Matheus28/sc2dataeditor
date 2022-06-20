@@ -1,6 +1,6 @@
 import assert from 'assert';
 import * as React from 'react';
-import { Accordion, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
+import { Accordion, Alert, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
@@ -14,6 +14,7 @@ import CatalogFieldReal from './components/CatalogFieldReal';
 import CatalogFieldString from './components/CatalogFieldString';
 import SelectEntry, { SelectOption } from './components/SelectEntry';
 import SelectEntryType from './components/SelectEntryType';
+import { valueSourceToClassName, valueSourceToVariant } from './components/utils';
 
 
 interface Props {
@@ -50,7 +51,7 @@ export default function(props:Props){
 					name: [name]
 				};
 				
-				return <FieldComponent endOfRow={null} key={`${entryType}::${name}`} name={name} field={field} meta={meta}/>
+				return <FieldComponent directChildProps={{}} key={`${entryType}::${name}`} name={name} field={field} meta={meta}/>
 			}
 		);
 	};
@@ -60,7 +61,7 @@ export default function(props:Props){
 			<Card.Body>
 				<Form>
 					<Form.Group className="mb-3">
-						<SelectEntry value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={onEntryChange}/>
+						<SelectEntry canCreate value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={onEntryChange}/>
 					</Form.Group>
 					
 					{entry && <>
@@ -99,7 +100,10 @@ interface FieldComponentSharedProps {
 	field:CatalogField;
 	meta:FieldType;
 	
-	endOfRow:React.ReactNode;
+	directChildProps:{
+		rowClassName?:string;
+		endOfRow?:React.ReactNode;
+	}
 }
 
 function FieldComponent(props:FieldComponentSharedProps){
@@ -114,10 +118,10 @@ function FieldComponent(props:FieldComponentSharedProps){
 type ComponentFromTypeFunc = React.FC<FieldComponentSharedProps & {def:any}>; //fixme: any
 
 const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.ReactNode}) => {
-	return <tr>
+	return <tr className={props.directChildProps.rowClassName}>
 		<td>{props.name}</td>
 		<td className="entry-field-value">{props.children}</td>
-		{props.endOfRow}
+		{props.directChildProps.endOfRow}
 	</tr>;
 };
 
@@ -238,7 +242,7 @@ function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeS
 							name: props.field.name.concat(name),
 						};
 						
-						return <FieldComponent endOfRow={null} key={name} name={name} field={subfield} meta={meta}/>
+						return <FieldComponent directChildProps={{}} key={name} name={name} field={subfield} meta={meta}/>
 					}
 				)}
 			</tbody>
@@ -291,7 +295,6 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 						{range(arrayLen, index => {
 							assert(indexes);
 							
-							/*
 							// In case we want to know the origin of this row...
 							let tmp:undefined|((typeof indexes)[number]) = indexes[index];
 							
@@ -301,7 +304,18 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 							// Index 1 will show up here but it doesn't exist anywhere...
 							// We consider that we created it ourselves then
 							if(tmp === undefined) tmp = { source: ValueSource.Self, removed: false };
-							*/
+							
+							const rowClassName = tmp.source != ValueSource.Self ? valueSourceToClassName(tmp.source) : "";
+							
+							if(tmp.removed){
+								return <tr key={index} className={rowClassName}>
+									<td>{index}</td>
+									<td className="entry-field-value"><Alert variant="danger" style={{margin: 0, padding: '0.25rem 0.5rem'}}>Removed</Alert></td>
+									<td style={{textAlign: 'end'}}>
+										<Button variant="success">New</Button>
+									</td>
+								</tr>
+							}
 							
 							const subfield:CatalogField = {
 								entry: props.field.entry,
@@ -313,15 +327,16 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 								name={index.toString()}
 								field={subfield}
 								meta={props.desc}
-								endOfRow={
-									<td style={{verticalAlign: 'middle'}}>
+								directChildProps={{
+									rowClassName: rowClassName,
+									endOfRow: <td style={{verticalAlign: 'middle'}}>
 										<Button variant="danger">Delete</Button>
-									</td>
-								}
+									</td>,
+								}}
 							/>;
 						})}
 						<tr>
-							<td>{arrayLen}</td>
+							<td>{arrayLen == 0 ? "Empty" : arrayLen}</td>
 							<td className="entry-field-value"></td>
 							<td style={{textAlign: 'end'}}>
 								<Button variant="success">New</Button>
@@ -369,7 +384,7 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 						};
 						
 						return <FieldComponent
-							endOfRow={null}
+							directChildProps={{}}
 							key={index}
 							name={index.toString()}
 							field={subfield}

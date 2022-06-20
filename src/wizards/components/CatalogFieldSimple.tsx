@@ -3,6 +3,7 @@ import { Form } from 'react-bootstrap';
 import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
+import { valueSourceToClassName } from './utils';
 
 /*
     htmlSize?: number;
@@ -102,7 +103,7 @@ export default function<
 	};
 	
 	if(source !== undefined) extraProps.className += " entry-field-value";
-	if(source !== undefined) extraProps.className += " " + source;
+	if(source !== undefined) extraProps.className += " " + valueSourceToClassName(source);
 	
 	return React.cloneElement<P>(props.control, {...extraProps as any, ref}); // FIXME: what is this type bug?
 };

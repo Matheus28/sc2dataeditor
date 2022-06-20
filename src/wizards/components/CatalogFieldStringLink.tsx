@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { ValueSource } from '../../worker';
 import { getStringLink, setStringLink } from '../../worker_client';
+import { valueSourceToClassName } from './utils';
 
 type Props = {
 	link:string;
@@ -48,7 +49,7 @@ export default function(props:Props){
 		value,
 		disabled: isDisabled,
 		placeholder: props.placeholder,
-		className: props.source,
+		className: valueSourceToClassName(props.source),
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){
 			if(e.target.validity.valid){
 				setValue(e.target.value)

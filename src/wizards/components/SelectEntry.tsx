@@ -57,6 +57,7 @@ export function makeSelectOption(value:Value, notExistsAsUnknown?:boolean):Selec
 interface Props {
 	value:SelectOption|null;
 	
+	canCreate?:boolean;
 	catalog:CatalogName|null;
 	source?:string|null|undefined;
 	dataspace?:string|undefined;
@@ -78,21 +79,10 @@ export default function(props:Props){
 	const [options, setOptions] = React.useState<SelectOption[]|undefined>(undefined);
 	const [menuIsOpen, setMenuIsOpen] = React.useState(false);
 	
-	const canCreate = props.catalog !== null;
+	const canCreate = props.canCreate && props.catalog !== null;
 	const placeholder = props.catalog == null ? "Select entry" : "Select " + props.catalog;
 	
-	let currentValueIsNew:boolean|undefined;
-	if(options !== undefined){
-		currentValueIsNew = false;
-		if(canCreate && props.value != null){
-			
-			let id = props.value.value.id;
-			let catalog = props.value.value.catalog;
-			if(!options.some(v => v.value.id == id && v.value.catalog == catalog)){
-				currentValueIsNew = true;
-			}
-		}
-	}
+	const [currentValueIsNew, setCurrentValueIsNew] = React.useState<boolean|undefined>();
 	
 	let keepSameValueOnOpen:boolean;
 	if(props.value == null){
@@ -105,11 +95,32 @@ export default function(props:Props){
 	
 	const defaultInputValue = props.value && keepSameValueOnOpen ? props.value.value.id : "";
 	
+	React.useEffect(()=> {
+		if(props.value == null){
+			setCurrentValueIsNew(false);
+			return;
+		}
+		
+		// Keep last value...
+		if(!options) return;
+		
+		let v = false;
+		if(canCreate && props.value != null){
+			let id = props.value.value.id;
+			let catalog = props.value.value.catalog;
+			if(!options.some(v => v.value.id == id && v.value.catalog == catalog)){
+				v = true;
+			}
+		}
+		
+		setCurrentValueIsNew(v);
+	}, [props.value, options]);
+	
 	React.useEffect(() => {
 		if(props.value == null) return;
-		if(props.value.value.catalog !== props.catalog
-		|| props.value.value.source !== props.source
-		|| props.value.value.dataspace !== props.dataspace
+		if((props.catalog != null && props.value.value.catalog !== props.catalog)
+		|| (props.source !== undefined && props.value.value.source !== props.source)
+		|| (props.dataspace != null && props.value.value.dataspace !== props.dataspace)
 		){
 			props.onChange(null);
 		}

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { CatalogEntry, ValueSource } from '../../worker';
 import { getEntryComment, setEntryComment } from '../../worker_client';
+import { valueSourceToClassName } from './utils';
 
 type Props = {
 	entry:CatalogEntry;
@@ -36,7 +37,7 @@ export default function(props:Props){
 	return <Form.Control
 		value={value}
 		disabled={isDisabled}
-		className={value ? ValueSource.Self : ValueSource.Default}
+		className={valueSourceToClassName(value ? ValueSource.Self : ValueSource.Default)}
 		onChange={(e) => {
 			setValue(e.target.value);
 			setEntryComment(props.entry, e.target.value);
