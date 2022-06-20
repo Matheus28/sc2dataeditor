@@ -6,16 +6,15 @@ import CatalogFieldSimple from './CatalogFieldSimple';
 interface Props {
 	field:CatalogField;
 	
-	default:string;
+	default:boolean;
+	label?:string;
 }
 
 export default function(props:Props){
+	console.log(JSON.stringify(props));
 	return <CatalogFieldSimple
 		field={props.field}
 		default={props.default}
-		isValid={(v) => /^[0-9]+$/.test(v)}
-		control={<Form.Control
-			
-		/>}
+		control={<Form.Check type="checkbox" label={props.label} />}
 	/>;
 };

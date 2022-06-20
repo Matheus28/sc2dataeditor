@@ -5,42 +5,27 @@ import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { valueSourceToClassName } from './utils';
 
-/*
-    htmlSize?: number;
-    size?: 'sm' | 'lg';
-    plaintext?: boolean;
-    readOnly?: boolean;
-    disabled?: boolean;
-    value?: string | string[] | number;
-    onChange?: React.ChangeEventHandler<FormControlElement>;
-    type?: string;
-    isValid?: boolean;
-    isInvalid?: boolean;
-*/
-
 type SubElements = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 interface ControlProps {
 	className?:string;
 	disabled:boolean;
-	value:string;
+	value:string|boolean;
+	checked:boolean;
 	onChange:React.ChangeEventHandler<SubElements>;
 	isInvalid:boolean;
 }
 
 export default function<
-	T extends {
-		toString:()=>string;
-	},
-	
 	P extends ControlProps
 >(props:{
 	field:CatalogField;
-	default:T;
+	default:string|number|boolean;
 	isValid?:(v:string)=>boolean;
 	control:React.ReactElement<P>;
 }){
-	const [value, setValue] = React.useState<string>(props.default.toString());
+	const defaultValueAsString = typeof props.default == "boolean" ? (props.default?"1":"0") : props.default.toString();
+	const [value, setValue] = React.useState<string>(defaultValueAsString);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
 	const [isDisabled, setDisabled] = React.useState(true);
 	const ref = React.useRef<SubElements>();
@@ -62,7 +47,7 @@ export default function<
 				setValue(v.value);
 				setSource(v.source);
 			}else{
-				setValue(props.default.toString());
+				setValue(defaultValueAsString);
 				setSource(ValueSource.Default);
 			}
 		});
@@ -89,14 +74,23 @@ export default function<
 	const extraProps:ControlProps = {
 		className: props.control.props.className||"",
 		disabled: isDisabled,
-		value: value,
+		value: (typeof props.default == "boolean" ? (value!="0") : value),
+		checked: (typeof props.default == "boolean" ? (value!="0") : false),
 		isInvalid: !isValid,
 		onChange: (e) => {
-			setValue(e.target.value);
+			let str = e.target.value;
+			if(e.target instanceof HTMLInputElement){
+				if(e.target.type == "checkbox"){
+					str = e.target.checked ? "1" : "0";
+				}
+			}
+			
+			setValue(str);
 			setSource(ValueSource.Self);
+			
 			if(e.target.validity.valid){
-				if(props.isValid == null || props.isValid(e.target.value)){
-					setFieldValue(props.field, e.target.value);
+				if(props.isValid == null || props.isValid(str)){
+					setFieldValue(props.field, str);
 				}
 			}
 		}

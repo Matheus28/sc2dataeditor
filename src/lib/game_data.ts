@@ -1,16 +1,18 @@
 import assert from "assert";
 
 export type DataFieldDefaults = typeof DataFieldDefaults;
-export type DataFieldTypes = keyof DataFieldDefaults;
+export type DataFieldSimpleTypes = keyof DataFieldDefaults;
 
-type SimpleFieldValue = {
-	[Type in DataFieldTypes]: {
+export type SimpleFieldValueByType = {
+	[Type in DataFieldSimpleTypes]: {
 		// Values dependent on type
 		type: Type;
 		default?: DataFieldDefaults[Type]|undefined;
 		restrictions?: Type extends keyof DataFieldRestrictions ? DataFieldRestrictions[Type]|undefined : undefined;
 	}
-}[DataFieldTypes];
+};
+
+export type SimpleFieldValue = SimpleFieldValueByType[DataFieldSimpleTypes];
 
 type NonEmptyArray<T> = [T, ...T[]];
 
@@ -39,6 +41,8 @@ export type FieldType = {
 		array:FieldType;
 	}
 );
+
+export type FieldTypeWithSimpleValue<T extends DataFieldSimpleTypes> = {value:SimpleFieldValueByType[T]};
 
 export type FieldTypeStruct = Record<string, FieldType>;
 export type FieldTypeNamedArray = Record<string, FieldType>;
@@ -264,7 +268,7 @@ export const DataFieldDefaults = {
 	"CHotkeyLink": "",
 	"TMarkerLink": "Effect/##id##",
 	"TCooldownLink": "Abil/##id##",
-	"bool": 0,
+	"bool": false,
 	"int8": 0,
 	"int16": 0,
 	"int32": 0,
@@ -552,7 +556,7 @@ export const CatalogTypesInstance = {
 			fields: {
 				"CreepFlags": namedArray({
 					"RemoveCreep": simpleType("bool"),
-					"Permanent": simpleType("bool", 1),
+					"Permanent": simpleType("bool", true),
 					"Immediate": simpleType("bool"),
 					"Ideal": simpleType("bool"),
 				}),

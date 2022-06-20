@@ -9,8 +9,6 @@ type Props = {
 	
 	default?:string;
 	placeholder?:string;
-	
-	source?:ValueSource;
 } & ({
 	oneLine:true;
 } | {
@@ -45,11 +43,13 @@ export default function(props:Props){
 		}
 	}, [props.link]);
 	
+	const source = value.length == 0 ? ValueSource.Default : ValueSource.Self;
+	
 	const sharedProps = {
 		value,
 		disabled: isDisabled,
 		placeholder: props.placeholder,
-		className: valueSourceToClassName(props.source),
+		className: valueSourceToClassName(source),
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){
 			if(e.target.validity.valid){
 				setValue(e.target.value)

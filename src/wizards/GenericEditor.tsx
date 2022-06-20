@@ -2,10 +2,11 @@ import assert from 'assert';
 import * as React from 'react';
 import { Accordion, Alert, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
-import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldValue } from '../lib/game_data';
+import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstanceGeneric, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType } from '../lib/game_data';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
 import CatalogEditorComment from './components/CatalogEditorComment';
+import CatalogFieldBool from './components/CatalogFieldBool';
 import CatalogFieldEnum from './components/CatalogFieldEnum';
 import CatalogFieldInt from './components/CatalogFieldInt';
 import CatalogFieldLink from './components/CatalogFieldLink';
@@ -115,7 +116,7 @@ function FieldComponent(props:FieldComponentSharedProps){
 	</>;
 }
 
-type ComponentFromTypeFunc = React.FC<FieldComponentSharedProps & {def:any}>; //fixme: any
+type ComponentFromTypeFunc<K extends DataFieldSimpleTypes> = React.FC<FieldComponentSharedProps & { meta:FieldTypeWithSimpleValue<K>; }>;
 
 const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.ReactNode}) => {
 	return <tr className={props.directChildProps.rowClassName}>
@@ -125,38 +126,35 @@ const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.Re
 	</tr>;
 };
 
-const boolType:ComponentFromTypeFunc = (props) => {
-	return <SimpleValueWrapper {...props}><Form.Check style={{paddingLeft: '0.5rem'}} type="checkbox"/></SimpleValueWrapper>;
-};
-
-const intType = (type:"int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64"):ComponentFromTypeFunc =>{
+function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64">():ComponentFromTypeFunc<T> {
 	return (props) => {
+		const def = getDefaultValue(props.meta.value);
 		let mv = props.meta.value;
-		assert(mv);
-		assert(mv.type == type);
 		let min = mv.restrictions ? mv.restrictions.min : undefined;
 		let max = mv.restrictions ? mv.restrictions.max : undefined;
 		
-		return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={props.def} min={min} max={max}/></SimpleValueWrapper>;
+		return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
 	}
 };
 
-const realType = (type:"CFixed"|"real32"):ComponentFromTypeFunc =>{
+function realType<T extends "CFixed"|"real32">():ComponentFromTypeFunc<T>{
 	return (props) => {
+		const def = getDefaultValue(props.meta.value);
 		let mv = props.meta.value;
-		assert(mv);
-		assert(mv.type == type);
 		let min = mv.restrictions ? mv.restrictions.min : undefined;
 		let max = mv.restrictions ? mv.restrictions.max : undefined;
 		
-		return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={props.def} min={min} max={max}/></SimpleValueWrapper>;
+		return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
 	}
 };
 
 
-const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
+const componentFromType:{
+	[K in DataFieldSimpleTypes]:ComponentFromTypeFunc<K>;
+} = {
 	CString: (props) => {
-		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={props.def}/></SimpleValueWrapper>;
+		const def = getDefaultValue(props.meta.value);
+		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
 	},
 	
 	CStringLink: () => {
@@ -164,7 +162,8 @@ const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
 	},
 	
 	CObjectStringLink: (props) => {
-		const link = props.def.replace(/##id##/gm, props.field.entry.id);
+		const def = getDefaultValue(props.meta.value);
+		const link = def.replace(/##id##/gm, props.field.entry.id);
 		return <SimpleValueWrapper {...props}><CatalogFieldObjectStringLink link={link} default={""} oneLine={true}/></SimpleValueWrapper>;
 	},
 	
@@ -175,30 +174,38 @@ const componentFromType:Record<DataFieldTypes, ComponentFromTypeFunc> = {
 	CHotkeyLink: () => { return null; },
 	TMarkerLink: () => { return null; },
 	TCooldownLink: () => { return null; },
-	bool: boolType,
+	bool: (props) => {
+		const def = getDefaultValue(props.meta.value);
+		return <SimpleValueWrapper {...props}><CatalogFieldBool field={props.field} default={def}/></SimpleValueWrapper>;
+	},
 	
-	int8: intType("int8"),
-	int16: intType("int16"),
-	int32: intType("int32"),
-	int64: intType("int64"),
-	uint8: intType("uint8"),
-	uint16: intType("uint16"),
-	uint32: intType("uint32"),
-	uint64: intType("uint64"),
+	int8: intType<"int8">(),
+	int16: intType<"int16">(),
+	int32: intType<"int32">(),
+	int64: intType<"int64">(),
+	uint8: intType<"uint8">(),
+	uint16: intType<"uint16">(),
+	uint32: intType<"uint32">(),
+	uint64: intType<"uint64">(),
 	
-	CFixed: realType("CFixed"),
-	real32: realType("real32"),
+	CFixed: realType<"CFixed">(),
+	real32: realType<"real32">(),
 	
-	...(():Record<keyof CatalogLinks, ComponentFromTypeFunc> => {
-		let v = {} as Record<keyof CatalogLinks, ComponentFromTypeFunc>;
+	...(():LinksHelper => {
+		let v = {} as LinksHelper;
 		for(let catalogName of CatalogNameArray){
 			v[`C${catalogName}Link`] = (props) => {
-				return <SimpleValueWrapper {...props}><CatalogFieldLink field={props.field} catalog={catalogName} default={props.def} /></SimpleValueWrapper>;
+				const def = getDefaultValue(props.meta.value);
+				return <SimpleValueWrapper {...props}><CatalogFieldLink field={props.field} catalog={catalogName} default={def} /></SimpleValueWrapper>;
 			};
 		}
 		
 		return v;
 	})()
+};
+
+type LinksHelper = {
+	[K in keyof CatalogLinks]:ComponentFromTypeFunc<K>;
 };
 
 function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}){
@@ -209,10 +216,14 @@ function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}
 		return <SimpleValueWrapper {...props}><CatalogFieldEnum field={props.field} values={values}/></SimpleValueWrapper>;
 	}
 	
-	const def = typeof props.desc.default == "undefined" ? DataFieldDefaults[props.desc.type] : props.desc.default;
-	
-	const C = componentFromType[props.desc.type];
-	return <C {...props} def={def} />
+	const C = componentFromType[props.desc.type] as any; // Too lazy to get the types checked here... just trust :D
+	return <C {...props} />
+}
+
+
+function getDefaultValue<T extends SimpleFieldValue>(desc:T):Exclude<T["default"], undefined>;
+function getDefaultValue(desc:SimpleFieldValue):Exclude<DataFieldDefaults[keyof DataFieldDefaults], undefined>{
+	return typeof desc.default == "undefined" ? DataFieldDefaults[desc.type] : desc.default;
 }
 
 function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeStruct, alsoHasValue:boolean}){
@@ -370,7 +381,9 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 				assert(v.value !== undefined);
 				assert(v.value.type === 'bool');
 				
-				return <Form.Check key={index} label={index} type="checkbox"/>;
+				const def = getDefaultValue(v.value);
+				
+				return <CatalogFieldBool key={index} label={index} field={subfield} default={def}/>;
 			})}
 		</div></SimpleValueWrapper>;
 	}else{
