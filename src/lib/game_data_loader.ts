@@ -391,7 +391,7 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		}
 		
 		if(!(v.tagname in tagnameToCatalog)){
-			console.log("Unknown catalog entry tagname: " + v.tagname);
+			console.warn("Unknown catalog entry tagname: " + v.tagname);
 			continue;
 		}
 		
