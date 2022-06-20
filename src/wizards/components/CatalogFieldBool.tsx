@@ -11,7 +11,6 @@ interface Props {
 }
 
 export default function(props:Props){
-	console.log(JSON.stringify(props));
 	return <CatalogFieldSimple
 		field={props.field}
 		default={props.default}
