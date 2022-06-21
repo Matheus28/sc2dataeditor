@@ -14,8 +14,16 @@ export function getEnumValue(docname:string, val:string):string {
 	return getKeyValueOrKey(`EDSTR_ENUMVAL_${docname}${val}`);
 }
 
-export function getStructField(docname:string, field:string):string {
+export function getStructFieldName(docname:string, field:string):string {
+	return getKeyValueOrKey(`EDSTR_FIELDNAME_${docname}_${field}`);
+}
+
+export function getStructFieldHint(docname:string, field:string):string {
 	return getKeyValueOrKey(`EDSTR_FIELDHINT_${docname}_${field}`);
+}
+
+export function getNamedArrayIndexName(enumDocname:string, index:string):string {
+	return getKeyValueOrKey(`EDSTR_ENUMVAL_${enumDocname}${index}`);
 }
 
 export function promise(){

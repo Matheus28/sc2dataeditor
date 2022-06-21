@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Form } from 'react-bootstrap';
+import { Form, Stack } from 'react-bootstrap';
 import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { valueSourceToClassName } from './utils';
+import { resolveTokens, valueSourceToClassName } from './utils';
+import assert from 'assert';
 
 type SubElements = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
@@ -23,17 +24,23 @@ export default function<
 	default:string|number|boolean;
 	isValid?:(v:string)=>boolean;
 	control:React.ReactElement<P>;
+	
+	onLoad?:undefined|((unresolved:string, resolved:string, source:ValueSource)=>void);
+	onChange?:undefined|((unresolved:string, resolved:string, source:ValueSource)=>void);
 }){
 	const defaultValueAsString = typeof props.default == "boolean" ? (props.default?"1":"0") : props.default.toString();
 	const [value, setValue] = React.useState<string>(defaultValueAsString);
+	const [resolvedValue, setResolvedValue] = React.useState<string>(defaultValueAsString);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
 	const [isDisabled, setDisabled] = React.useState(true);
 	const ref = React.useRef<SubElements>();
+	const fieldValueChangeRef = React.useRef<{}>({});
 	
 	// Try to load field from dataspace
 	useDeepCompareEffect(() => {
 		setDisabled(true);
 		setSource(undefined);
+		fieldValueChangeRef.current = {};
 		
 		if(props.field.entry.id.length == 0) return;
 		
@@ -43,13 +50,20 @@ export default function<
 			if(abort) return;
 			
 			setDisabled(false);
-			if(typeof v != "undefined"){
-				setValue(v.value);
-				setSource(v.source);
-			}else{
-				setValue(defaultValueAsString);
-				setSource(ValueSource.Default);
+			if(v === undefined){
+				assert(defaultValueAsString.indexOf("##") == -1); // Can't resolve it without tokens
+				v = {
+					value: defaultValueAsString,
+					source: ValueSource.Default,
+					tokens: {},
+				};
 			}
+			
+			let resolved = resolveTokens(v.value, v.tokens);
+			setValue(v.value);
+			setSource(v.source);
+			setResolvedValue(resolved);
+			if(props.onLoad) props.onLoad(v.value, resolved, v.source);
 		});
 		
 		return function(){
@@ -90,7 +104,16 @@ export default function<
 			
 			if(e.target.validity.valid){
 				if(props.isValid == null || props.isValid(str)){
-					setFieldValue(props.field, str);
+					let refValue = {};
+					fieldValueChangeRef.current = refValue;
+					setFieldValue(props.field, str).then(v => {
+						if(fieldValueChangeRef.current != refValue) return;
+						
+						let resolved = resolveTokens(str, v.tokens);
+						setValue(v.unresolvedValue);
+						setResolvedValue(str);
+						if(props.onChange) props.onChange(str, resolved, v.source);
+					});
 				}
 			}
 		}
@@ -99,5 +122,12 @@ export default function<
 	if(source !== undefined) extraProps.className += " entry-field-value";
 	if(source !== undefined) extraProps.className += " " + valueSourceToClassName(source);
 	
-	return React.cloneElement<P>(props.control, {...extraProps as any, ref}); // FIXME: what is this type bug?
+	let elem = React.cloneElement<P>(props.control, {...extraProps as any, ref}); // FIXME: what is this type bug?
+	
+	return <>
+		{elem}
+		{resolvedValue != value && <Form.Text muted>
+			{resolvedValue}
+		</Form.Text>}
+	</>
 };

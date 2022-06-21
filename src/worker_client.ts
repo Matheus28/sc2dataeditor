@@ -15,7 +15,11 @@ export function loadMap(_value:string):Promise<void> {
 	return sendMessage("loadMap", arguments);
 }
 
-export function getFieldValue(_field:CatalogField):Promise<{ value:string; source:ValueSource; }|undefined>{
+export function getFieldValue(_field:CatalogField):Promise<{
+	value:string;
+	source:ValueSource;
+	tokens:Record<string,string>;
+}|undefined>{
 	return sendMessage("getFieldValue", arguments);
 }
 
@@ -55,14 +59,8 @@ export function getEntry(_entry:CatalogEntry):Promise<{
 	dataspace?:string;
 	source?:string;
 	type:string;
-	tokens:Record<string,string>;
 }|undefined> {
 	return sendMessage("getEntry", arguments);
-}
-
-export function resolveTokens(_entry:CatalogEntry, value:string):Promise<string>{
-	if(value.indexOf("##") == -1) return Promise.resolve(value);
-	return sendMessage("resolveTokens", arguments);
 }
 
 export function setEntryType(_entry:CatalogEntry, _value:string):Promise<void> {
@@ -105,7 +103,11 @@ export function setEntryParent(_entry:CatalogEntry, _value:string):Promise<void>
 	return sendMessage("setEntryParent", arguments);
 }
 
-export function setFieldValue(_field:CatalogField, _value:string):Promise<void> {
+export function setFieldValue(_field:CatalogField, _value:string):Promise<{
+	source:ValueSource;
+	tokens:Record<string,string>;
+	unresolvedValue:string;
+}> {
 	return sendMessage("setFieldValue", arguments);
 }
 

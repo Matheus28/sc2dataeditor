@@ -292,6 +292,10 @@ export const DataFieldDefaults = {
 	})()
 };
 
+export function isSimpleType(v:string):v is DataFieldSimpleTypes {
+	return v in DataFieldDefaults
+}
+
 const numberRestrictions:{
 	min?:number;
 	max?:number;
@@ -358,7 +362,7 @@ type DataFieldRestrictions = typeof DataFieldRestrictions;
 */
 
 const enums = {
-	e_effectHistory: simpleEnum(["Unknown", "Damage", "Health", "Healing", "Modifier"]),
+	e_effectHistory: simpleEnum(["Unknown", "Damage", "Healing", "Modifier"]),
 	
 	e_effectLocation: simpleEnum([
 		"TargetPoint",

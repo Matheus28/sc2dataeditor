@@ -25,6 +25,7 @@ export default function(props:Props){
 	// Try to load field from dataspace
 	React.useEffect(() => {
 		setDisabled(true);
+		if(props.link == "") return;
 		
 		let abort = false;
 		
@@ -47,7 +48,7 @@ export default function(props:Props){
 	
 	const sharedProps = {
 		value,
-		disabled: isDisabled,
+		disabled: isDisabled || props.link == "",
 		placeholder: props.placeholder,
 		className: valueSourceToClassName(props.source),
 		onChange(e:{target:{value:string, validity:{valid:boolean}}}){

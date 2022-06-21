@@ -2,7 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
-import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames } from "./game_data";
+import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType } from "./game_data";
 
 
 interface XMLNodeBase<ChildType> {
@@ -30,6 +30,16 @@ export interface XMLNode extends XMLNodeBase<XMLNode> {
 export interface XMLNodeCatalog extends XMLNodeBase<XMLNodeEntry> {};
 export interface XMLNodeEntry extends XMLNodeBase<XMLNode> {
 	editorComment?:string;
+	declaredTokens?:Record<string, {
+		value?:string;
+		type?:DataFieldSimpleTypes;
+	}>;
+	attr:{
+		id?:string;
+		parent?:string;
+		default?:string;
+		[x:string]:string;
+	};
 }
 
 type XMLParseResult = Record<string, XMLNode>;
@@ -429,10 +439,56 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		let id = v.attr["id"];
 		if(id !== undefined){
 			if(id in catalog.entryByID){
-				throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
+				throw new Error(`Duplicate ID found: ${id} in ${catalogName} catalog in ${filename}`);
 			}
 			
 			catalog.entryByID[id] = v as any;
+		}
+		
+		const isDefault = v.attr.default === "1";
+		
+		// Check for token declarations
+		// Random note: the editor allows them anywhere, but moves them to the top when saving
+		for(let i = 0; i < v.children.length; ++i){
+			let child = v.children[i];
+			if(child.tagname != "?token") continue;
+			
+			let id = child.attr["id"];
+			if(id === undefined){
+				console.warn(`Token with no id in ${filename}`);
+				continue;
+			}
+			
+			if(!isDefault){
+				console.warn(`Token ${id} declared in a non-default class in ${filename}, deleting it. The editor was gonna do that anyway.`);
+				// Deleting it keeps the record consistent with children. Makes things easier
+				removeChild(v, child);
+				--i;
+				continue;
+			}
+			
+			v.declaredTokens = v.declaredTokens || {};
+			
+			if(id in v.declaredTokens){
+				console.warn(`Duplicate token ${id} in ${filename}`);
+				continue;
+			}
+			
+			let obj:(typeof v.declaredTokens)[string] = {};
+			
+			let value:string|undefined = child.attr["value"];
+			if(value !== undefined) obj.value = value;
+			
+			let type:string|undefined = child.attr["type"];
+			if(type !== undefined){
+				if(isSimpleType(type)){
+					obj.type = type;
+				}else{
+					console.warn(`Token ${id} has invalid type ${type} in ${filename}`);
+				}
+			}
+			
+			v.declaredTokens[id] = obj;
 		}
 		
 		catalog.entries.push(v);
@@ -970,7 +1026,22 @@ export function getChildrenByTagName(x:XMLNode, tag:string):XMLNode[]|undefined{
 	return x.childrenByTagname ? x.childrenByTagname[tag] : undefined;
 }
 
-export function clearChildrenByTagName(x:XMLNode, tag:string){
+export function removeChild(parent:XMLNode, child:XMLNode){
+	let i = parent.children.indexOf(child);
+	if(i === -1) return;
+	
+	parent.children.splice(i, 1);
+	
+	let arr = parent.childrenByTagname[child.tagname];
+	assert(arr); // if it had this child, it must've had this array
+	i = arr.indexOf(child);
+	assert(i !== -1); // if it had this child, it must be here
+	arr.splice(i, 1);
+	
+	if(arr.length == 0) delete parent.childrenByTagname[child.tagname];
+}
+
+export function removeChildrenByTagName(x:XMLNode, tag:string){
 	x.children = x.children.filter(v => v["tagname"] != tag);
 	delete x.childrenByTagname[tag];
 }

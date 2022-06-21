@@ -17,7 +17,7 @@ const root = ReactDOM.createRoot(mainElement);
 
 
 const CatalogBrowser = function(props:{rootDir:string}){
-	const [isMapLoaded, setLoaded] = React.useState(false);
+	const [isMapLoaded, setMapLoaded] = React.useState(false);
 	const [catalog, setCatalog] = React.useState<CatalogName|null>(null);
 	const [source, setSource] = React.useState<string|null|undefined>(undefined);
 	const [dataspace, setDataspace] = React.useState<string|undefined>(undefined);
@@ -39,7 +39,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 		let abort = false;
 		loadMap(props.rootDir).then(() => {
 			if(abort) return;
-			setLoaded(true);
+			setMapLoaded(true);
 		});
 		
 		return () => {

@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
-import { getEntries, getEntry, getFieldValue, resolveTokens, setFieldValue } from '../../worker_client';
+import { getEntries, getEntry, getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
 import SelectEntry, { makeSelectOption, SelectOption } from './SelectEntry';
-import { valueSourceToClassName } from './utils';
+import { resolveTokens, valueSourceToClassName } from './utils';
 
 interface Props {
 	field:CatalogField;
@@ -28,23 +28,25 @@ export default function(props:Props){
 		getFieldValue(props.field).then(async (vv) => {
 			if(abort) return;
 			
-			let v:string;
 			if(typeof vv == "undefined"){
-				v = props.default || "";
-				setSource(ValueSource.Default);
-			}else{
-				v = vv.value;
-				setSource(vv.source);
+				vv = {
+					value: props.default || "",
+					source: ValueSource.Default,
+					tokens: {},
+				}
 			}
 			
-			if(v === ""){
+			setSource(vv.source);
+			
+			if(vv.value === ""){
 				setLoading(false);
 				setValue(null);
 				return;
 			}
 			
+			let resolvedValue = resolveTokens(vv.value, vv.tokens);
 			let entry = await getEntry({
-				id: await resolveTokens(props.field.entry, v),
+				id: resolvedValue,
 				catalog: props.catalog,
 			})
 			
@@ -52,7 +54,7 @@ export default function(props:Props){
 			
 			setLoading(false);
 			setValue(makeSelectOption({
-				id: v,
+				id: resolvedValue,
 				catalog: props.catalog,
 				dataspace: entry !== undefined ? entry.dataspace : undefined,
 				source: entry !== undefined && entry.source !== undefined ? entry.source : null,

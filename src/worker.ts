@@ -1,8 +1,9 @@
 import assert from "assert";
 import { CatalogName, CatalogSubtype, CatalogTypesInstance, FieldType } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex } from './lib/game_data_loader';
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
+import { resolveTokens, unresolveTokens } from "./wizards/components/utils";
 import * as worker_client from "./worker_client";
 
 type WorkerClient = typeof worker_client;
@@ -98,15 +99,95 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWit
 	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
 }
 
-function getEntryTokens(entry:CatalogEntry):Record<string,string>|undefined {
-	let cur = accessEntry(entry, false);
-	if(!cur) return undefined;
-	return cur.node.attr;
+interface SelfTokens {
+	readonly id:string;
+	readonly parent:string;
+	readonly [x:string]:string;
 }
 
-function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:true):XMLNode;
-function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:boolean):XMLNode|undefined;
-function getFieldContainer(field:CatalogField, entry:XMLNode, createIfNotExists:boolean):XMLNode|undefined {
+function getSelfTokens(cur:XMLNodeEntry):SelfTokens {
+	let attr = cur.attr;
+	let isDefault = cur.attr.default === "1";
+	if(isDefault){
+		// Default classes aren't allowed to set tokens
+		let id = attr.id || cur.tagname;
+		
+		let parent = getParentNodeFor(cur, false);
+		if(parent === undefined) return { id, parent: id };
+		
+		let parentID = parent.node.attr.id || parent.node.tagname;
+		let ret:Record<string,string> = { id, parent: parentID };
+		
+		// Any token declarations set their value here
+		if(cur.declaredTokens){
+			for(let key in cur.declaredTokens){
+				ret[key] = cur.declaredTokens[key].value || ""; // Default value is empty string
+			}
+		}
+		
+		return ret as SelfTokens;
+	}else{
+		if('parent' in attr){
+			if('id' in attr){
+				return attr as SelfTokens;
+			}else{
+				// huh... this is weird
+				console.warn("Entry with no id has a parent...");
+				return { ...attr, id: cur.tagname } as SelfTokens;
+			}
+		}
+		
+		let id = attr.id || cur.tagname;
+		
+		let parent = getParentNodeFor(cur, false);
+		if(parent === undefined) return { ...attr, id, parent: id };
+		
+		let parentID = parent.node.attr.id || parent.node.tagname;
+		return {...attr, id, parent: parentID };
+	}
+}
+
+function getTokensForNewField(cur:XMLNodeEntry):Record<string,string> {
+	let ret:Record<string,string> = Object.assign({}, getSelfTokens(cur));
+	
+	let tmp = getParentNodeFor(cur);
+	if(tmp !== undefined){
+		let {node: parent} = tmp;
+		let inherited = getTokensForNewField(parent);
+		
+		ret = Object.assign(inherited, ret); // Prefer our tokens
+	}
+	
+	return ret;
+}
+
+function getTokensForDefaultField(cur:XMLNodeEntry):Record<string,string> {
+	let ret:Record<string,string> = Object.assign({}, getSelfTokens(cur));
+	
+	let tmp = getParentNodeFor(cur);
+	if(tmp !== undefined){
+		let {node: parent} = tmp;
+		let inherited = getTokensForDefaultField(parent);
+		
+		// So this exists because if we have
+		// grand parent (default = 1) -> parent (default = 0) -> me (default = 0)
+		// the id token that gets used is the parent one
+		// so on the first entry missing `default=1`, we override the id there
+		if(parent.attr.default === "1"){
+			// grand parent, parent
+			ret = Object.assign(inherited, ret); // Prefer our tokens
+		}else{
+			// me
+			ret = Object.assign({}, ret, inherited); // Prefer parent tokens
+		}
+	}
+	
+	return ret;
+}
+
+function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:true):XMLNode;
+function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined;
+function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined {
 	for(let i = 0; i < field.name.length-1; ++i){
 		let name = field.name[i];
 		if(typeof name == 'string'){
@@ -155,20 +236,39 @@ function getFieldValueLast(cur:XMLNode, name:string|[string,string|number]):{ va
 }
 
 // If not found on this node, will navigate to the parent to try to find it there
-function getFieldValueSpecific(node:XMLNode, field:CatalogField):{ value:string; source:ValueSource; }|undefined {
+function getFieldValueSpecific(node:XMLNodeEntry, field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
 	assert(field.name.length >= 1);
 	
 	let cur = getFieldContainer(field, node, false);
 	if(cur){
 		let vv = getFieldValueLast(cur, field.name[field.name.length - 1]);
-		if(vv !== undefined) return vv;
+		if(vv !== undefined){
+			return {...vv, tokens: getTokensForNewField(node)};
+		}
 	}
 	
 	let tmp = getParentNodeFor(node);
 	if(tmp !== undefined){
-		let {parent, isDefault} = tmp;
+		let {node: parent, isDefault} = tmp;
 		let ret = getFieldValueSpecific(parent, field);
 		if(ret){
+			// So this exists because if we have
+			// grand parent (default = 1) -> parent (default = 0) -> me (default = 0)
+			// the id token that gets used is the parent one
+			// so on the first entry missing `default=1`, we override the id there
+			if(parent.attr.default === "1"){
+				// grand parent, parent
+				ret.tokens = Object.assign(ret.tokens, getSelfTokens(node)); // Prefer our tokens
+			}else{
+				// me
+				ret.tokens = Object.assign({}, getSelfTokens(node), ret.tokens); // Prefer parent tokens
+			}
+			
+			// ^
+			// Also we don't use the other functions to get the tokens is because if the field refers
+			// to `id`, it's always going to use the `id` of where that value was set, even if it's a
+			// non-default inheriting from several other non-default
+			
 			if(ret.source == ValueSource.Self){
 				if(isDefault){
 					ret.source = ValueSource.Default;
@@ -184,26 +284,27 @@ function getFieldValueSpecific(node:XMLNode, field:CatalogField):{ value:string;
 	return undefined;
 }
 
-function getParentNodeFor(node:XMLNode):{parent: XMLNode, dataspace:Dataspace, isDefault:boolean}|undefined{
+function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node: XMLNodeEntry, dataspace:Dataspace, isDefault:boolean}|undefined{
 	let def = getDefaultEntryForType(node.tagname);
 	if(def === undefined) return undefined;
 	
 	if(def.node === node){
 		// We have reached the top of the chain, like CEffectCreep and we want its parent
 		// Now we check the meta parent for that (CEffect)
+		if(!useMetaChain) return undefined;
 		let meta = CatalogTypesInstance[getCatalogNameByTagname(node.tagname)][node.tagname];
 		if(meta.parent == null) return undefined;
 		
 		def = getDefaultEntryForType(meta.parent);
 		if(def === undefined) return undefined;
-		return { parent: def.node, dataspace: def.dataspace, isDefault: true };
+		return { node: def.node, dataspace: def.dataspace, isDefault: true };
 	}
 	
 	let parent = def; // This will be our fallback parent
 	
-	if(node.attr["parent"]){
+	if(node.attr.parent){
 		let vv = accessEntry({
-			id: node.attr["parent"],
+			id: node.attr.parent,
 			catalog: getCatalogNameByTagname(node.tagname),
 		}, false);
 		
@@ -219,7 +320,7 @@ function getParentNodeFor(node:XMLNode):{parent: XMLNode, dataspace:Dataspace, i
 	}
 	
 	if(parent === undefined) return undefined;
-	return {parent: parent.node, dataspace: parent.dataspace, isDefault: parent === def};
+	return {node: parent.node, dataspace: parent.dataspace, isDefault: parent === def};
 }
 
 function getStructDefaultValue(tagname:string, field:CatalogField):string|undefined {
@@ -227,12 +328,11 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 	
 	let tmp = getDefaultEntryForType(tagname);
 	if(tmp === undefined) return undefined;
-	let dataspace = tmp.dataspace;
+	let cur = tmp;
 	
 	const catalog = getCatalogNameByTagname(tagname);
 	let meta:CatalogSubtype = CatalogTypesInstance[catalog][tagname];
 	assert(meta);
-	
 	
 	for(;;){
 		const removeIndex = (x:string|[string,string|number]) => {
@@ -261,7 +361,7 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 		// We still have one more level to go down. We should be at the struct containing our value now
 		if(metaf !== undefined){
 			if('struct' in metaf){
-				let defs = dataspace.structDefaults[metaf.structTypename];
+				let defs = cur.dataspace.structDefaults[metaf.structTypename];
 				if(defs !== undefined){
 					let vv = getFieldValueLast(defs, field.name[field.name.length - 1]);
 					if(vv !== undefined) return vv.value;
@@ -273,7 +373,7 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 		if(meta.parent != null){
 			let tmp = getDefaultEntryForType(meta.parent);
 			if(tmp === undefined) return undefined;
-			dataspace = tmp.dataspace;
+			cur = tmp;
 			
 			meta = CatalogTypesInstance[catalog][meta.parent];
 			assert(meta);
@@ -285,16 +385,20 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 	return undefined;
 }
 
-function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; }|undefined {
+function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
 	let v = accessEntry(field.entry, false);
 	if(!v) return undefined;
 	
-	let vv = getFieldValueSpecific(v.node, field);
+	return getFieldValueStartingFromNode(field, v.node);
+}
+
+function getFieldValueStartingFromNode(field:CatalogField, node:XMLNodeEntry):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
+	let vv = getFieldValueSpecific(node, field);
 	if(vv !== undefined) return vv;
 	
-	let tmp = getStructDefaultValue(v.node.tagname, field);
+	let tmp = getStructDefaultValue(node.tagname, field);
 	if(tmp !== undefined){
-		return { value: tmp, source: ValueSource.Default };
+		return { value: tmp, source: ValueSource.Default, tokens: getTokensForDefaultField(node) };
 	}
 	
 	return undefined;
@@ -344,7 +448,7 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 		let tmp = getParentNodeFor(entry);
 		if(tmp === undefined) break;
 		
-		let {parent, isDefault} = tmp;
+		let {node: parent, isDefault} = tmp;
 		
 		entry = parent;
 		addEntryIndexes(entry, isDefault ? ValueSource.Default : ValueSource.Parent);
@@ -422,12 +526,61 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {'Research1':true, '1':true, 'Research3':true, 'Research4':true}, mapping);
 }
 
-
-function setFieldValue(field:CatalogField, newValue:string){
+function setFieldValue(field:CatalogField, newValue:string):{
+	source:ValueSource;
+	tokens:Record<string,string>;
+	unresolvedValue:string;
+}{
 	assert(field.name.length >= 1);
 	
 	let vv = accessEntry(field.entry, true);
-	let cur = getFieldContainer(field, vv.node, true);
+	
+	let unresolvedValue:string;
+	let thisEntryTokens = getTokensForNewField(vv.node);
+	
+	const isDefaultEntry = vv.node.attr["default"] === "1";
+	
+	if(isDefaultEntry){
+		unresolvedValue = unresolveTokens(newValue, thisEntryTokens);
+	}else{
+		// For non-default entries, the editor just writes down the resolved tokens that it can
+		// It can read tokens and resolve them still, but when it writes to the catalog it always does it like this
+		unresolvedValue = newValue;
+		newValue = resolveTokens(newValue, thisEntryTokens);
+	}
+	
+	
+	let parent = getParentNodeFor(vv.node);
+	if(parent !== undefined){
+		let cur = getFieldValueStartingFromNode(field, parent.node);
+		if(cur !== undefined){
+			if(cur.source == ValueSource.Self) ValueSource.Parent;
+			
+			let resolved = resolveTokens(cur.value, cur.tokens);
+			if(resolved === newValue){
+				// So this field already has this value from a parent
+				// delete it if it exists and let's inherit it instead
+				let container = getFieldContainer(field, vv.node, false);
+				if(container !== undefined){
+					deleteFieldValueInternal(field, container);
+				}
+				
+				return {
+					source: cur.source,
+					tokens: cur.tokens,
+					unresolvedValue: cur.value,
+				};
+			}
+		}
+	}
+	
+	let container = getFieldContainer(field, vv.node, true);
+	
+	let ret = {
+		source: ValueSource.Self,
+		tokens: thisEntryTokens,
+		unresolvedValue,
+	};
 	
 	let name = field.name[field.name.length - 1];
 	if(typeof name == 'string'){
@@ -436,51 +589,89 @@ function setFieldValue(field:CatalogField, newValue:string){
 		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
 		
 		// Check if the first form exists
-		if(name in cur.attr){
-			if(cur.attr[name] === newValue) return; // Not changed
-			cur.attr[name] = newValue;
-			modifiedDataspace(vv.dataspace);
-			return;
+		if(name in container.attr){
+			if(container.attr[name] !== newValue){
+				container.attr[name] = newValue;
+				modifiedDataspace(vv.dataspace);
+			}
+			
+			return ret;
 		}
 		
 		// Check the second form exists
-		let subnodes = getChildrenByTagName(cur, name);
+		let subnodes = getChildrenByTagName(container, name);
 		if(subnodes && subnodes.length > 0){
 			assert(subnodes.length == 1); // Otherwise this should've been an array...
 			
 			// So just set the "value" attribute in that child
 			
 			let sub = subnodes[0];
-			if(sub.attr["value"] === newValue) return; // Not changed
+			if(sub.attr["value"] !== newValue){
+				sub.attr["value"] = newValue;
+				modifiedDataspace(vv.dataspace);
+			}
 			
-			sub.attr["value"] = newValue;
-			modifiedDataspace(vv.dataspace);
-			return;
+			return ret;
 		}
 		
 		// Neither exists, so we must create it
-		if(cur == vv.node){
+		if(container == vv.node){
 			// Our `cur` node is also our entry node
 			// We can't put root ones in the attributes, or it'd be a token
 			
 			// Create a <name value="newValue"/> inside it
-			addChild(cur, newNode(name, {value:newValue}));
+			addChild(container, newNode(name, {value:newValue}));
 			modifiedDataspace(vv.dataspace);
 		}else{
-			cur.attr[name] = newValue;
+			container.attr[name] = newValue;
 			modifiedDataspace(vv.dataspace);
+		}
+		
+		return ret;
+	}else{
+		// This is an array of simple values, such as
+		// <Resource index="Minerals" value="100"/>
+		let [arrayName, arrayIndex] = name;
+		
+		let v = accessArray(container, arrayName, arrayIndex, true);
+		
+		if(v.attr["value"] !== newValue){
+			v.attr["value"] = newValue;
+			modifiedDataspace(vv.dataspace);
+		}
+		
+		return ret;
+	}
+}
+
+function deleteFieldValueInternal(field:CatalogField, container:XMLNode){
+	let name = field.name[field.name.length - 1];
+	if(typeof name == 'string'){
+		// There are two ways this could be defined, say we're accessing "Row"
+		// 1. <DefaultButtonLayout Row="1"/>
+		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+		
+		// Check if the first form exists
+		if(name in container.attr){
+			delete container.attr[name];
+		}
+		
+		// Check the second form exists
+		let subnodes = getChildrenByTagName(container, name);
+		if(subnodes && subnodes.length > 0){
+			assert(subnodes.length == 1); // Otherwise this should've been an array...
+			
+			removeChild(container, subnodes[0]);
 		}
 	}else{
 		// This is an array of simple values, such as
 		// <Resource index="Minerals" value="100"/>
 		let [arrayName, arrayIndex] = name;
 		
-		let v = accessArray(cur, arrayName, arrayIndex, true);
-		
-		if(v.attr["value"] === newValue) return; // Not changed
-		
-		v.attr["value"] = newValue;
-		modifiedDataspace(vv.dataspace);
+		let v = accessArray(container, arrayName, arrayIndex, false);
+		if(v !== undefined){
+			removeChild(container, v);
+		}
 	}
 }
 
@@ -608,12 +799,8 @@ const messageHandlers:{
 		let v = accessEntry(entry, false);
 		if(v === undefined) return undefined;
 		
-		let tokens = Object.assign({}, v.node.attr);
-		delete tokens["id"];
-		
 		let r:Awaited<ReturnType<WorkerClient["getEntry"]>> = {
 			type: v.node.tagname,
-			tokens,
 		};
 		
 		assert(v.dataspace.index != null);
@@ -624,21 +811,6 @@ const messageHandlers:{
 		}
 		
 		return r;
-	},
-	
-	async resolveTokens(entry:CatalogEntry, value:string){
-		let tokens = getEntryTokens(entry);
-		if(tokens === undefined) return value;
-		
-		let tokens2 = tokens;
-		
-		return value.replaceAll(/##([a-z0-9_]+)##/gim, function(all, id){
-			if(id in tokens2){
-				return tokens2[id];
-			}else{
-				return all;
-			}
-		});
 	},
 	
 	async setEntryType(entry:CatalogEntry, value:string){
@@ -708,15 +880,15 @@ const messageHandlers:{
 		
 		let partialMatchLower = partialMatch !== undefined ? partialMatch.toLowerCase() : undefined;
 		
-		const iterateEntries = (entries:XMLNode[], catalogName:CatalogName|null, dataspaceName:string|null, dataspaceSource:string|null) => {
+		const iterateEntries = (entries:XMLNodeEntry[], catalogName:CatalogName|null, dataspaceName:string|null, dataspaceSource:string|null) => {
 			for(let entry of entries){
-				if(typeof filterByParent != "undefined" && entry.attr["parent"] != filterByParent){
+				if(typeof filterByParent != "undefined" && entry.attr.parent != filterByParent){
 					continue;
 				}
 				
 				let id = "";
 				
-				if("id" in entry.attr) id = entry.attr["id"];
+				if("id" in entry.attr) id = entry.attr.id;
 				
 				if(typeof partialMatchLower != "undefined"){
 					if(id.toLowerCase().indexOf(partialMatchLower) == -1) continue;
@@ -823,7 +995,7 @@ const messageHandlers:{
 	},
 	
 	async setFieldValue(field:CatalogField, value:string){
-		setFieldValue(field, value);
+		return setFieldValue(field, value);
 	},
 	
 	async getPendingChangesList(){

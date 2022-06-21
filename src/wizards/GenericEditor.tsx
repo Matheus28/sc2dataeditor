@@ -13,6 +13,7 @@ import CatalogFieldLink from './components/CatalogFieldLink';
 import CatalogFieldObjectStringLink from './components/CatalogFieldObjectStringLink';
 import CatalogFieldReal from './components/CatalogFieldReal';
 import CatalogFieldString from './components/CatalogFieldString';
+import CatalogFieldStringLink from './components/CatalogFieldStringLink';
 import SelectEntry, { SelectOption } from './components/SelectEntry';
 import SelectEntryType from './components/SelectEntryType';
 import { valueSourceToClassName, valueSourceToVariant } from './components/utils';
@@ -161,8 +162,27 @@ const componentFromType:{
 } = {
 	CString: stringType<"CString">(),
 	
-	CStringLink: () => {
-		return null;
+	CStringLink: (props) => {
+		const def = DataFieldDefaults[props.meta.value.type];
+		const [link, setLink] = React.useState("");
+		
+		return <SimpleValueWrapper {...props}>
+			<Table size="sm" className="entry-subfields">
+				<tbody>
+					<tr>
+						<td>Link</td>
+						<td className="entry-field-value">
+							<CatalogFieldString field={props.field} default={def} onLoad={setLink} onChange={setLink}/>
+						</td>
+					</tr>
+					
+					<tr>
+						<td>Value</td>
+						<td className="entry-field-value"><CatalogFieldStringLink link={link} /></td>
+					</tr>
+				</tbody>
+			</Table>
+		</SimpleValueWrapper>;
 	},
 	
 	CObjectStringLink: (props) => {

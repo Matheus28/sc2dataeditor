@@ -7,6 +7,9 @@ interface Props {
 	field:CatalogField;
 	
 	default:string;
+	
+	onLoad?:undefined|((v:string)=>void);
+	onChange?:undefined|((v:string)=>void);
 }
 
 export default function(props:Props){
@@ -14,5 +17,7 @@ export default function(props:Props){
 		field={props.field}
 		default={props.default}
 		control={<Form.Control/>}
+		onLoad={props.onLoad}
+		onChange={props.onChange}
 	/>;
 };
