@@ -1,6 +1,6 @@
 import assert from "assert";
-import { CatalogName, CatalogSubtype, CatalogTypesInstance, FieldType } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild } from './lib/game_data_loader';
+import { CatalogName, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./lib/game_data";
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import { resolveTokens, unresolveTokens } from "./wizards/components/utils";
@@ -185,69 +185,86 @@ function getTokensForDefaultField(cur:XMLNodeEntry):Record<string,string> {
 	return ret;
 }
 
-function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:true):XMLNode;
-function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined;
-function getFieldContainer(field:CatalogField, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined {
-	for(let i = 0; i < field.name.length-1; ++i){
-		let name = field.name[i];
+function getFieldContainer(fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:true):XMLNode;
+function getFieldContainer(fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined;
+function getFieldContainer(fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined {
+	let container:XMLNode = entry;
+	
+	for(let i = 0; i < fieldName.length-1; ++i){
+		let name = fieldName[i];
 		if(typeof name == 'string'){
-			let tmp = accessStruct(entry, name, createIfNotExists);
+			let tmp = accessStruct(container, name, createIfNotExists);
 			if(!tmp) return undefined;
 			
-			entry = tmp;
+			container = tmp;
 		}else{
-			let [arrayName, arrayIndex] = name;
-			
-			let tmp = accessArray(entry, arrayName, arrayIndex, createIfNotExists);
+			let tmp = wrapAccessArray(entry, fieldName.slice(0, i+1), container, createIfNotExists);
 			if(!tmp) return undefined;
 			
-			entry = tmp;
+			container = tmp.node;
 		}
 	}
 	
-	return entry;
+	return container;
 }
 
-function getFieldValueLast(cur:XMLNode, name:string|[string,string|number]):{ value:string; source:ValueSource; }|undefined {
-	if(typeof name == 'string'){
-		// There are two ways this could be defined, say we're accessing "Row"
-		// 1. <DefaultButtonLayout Row="1"/>
-		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
-		
-		// Check the first form
-		if(name in cur.attr){
-			return { value: cur.attr[name], source: ValueSource.Self };
-		}
-		
-		// Then check the second form
-		let subnodes = getChildrenByTagName(cur, name);
-		if(!subnodes || subnodes.length == 0) return undefined;
-		return { value: subnodes[0].attr["value"], source: ValueSource.Self };
+function getFieldValueLast(entry:XMLNodeEntry, container:XMLNode, fieldName:CatalogFieldName):{ value:string; source:ValueSource; }|undefined {
+	let lastName = fieldName[fieldName.length - 1];
+	if(typeof lastName == 'string'){
+		// Defer to the other definition to reduce duplication
+		return getFieldValueLast_Internal(container, lastName);
 	}else{
 		// This is an array of simple values, such as
 		// <Resource index="Minerals" value="100"/>
-		let [arrayName, arrayIndex] = name;
-		
-		let v = accessArray(cur, arrayName, arrayIndex, false);
+		let v = wrapAccessArray(entry, fieldName, container, false);
 		if(!v) return undefined;
 		
-		return { value: v.attr["value"], source: ValueSource.Self };
+		return { value: v.node.attr["value"], source: ValueSource.Self };
 	}
 }
 
+function getFieldValueLast_Internal(container:XMLNode, lastName:string){
+	// There are two ways this could be defined, say we're accessing "Row"
+	// 1. <DefaultButtonLayout Row="1"/>
+	// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
+	
+	// Check the first form
+	if(lastName in container.attr){
+		return { value: container.attr[lastName], source: ValueSource.Self };
+	}
+	
+	// Then check the second form
+	let subnodes = getChildrenByTagName(container, lastName);
+	if(!subnodes || subnodes.length == 0) return undefined;
+	return { value: subnodes[0].attr["value"], source: ValueSource.Self };
+}
+
+// Does not look into parents to access arrays correctly!!
+function getFieldValueLastSimple(container:XMLNode, lastName:CatalogFieldName[number], metaf:FieldType):{ value:string; source:ValueSource; }|undefined {
+	if(typeof lastName == 'string'){
+		return getFieldValueLast_Internal(container, lastName);
+	}else{
+		// This is an array of simple values, such as
+		// <Resource index="Minerals" value="100"/>
+		let v = wrapAccessArraySimple(metaf, lastName, container);
+		if(!v) return undefined;
+		
+		return { value: v.node.attr["value"], source: ValueSource.Self };
+	}
+}
 // If not found on this node, will navigate to the parent to try to find it there
-function getFieldValueSpecific(node:XMLNodeEntry, field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
+function getFieldValueSpecific(entry:XMLNodeEntry, field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
 	assert(field.name.length >= 1);
 	
-	let cur = getFieldContainer(field, node, false);
-	if(cur){
-		let vv = getFieldValueLast(cur, field.name[field.name.length - 1]);
+	let container = getFieldContainer(field.name, entry, false);
+	if(container){
+		let vv = getFieldValueLast(entry, container, field.name);
 		if(vv !== undefined){
-			return {...vv, tokens: getTokensForNewField(node)};
+			return {...vv, tokens: getTokensForNewField(entry)};
 		}
 	}
 	
-	let tmp = getParentNodeFor(node);
+	let tmp = getParentNodeFor(entry);
 	if(tmp !== undefined){
 		let {node: parent, isDefault} = tmp;
 		let ret = getFieldValueSpecific(parent, field);
@@ -258,10 +275,10 @@ function getFieldValueSpecific(node:XMLNodeEntry, field:CatalogField):{ value:st
 			// so on the first entry missing `default=1`, we override the id there
 			if(parent.attr.default === "1"){
 				// grand parent, parent
-				ret.tokens = Object.assign(ret.tokens, getSelfTokens(node)); // Prefer our tokens
+				ret.tokens = Object.assign(ret.tokens, getSelfTokens(entry)); // Prefer our tokens
 			}else{
 				// me
-				ret.tokens = Object.assign({}, getSelfTokens(node), ret.tokens); // Prefer parent tokens
+				ret.tokens = Object.assign({}, getSelfTokens(entry), ret.tokens); // Prefer parent tokens
 			}
 			
 			// ^
@@ -323,8 +340,74 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 	return {node: parent.node, dataspace: parent.dataspace, isDefault: parent === def};
 }
 
-function getStructDefaultValue(tagname:string, field:CatalogField):string|undefined {
-	if(field.name.length < 2) return undefined;
+/*
+	Given the following metafield:
+	
+	[1] {
+		struct: { // CAbilResearch
+			"InfoArray": {
+				[2] "namedArray": {
+					keys: {"Research1":0, ...}
+					value: {
+						[3] struct: {
+							"Time": [4] { value: { type: "CFixed" } },
+							"Resource": {
+								[5] "namedArray": {
+									keys: {"Minerals":0, ...},
+									value: [6] { value: { type: "CFixed" } },
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	[["InfoArray", "Research1"], "Time"]
+		accessMetafield([1], "InfoArray") = [2]
+		accessMetafield([1], ["InfoArray", "Research1"]) = [3]
+		accessMetafield([3], "Time") = [4]
+		
+	[["InfoArray", "Research1"], ["Resource", "Minerals"]]
+		accessMetafield([3], "Resource") = [5]
+		accessMetafield([3], ["Resource", "Minerals"]) = [6]
+	
+	
+*/
+function accessMetafield(metaf:FieldType, name:CatalogFieldName[number]):FieldType|undefined {
+	assert('struct' in metaf);
+	
+	if(typeof name == 'string'){
+		return metaf.struct[name];
+	}else{
+		let index = name[1];
+		
+		name = name[0]; // Remove index, we don't care, it doesn't affect the meta type
+		metaf = metaf.struct[name]; // Access the struct
+		if(metaf == undefined) return undefined;
+		
+		const isNumericIndex = typeof index == "number" || /^[0-9]+$/.test(index);
+		if(!isNumericIndex) assert('namedArray' in metaf);
+		
+		// And now we access the index...
+		if('namedArray' in metaf){
+			if(isNumericIndex) assert(index in metaf.namedArray.keys.reverseValues);
+			else assert(index in metaf.namedArray.keys.values);
+			
+			return metaf.namedArray.value;
+		}else if('array' in metaf){
+			assert(isNumericIndex);
+			return metaf.array;
+		}else{
+			return undefined;
+		}
+	}
+}
+
+
+function getMetafieldContainerFor(tagname:string, fieldName:CatalogFieldName):{ metaf:FieldType, dataspace:Dataspace }|undefined {
+	if(fieldName.length < 1) return undefined;
 	
 	let tmp = getDefaultEntryForType(tagname);
 	if(tmp === undefined) return undefined;
@@ -335,41 +418,19 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 	assert(meta);
 	
 	for(;;){
-		const removeIndex = (x:string|[string,string|number]) => {
-			if(typeof x == 'string') return x;
-			return x[0];
+		let metaf:FieldType|undefined = meta.type;
+		let lastMetaf:FieldType = metaf;
+		for(let i = 0; metaf !== undefined && i < fieldName.length; ++i){
+			lastMetaf = metaf;
+			metaf = accessMetafield(metaf, fieldName[i]);
 		}
 		
-		let metaf:FieldType|undefined = meta.fields[removeIndex(field.name[0])];
-		for(let i = 1; metaf && i < field.name.length-1; ++i){
-			let name = field.name[i];
-			if(typeof name == 'string'){
-				assert('struct' in metaf);
-				metaf = metaf.struct[name];
-			}else{
-				name = name[0]; // Remove index, we don't care
-				if('namedArray' in metaf){
-					metaf = metaf.namedArray.value;
-				}else if('array' in metaf){
-					metaf = metaf.array;
-				}else{
-					assert(false);
-				}
-			}
-		}
-		
-		// We still have one more level to go down. We should be at the struct containing our value now
+		// Found it
 		if(metaf !== undefined){
-			if('struct' in metaf){
-				let defs = cur.dataspace.structDefaults[metaf.structTypename];
-				if(defs !== undefined){
-					let vv = getFieldValueLast(defs, field.name[field.name.length - 1]);
-					if(vv !== undefined) return vv.value;
-				}
-			}
+			return { metaf: lastMetaf, dataspace: cur.dataspace};
 		}
 		
-		// Look in the parent meta
+		// Not here...
 		if(meta.parent != null){
 			let tmp = getDefaultEntryForType(meta.parent);
 			if(tmp === undefined) return undefined;
@@ -385,6 +446,37 @@ function getStructDefaultValue(tagname:string, field:CatalogField):string|undefi
 	return undefined;
 }
 
+function getStructDefaultValue(tagname:string, fieldName:CatalogFieldName):string|undefined {
+	if(fieldName.length < 2) return undefined;
+	
+	let tmp = getMetafieldContainerFor(tagname, fieldName);
+	if(tmp === undefined) return undefined;
+	
+	let {metaf, dataspace} = tmp;
+	
+	// We should be at the struct containing our value now
+	assert('struct' in metaf); // is this assert too restrictive?
+	if('struct' in metaf){
+		// So now we check the default values for that struct
+		let defs = dataspace.structDefaults[metaf.structTypename];
+		if(defs !== undefined){
+			let vv = getFieldValueLastSimple(defs, fieldName[fieldName.length - 1], metaf);
+			if(vv !== undefined) return vv.value;
+		}
+	}
+	
+	return undefined;
+}
+
+function getMetafieldFor(tagname:string, fieldName:CatalogFieldName):FieldType|undefined {
+	assert(fieldName.length > 0);
+	
+	let tmp = getMetafieldContainerFor(tagname, fieldName);
+	if(tmp === undefined) return undefined;
+	
+	return accessMetafield(tmp.metaf, fieldName[fieldName.length-1]);
+}
+
 function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
 	let v = accessEntry(field.entry, false);
 	if(!v) return undefined;
@@ -396,7 +488,7 @@ function getFieldValueStartingFromNode(field:CatalogField, node:XMLNodeEntry):{ 
 	let vv = getFieldValueSpecific(node, field);
 	if(vv !== undefined) return vv;
 	
-	let tmp = getStructDefaultValue(node.tagname, field);
+	let tmp = getStructDefaultValue(node.tagname, field.name);
 	if(tmp !== undefined){
 		return { value: tmp, source: ValueSource.Default, tokens: getTokensForDefaultField(node) };
 	}
@@ -414,7 +506,7 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	if(!vv) return undefined;
 	
 	
-	let entry = getFieldContainer(field, vv.node, false);
+	let entry = getFieldContainer(field.name, vv.node, false);
 	if(!entry) return undefined;
 	
 	let arrName2 = field.name[field.name.length - 1];
@@ -559,9 +651,9 @@ function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<W
 			if(resolved === newValue){
 				// So this field already has this value from a parent
 				// delete it if it exists and let's inherit it instead
-				let container = getFieldContainer(field, vv.node, false);
+				let container = getFieldContainer(field.name, vv.node, false);
 				if(container !== undefined){
-					deleteFieldValueInternal(field, container);
+					deleteFieldValueInternal(vv.node, field, container);
 				}
 				
 				return {
@@ -575,7 +667,7 @@ function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<W
 		}
 	}
 	
-	let container = getFieldContainer(field, vv.node, true);
+	let container = getFieldContainer(field.name, vv.node, true);
 	
 	let ret = {
 		source: ValueSource.Self,
@@ -634,12 +726,10 @@ function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<W
 	}else{
 		// This is an array of simple values, such as
 		// <Resource index="Minerals" value="100"/>
-		let [arrayName, arrayIndex] = name;
 		
-		let v = accessArray(container, arrayName, arrayIndex, true);
-		
-		if(v.attr["value"] !== newValue){
-			v.attr["value"] = newValue;
+		let v = wrapAccessArray(vv.node, field.name, container, true);
+		if(v.node.attr["value"] !== newValue){
+			v.node.attr["value"] = newValue;
 			modifiedDataspace(vv.dataspace);
 		}
 		
@@ -647,7 +737,97 @@ function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<W
 	}
 }
 
-function deleteFieldValueInternal(field:CatalogField, container:XMLNode){
+function getNextIndexForArray_Internal(entry:XMLNodeEntry, fieldName:CatalogFieldName, metaf:FieldType):number {
+	let lastName = fieldName[fieldName.length - 1];
+	assert(typeof lastName === "string");
+	
+	let nextIndex:number;
+	
+	let parent = getParentNodeFor(entry, true);
+	if(parent !== undefined){
+		nextIndex = getNextIndexForArray_Internal(parent.node, fieldName, metaf);
+	}else{
+		nextIndex = 0;
+	}
+	
+	let enumType:EnumType|null;
+	if('array' in metaf){
+		enumType = null;
+	}else if('namedArray' in metaf){
+		enumType = metaf.namedArray.keys;
+	}else{
+		throw new Error(`getNextIndexForArray on non-array meta`);
+	}
+	
+	let container = getFieldContainer(fieldName, entry, false);
+	if(container === undefined) return nextIndex;
+	return getFieldArrayLength(container, lastName, nextIndex, enumType);
+}
+
+function getNextIndexForArray(entry:XMLNodeEntry, fieldName:CatalogFieldName, metaf:FieldType):number {
+	// We don't count ourselves for this, so start at the parent
+	
+	let parent = getParentNodeFor(entry, true);
+	if(parent === undefined) return 0;
+	
+	return getNextIndexForArray_Internal(parent.node, fieldName, metaf);
+}
+
+function wrapAccessArray(entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:true):{node:XMLNode, index?:ArrayAccessReturnIndex};
+function wrapAccessArray(entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:false):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined;
+function wrapAccessArray(entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined;
+function wrapAccessArray(entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined {
+	assert(fieldName.length > 0);
+	assert(isValidTagname(entry.tagname));
+	
+	let tmp = getMetafieldContainerFor(entry.tagname, fieldName);
+	if(tmp === undefined){
+		return undefined;
+	}
+	
+	let metaf:FieldType|undefined = tmp.metaf;
+	
+	let lastName = fieldName[fieldName.length - 1];
+	assert(typeof lastName !== "string"); // We're accessing an array, right?
+	
+	let [arrayName, arrayIndex] = lastName;
+	metaf = accessMetafield(metaf, arrayName);
+	if(metaf == undefined){
+		return undefined;
+	}
+	
+	let almostFullFieldName = fieldName.slice(0, fieldName.length-1).concat(arrayName);
+	
+	// We need to cache this...
+	let nextIndex = getNextIndexForArray(entry, almostFullFieldName, metaf);
+	
+	if('array' in metaf){
+		return accessArray(container, arrayName, arrayIndex, nextIndex, null, createIfNotExists);
+	}else if('namedArray' in metaf){
+		return accessArray(container, arrayName, arrayIndex, nextIndex, metaf.namedArray.keys, createIfNotExists);
+	}else{
+		throw new Error("Trying to access array value with bad meta field");
+	}
+}
+
+function wrapAccessArraySimple(metaf:FieldType, lastName:Exclude<CatalogFieldName[number], string>, container:XMLNode):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined {
+	assert(typeof lastName !== "string"); // We're accessing an array, right?
+	
+	let [arrayName, arrayIndex] = lastName;
+	let tmp = accessMetafield(metaf, arrayName);
+	if(tmp == undefined) return undefined;
+	metaf = tmp;
+	
+	if('array' in metaf){
+		return accessArray(container, arrayName, arrayIndex, 0, null, false);
+	}else if('namedArray' in metaf){
+		return accessArray(container, arrayName, arrayIndex, 0, metaf.namedArray.keys, false);
+	}else{
+		throw new Error("Trying to access array value with bad meta field");
+	}
+}
+
+function deleteFieldValueInternal(entry:XMLNodeEntry, field:CatalogField, container:XMLNode){
 	let name = field.name[field.name.length - 1];
 	if(typeof name == 'string'){
 		// There are two ways this could be defined, say we're accessing "Row"
@@ -669,11 +849,13 @@ function deleteFieldValueInternal(field:CatalogField, container:XMLNode){
 	}else{
 		// This is an array of simple values, such as
 		// <Resource index="Minerals" value="100"/>
-		let [arrayName, arrayIndex] = name;
-		
-		let v = accessArray(container, arrayName, arrayIndex, false);
+		let v = wrapAccessArray(entry, field.name, container, false);
 		if(v !== undefined){
-			removeChild(container, v);
+			// We'll be lazy here and just mark the field with removed=1
+			// Otherwise we'd have to check if we have anyone inheriting this entry to remove this safely
+			
+			v.node.attr = {"index": v.index.str, "removed":"1"};
+			clearChildren(v.node);
 		}
 	}
 }
@@ -1021,14 +1203,18 @@ function hasMemoryHandler(i:string):i is keyof typeof messageHandlers {
 async function onMessage(msg:Message){
 	for(let i in msg.data){
 		if(hasMemoryHandler(i)){
-			const label = `[${msg.id}] ${i}`;
 			
-			console.time(label);
+			const alwaysPrintTime = false;
 			
+			let start = Date.now();
 			let r = (messageHandlers[i] as any).apply(messageHandlers, msg.data[i]);
 			try { await r; } catch(e){}
+			let end = Date.now();
 			
-			console.timeEnd(label);
+			if(alwaysPrintTime || (end - start > 10)){
+				console.log(`[${msg.id}] ${i} took ${(end-start).toFixed(1)} ms`);
+			}
+			
 			
 			return r;
 		}else{

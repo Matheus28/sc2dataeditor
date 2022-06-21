@@ -2,7 +2,7 @@ import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
-import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType } from "./game_data";
+import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType, EnumType } from "./game_data";
 
 
 interface XMLNodeBase<ChildType> {
@@ -761,6 +761,8 @@ export interface CatalogEntry {
 	catalog:CatalogName;
 }
 
+export type CatalogFieldName = (string|[string, string|number])[];
+
 export interface CatalogField {
 	entry:CatalogEntry;
 	
@@ -783,107 +785,127 @@ export interface CatalogField {
 	// 
 	// Note that in both cases, string indexes are just aliases for a number. Research1 is 0. Minerals is 0.
 	
-	name:(string|[string, string|number])[];
+	name:CatalogFieldName;
+}
+
+// Does not look into parents!
+export function getFieldArrayLength(container:XMLNode, name:string, nextIndex:number, enumType:null|EnumType):number {
+	let subnodes = getChildrenByTagName(container, name);
+	if(subnodes){
+		for(let sub of subnodes){
+			let nodeIndex:string|number|undefined = sub.attr["index"];
+			if(nodeIndex === undefined){
+				nodeIndex = nextIndex;
+			}else if(/^[0-9]+$/.test(nodeIndex)){
+				nodeIndex = parseInt(nodeIndex, 10);
+			}else if(enumType != null && (nodeIndex in enumType.values)){
+				nodeIndex = enumType.values[nodeIndex];
+			}else{
+				if(enumType != null){
+					console.error(`Invalid index ${nodeIndex}, mapping only allows for: [${Object.keys(enumType.values).join(", ")}]`);
+				}else{
+					console.error(`Invalid index ${nodeIndex}, this array only accepts numeric indexes`);
+				}
+				
+				continue;
+			}
+			
+			nextIndex = Math.max(nodeIndex + 1, nextIndex);
+		}
+	}
+	
+	return nextIndex;
 }
 
 // Some arrays can be accessed through constants, which map simply to a number (Research3 -> 2, Minerals -> 0)
-// Not sure if those constants are per-array or global
 // Editor will prefer constants for the ones that have it (such as Research<N>), but we can write integers and it'll convert it
 // next time it saves that data space
-export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:true):XMLNode;
-export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean):XMLNode|undefined;
-export function accessArray(node:XMLNode, name:string, index:string|number|null, createIfNotExists:boolean = false):XMLNode|undefined {
+export type ArrayAccessReturnIndex = { num:number; str:string; };
+export function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:true):{node:XMLNode, index?:ArrayAccessReturnIndex};
+export function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:false):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined;
+export function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined;
+export function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean = false):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined {
 	if(index == null){
 		if(createIfNotExists){
-			let c = newNode(name);
-			addChild(node, c);
-			return c;
+			let c = newNode(name); // No index means next available one
+			addChild(container, c);
+			return {node: c};
 		}else{
 			throw new Error("null index means we want to create");
 		}
 	}
 	
-	let subnodes = getChildrenByTagName(node, name);
-	if(!subnodes || subnodes.length == 0){
-		if(createIfNotExists){
-			let c = newNode(name, { index: index.toString() });
-			addChild(node, c);
-			return c;
+	if(typeof index == "string"){
+		if(/^[0-9]+$/.test(index)){
+			index = parseInt(index, 10);
 		}else{
-			return undefined;
+			assert(enumType != null);
+			assert(index in enumType.values);
+			index = enumType.values[index];
 		}
 	}
 	
-	for(let sub of subnodes){
-		if(!sub.attr || sub.attr["index"] != index) continue;
-		if(sub.attr["removed"]){
-			if(createIfNotExists){
-				delete sub.attr["removed"];
-				return sub;
+	let subnodes = getChildrenByTagName(container, name);
+	if(subnodes){
+		for(let sub of subnodes){
+			let nodeIndex:string|number|undefined = sub.attr["index"];
+			if(nodeIndex === undefined){
+				nodeIndex = nextIndex;
+			}else if(/^[0-9]+$/.test(nodeIndex)){
+				nodeIndex = parseInt(nodeIndex, 10);
+			}else if(enumType != null && (nodeIndex in enumType.values)){
+				nodeIndex = enumType.values[nodeIndex];
 			}else{
-				return undefined;
+				if(enumType != null){
+					console.error(`Invalid index ${nodeIndex}, mapping only allows for: [${Object.keys(enumType.values).join(", ")}]`);
+				}else{
+					console.error(`Invalid index ${nodeIndex}, this array only accepts numeric indexes`);
+				}
+				
+				continue;
+			}
+			
+			nextIndex = Math.max(nodeIndex + 1, nextIndex);
+			
+			if(nodeIndex === index){
+				if(sub.attr["removed"]){
+					if(createIfNotExists){
+						delete sub.attr["removed"];
+						return {node: sub, index: arrayIndexToObject(nodeIndex, enumType) };
+					}else{
+						return undefined;
+					}
+				}
+				
+				return {node: sub, index: arrayIndexToObject(nodeIndex, enumType) };
 			}
 		}
-		
-		return sub;
 	}
 	
-	const bailWithIndex = function(){
-		assert(index != null);
-		if(createIfNotExists){
-			let c = newNode(name, { index: index.toString() });
-			addChild(node, c);
-			return c;
+	if(createIfNotExists){
+		let c = newNode(name, { index: arrayIndexToString(index, enumType) });
+		addChild(container, c);
+		return {node: c};
+	}else{
+		return undefined;
+	}
+}
+
+function arrayIndexToObject(index:number, enumType:EnumType|null):ArrayAccessReturnIndex {
+	return { num: index, str: arrayIndexToString(index, enumType) };
+}
+
+function arrayIndexToString(index:number, enumType:EnumType|null):string {
+	if(enumType != null){
+		if(index in enumType.reverseValues){
+			return enumType.reverseValues[index];
 		}else{
-			return undefined;
+			console.warn(`Enum doesn't have a value for ${index}. Falling back to numeric index`);
+			return index.toString();
 		}
-	};
-	
-	if(typeof index == 'string'){
-		if(!/^[0-9]+$/.test(index)){
-			return bailWithIndex();
-		}
-		
-		index = parseInt(index, 10);
-		assert(!isNaN(index)); // Regex should've prevented this
+	}else{
+		return index.toString();
 	}
-	
-	let hasUnnamedIndexes = false;
-	for(let sub of subnodes){
-		if(!sub.attr || typeof sub.attr["index"] == 'undefined'){
-			hasUnnamedIndexes = true;
-			break;
-		}
-	}
-	
-	if(!hasUnnamedIndexes){
-		return bailWithIndex();
-	}
-	
-	// Ideally... we'd also look into the parents to count the indexes they're taking up too...
-	let indexesTaken = new Set<number>();
-	
-	for(let sub of subnodes){
-		if(!sub.attr || typeof sub.attr["index"] == 'undefined') continue;
-		if(!/^[0-9]+$/.test(sub.attr["index"])) continue;
-		let v = parseInt(sub.attr["index"], 10);
-		assert(!isNaN(index)); // Regex should've prevented this
-		indexesTaken.add(v);
-	}
-	
-	// Now we loop knowing the implied index of the unnamed array elements
-	let i = 0;
-	for(let sub of subnodes){
-		if(sub.attr && typeof sub.attr["index"] != 'undefined') continue;
-		
-		if(i == index){
-			return sub;
-		}
-		
-		++i;
-	}
-	
-	return bailWithIndex();
 }
 
 export function accessStruct(node:XMLNode, name:string, createIfNotExists:true):XMLNode;

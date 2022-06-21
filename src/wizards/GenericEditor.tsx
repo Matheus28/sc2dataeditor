@@ -41,7 +41,7 @@ export default function(props:Props){
 		
 		return [
 			addFieldsAndParent(entry, catalog, CatalogTypesInstance[catalog][entryType].parent),
-			addFields(entry, entryType, CatalogTypesInstance[catalog][entryType].fields)
+			addFields(entry, entryType, CatalogTypesInstance[catalog][entryType].type.struct)
 		];
 	};
 	
@@ -112,7 +112,7 @@ interface FieldComponentSharedProps {
 function FieldComponent(props:FieldComponentSharedProps){
 	return <>
 		{props.meta.value && <FieldComponentValue {...props} desc={props.meta.value} /> }
-		{'struct' in props.meta && <FieldComponentStruct {...props} desc={props.meta.struct} alsoHasValue={props.meta.value !== undefined} /> }
+		{'struct' in props.meta && <FieldComponentStruct {...props} desc={props.meta} alsoHasValue={props.meta.value !== undefined} /> }
 		{'array' in props.meta && <FieldComponentArray {...props} desc={props.meta.array} /> }
 		{'namedArray' in props.meta && <FieldComponentNamedArray {...props} desc={props.meta.namedArray} /> }
 	</>;
@@ -248,7 +248,7 @@ function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}
 	if(props.desc.type == "CEnum"){
 		let values = props.desc.values;
 		
-		return <SimpleValueWrapper {...props}><CatalogFieldEnum field={props.field} values={values}/></SimpleValueWrapper>;
+		return <SimpleValueWrapper {...props}><CatalogFieldEnum field={props.field} enumType={props.desc}/></SimpleValueWrapper>;
 	}
 	
 	const C = componentFromType[props.desc.type] as any; // Too lazy to get the types checked here... just trust :D
@@ -257,9 +257,9 @@ function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}
 
 function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeStruct, alsoHasValue:boolean}){
 	// This is used for accumulator fields
-	if(props.alsoHasValue && Object.keys(props.desc).length == 1){
-		for(let subname in props.desc){
-			let sub = props.desc[subname];
+	if(props.alsoHasValue && Object.keys(props.desc.struct).length == 1){
+		for(let subname in props.desc.struct){
+			let sub = props.desc.struct[subname];
 			let prettyName = `${props.name} ${subname}`;
 			
 			const subfield:CatalogField = {
@@ -275,7 +275,7 @@ function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeS
 		<Table striped size="sm" className="entry-subfields" >
 			<tbody>
 				{mapObjectToArray(
-					props.desc,
+					props.desc.struct,
 					(name, meta) => {
 						const subfield:CatalogField = {
 							entry: props.field.entry,
@@ -395,10 +395,10 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 	
 	if(isFlagArray){
 		return <SimpleValueWrapper {...props}><div style={{padding: '0.5rem 0.5rem 0 0.5rem'}}>
-			{props.desc.keys.values.map((index) => {
+			{mapObjectToArray(props.desc.keys.values, (indexName) => {
 				let subfield = {
 					entry: props.field.entry,
-					name: props.field.name.slice(0, -1).concat([[props.name, index]]),
+					name: props.field.name.slice(0, -1).concat([[props.name, indexName]]),
 				};
 				
 				assert(v.value !== undefined);
@@ -406,23 +406,23 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 				
 				const def = DataFieldDefaults[v.value.type];
 				
-				return <CatalogFieldBool key={index} label={index} field={subfield} default={def}/>;
+				return <CatalogFieldBool key={indexName} label={indexName} field={subfield} default={def}/>;
 			})}
 		</div></SimpleValueWrapper>;
 	}else{
 		return <SimpleValueWrapper {...props}>
 			<Table striped size="sm" className="entry-subfields">
 				<tbody>
-					{props.desc.keys.values.map((index) => {
+					{mapObjectToArray(props.desc.keys.values, (indexName) => {
 						const subfield:CatalogField = {
 							entry: props.field.entry,
-							name: props.field.name.slice(0, -1).concat([[props.name, index]]),
+							name: props.field.name.slice(0, -1).concat([[props.name, indexName]]),
 						};
 						
 						return <FieldComponent
 							directChildProps={{}}
-							key={index}
-							name={index.toString()}
+							key={indexName}
+							name={indexName.toString()}
 							field={subfield}
 							meta={v}
 						/>;

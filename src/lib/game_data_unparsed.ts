@@ -950,7 +950,7 @@ export const unparsedGameData:{
 	
 	enums:Record<string, { // ESomethingSomething
 		prefix:string; // e_somethingSomething
-		values: [string, ...string[]]; // second element is default... I know... but first is -1
+		values: [string, ...string[]]; // starts at -1, 0, ...
 	}>;
 } = {
 	"classes": {
@@ -14491,7 +14491,40 @@ export const unparsedGameData:{
 		"SAbilResearchInfo": { //TODO: verify
 			"parent": "SAbilQueueableInfo",
 			"fields": {
-				"Upgrade": "CUpgradeLink"
+				"Upgrade": "CUpgradeLink",
+				"Resource": {
+					"type": "int32",
+					"array": true,
+					"indexEnum": "EResourceType"
+				},
+				
+				"Time": {
+					"type": "CGameTime",
+					"minValue": 0
+				},
+				
+				"Vital": {
+					"type": "CFixed",
+					"array": true,
+					"indexEnum": "EUnitVital"
+				},
+				
+				"Button": "SAbilCmdButton",
+				"Alert": "CAlertLink",
+				"Charge": "SCharge",
+				"Cooldown": "SCooldown",
+				
+				"Display": {
+					"type": "bool",
+					"array": true,
+					"indexEnum": "ECostDisplay"
+				},
+				
+				"VitalFraction": {
+					"type": "CFixed",
+					"array": true,
+					"indexEnum": "EUnitVital"
+				}
 			}
 		},
 		
@@ -18726,12 +18759,18 @@ export const unparsedGameData:{
 		
 		"EAbilCmdFlags": {
 			"prefix": "e_abilCmd",
-			"values": [
+			"values": [ //TODO: verify values
 				"Unknown",
+				"AllowMinimap",
 				"AllowSelfCast",
+				"Continuous",
 				"Hidden",
+				"HidePath",
+				"IgnoreUser",
 				"ShowInGlossary",
-				"ToSelection"
+				"ToSelection",
+				"UseDefaultButton",
+				"CreateDefaultButton"
 			]
 		},
 		

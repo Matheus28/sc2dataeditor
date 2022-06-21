@@ -19,21 +19,18 @@ type NonEmptyArray<T> = [T, ...T[]];
 
 export type EnumType = {
 	type:"CEnum";
-	// Default value is implied to be the first one
-	values:NonEmptyArray<string>;
+	values:Record<string,number>;
+	reverseValues:Record<number,string>; // Default value is reverseValues[0]
 };
 
-export type FieldValue = SimpleFieldValue  | EnumType;
+export type FieldValue = SimpleFieldValue | EnumType;
 
 export type FieldType = {
 	value?:FieldValue;
 } & (
 	{}
 	|
-	{
-		struct:FieldTypeStruct;
-		structTypename:string;
-	}
+	FieldTypeStruct
 	|
 	{
 		// This differs from struct because they're stored a lot like arrays
@@ -48,7 +45,11 @@ export type FieldType = {
 
 export type FieldTypeWithSimpleValue<T extends DataFieldSimpleTypes> = {value:SimpleFieldValueByType[T]};
 
-export type FieldTypeStruct = Record<string, FieldType>;
+export type FieldTypeStruct = {
+	struct:Record<string, FieldType>;
+	structTypename:string;
+};
+
 export type FieldTypeNamedArray = {
 	keys:EnumType;
 	value:FieldType;
@@ -73,8 +74,10 @@ function namedArray(e:{value:EnumType}, value:FieldType): FieldType {
 }
 
 // First value is implied to be the default
-function simpleEnum(values:NonEmptyArray<string>): {value:EnumType} {
-	return { value: { type: "CEnum", values } }
+function simpleEnum(values:Record<string, number>): {value:EnumType} {
+	let reverseValues:Record<number,string> = {};
+	for(let key in values) reverseValues[values[key]] = key;
+	return { value: { type: "CEnum", values, reverseValues } }
 }
 
 // Use this to combine multiple types
@@ -119,29 +122,18 @@ function editorFields(): Record<string, FieldType> {
 export interface CatalogSubtype {
 	parent: string | null;
 	abstract?: true;
-	
-	// i18n key: complicated
-	// for simple types: EDSTR_FIELDNAME_CEffectCreep_WhichLocation
-	// 
-	// for stuff inside structs, we have to know the structure name:
-	//     EDSTR_FIELDNAME_SButtonCardLayout_Row (for CButton > DefaultButtonLayout > Row)
-	// 
-	// There doesn't seem to be a way to find that out.
-	// The furthest we can get to is the "base" of the structure:
-	//     EDSTR_FIELDNAME_CButton_DefaultButtonLayout
-	//
-	fields: Record<string, FieldType>;
+	type:FieldTypeStruct;
 }
 
-const unspecifiedSubtype = (): CatalogSubtype => ({
+const unspecifiedSubtype = (name:string): CatalogSubtype => ({
 	parent: null,
-	fields: {},
+	type: struct(name, {}),
 	abstract: true,
 });
 
 function subtype(v: CatalogSubtype): CatalogSubtype {
 	if(v.parent == null){
-		v.fields = {...editorFields(), ...v.fields};
+		v.type.struct = {...editorFields(), ...v.type.struct};
 	}
 	
 	return v;
@@ -355,10 +347,10 @@ export const DataFieldDefaults = {
 	"TConversationStateInfoId": "",
 	"TConversationStateOpId": "",
 	"TConversationStateVariation": "",
-	"TCooldownLink": "Abil/##id##",
+	"TCooldownLink": "",
 	"TEditorCategories": "",
 	"TGalaxyFunction": "",
-	"TMarkerLink": "Effect/##id##",
+	"TMarkerLink": "",
 	"TPowerLink": "",
 	"TTechAlias": "",
 	"TTriggerLibId": "",
@@ -519,29 +511,31 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 	let parsed = {} as Record<CatalogName, Record<string, CatalogSubtype>>;
 	
 	let parsedRawEnums:Record<string, ReturnType<typeof simpleEnum>> = {};
-	let parsedStructs:Record<string, FieldType> = {};
+	let parsedStructs:Record<string, FieldTypeStruct> = {};
 	
 	function getRawEnum(name:string):ReturnType<typeof simpleEnum> {
 		if(name in parsedRawEnums) return parsedRawEnums[name];
 		
 		assert(name in unparsedGameData.enums);
 		
-		return parsedRawEnums[name] = simpleEnum(unparsedGameData.enums[name].values);
-	}
-	
-	function getEnumFixedDefault(name:string):ReturnType<typeof simpleEnum> {
-		let values = getRawEnum(name).value.values;
+		let values:Record<string, number> = {};
+		let cur = -1;
+		for(let v of unparsedGameData.enums[name].values){
+			values[v] = cur++;
+		}
 		
-		// Workaround so the second element is the default one
-		// Move first element to last
-		values = values.slice(1).concat(values[0]) as NonEmptyArray<string>;
-		return simpleEnum(values);
+		return parsedRawEnums[name] = simpleEnum(values);
 	}
 	
+	let parsedNoUnknownEnums:Record<string, ReturnType<typeof simpleEnum>> = {};
 	function getEnumNoUnknown(name:string):ReturnType<typeof simpleEnum> {
-		let values = getRawEnum(name).value.values.slice(1) as NonEmptyArray<string>;
+		if(name in parsedNoUnknownEnums) return parsedNoUnknownEnums[name];
 		
-		return simpleEnum(values);
+		let rawEnum = getRawEnum(name);
+		let values = Object.assign({}, rawEnum.value.values);
+		delete values[rawEnum.value.reverseValues[-1]]; // Delete the unknown entry
+		
+		return parsedNoUnknownEnums[name] = simpleEnum(values);
 	}
 	
 	let simpleTypes:Record<string, ReturnType<typeof simpleType>> = {};
@@ -551,16 +545,15 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			return simpleTypes[name] = simpleType(name);
 		}
 		
-		if(name in unparsedGameData.enums) return getEnumFixedDefault(name);
+		if(name in unparsedGameData.enums) return getRawEnum(name);
 		
 		return getStructType(name);
 	}
 	
-	function getStructType(name:string):FieldType {
+	function getStructType(name:string):FieldTypeStruct {
 		if(name in parsedStructs) return parsedStructs[name];
 		
-		structNames.add(name);
-		assert(name[0] == 'S');
+		if(name[0] == 'S') structNames.add(name);
 		assert(name in unparsedGameData.classes, `Type ${name} is referred to but not defined`);
 		
 		let unparsedClass = unparsedGameData.classes[name];
@@ -588,8 +581,8 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			getType(type),
 			struct(name, {
 				"AccumulatorArray": array(simpleType("CAccumulatorLink")),
-			}),
-		);
+			})
+		) as (FieldType & FieldTypeStruct);
 	}
 	
 	addAccumulator("SAccumulatedFixed", "CFixed");
@@ -608,7 +601,7 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			let unparsedClass = unparsedGameData.classes[sub];
 			if(!unparsedClass){
 				console.warn(`No game data for ${sub} in ${catalogName} catalog`);
-				catalog[sub] = unspecifiedSubtype();
+				catalog[sub] = unspecifiedSubtype(sub);
 				continue;
 			}
 			
@@ -622,7 +615,7 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			
 			let v:CatalogSubtype = {
 				parent: unparsedClass.parent,
-				fields: parseFields(unparsedClass.fields),
+				type: getStructType(sub),
 			};
 			
 			if(unparsedClass.abstract) v.abstract = true;
