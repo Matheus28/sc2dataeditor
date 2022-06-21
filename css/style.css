@@ -46,6 +46,11 @@ a[href^="ftp://"] {
 	margin-bottom: 0.25rem;
 }
 
+.table.table-striped {
+	--falcon-table-bg: var(--falcon-card-bg);
+    --falcon-table-accent-bg: var(--falcon-card-bg);
+}
+
 .entry-fields>thead>tr>th, .entry-subfields>thead>tr>th {
 	padding-left: 0.25rem;
 	padding-right: 0.25rem;

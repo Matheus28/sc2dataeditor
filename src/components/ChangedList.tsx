@@ -20,8 +20,8 @@ export default function(){
 		
 		getPendingChangesList().then((v) => {
 			if(abort) return;
-			setChangedData(v);
 			doWait();
+			setChangedData(v);
 		});
 		
 		return () => {
