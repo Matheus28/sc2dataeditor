@@ -2,7 +2,8 @@ import assert from 'assert';
 import * as React from 'react';
 import { Accordion, Alert, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
-import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstance, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType } from '../lib/game_data';
+import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstance, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType, SimpleIntegerTypes, SimpleRealTypes, SimpleRealTypesArray, SimpleStringTypes } from '../lib/game_data';
+import { mapObjectToArray } from '../lib/utils';
 import { CatalogEntry, CatalogField, ValueSource } from '../worker';
 import { getArrayFieldIndexes } from '../worker_client';
 import CatalogEditorComment from './components/CatalogEditorComment';
@@ -45,7 +46,7 @@ export default function(props:Props){
 	};
 	
 	const addFields = (entry:CatalogEntry, entryType:string, fields:Record<string, FieldType>) => {
-		return mapObject(
+		return mapObjectToArray(
 			fields,
 			(name, meta) => {
 				const field:CatalogField = {
@@ -127,40 +128,76 @@ const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.Re
 	</tr>;
 };
 
-function stringType<T extends "CString"|"CHotkeyLink"|"TMarkerLink"|"TCooldownLink"|"CImagePath">():ComponentFromTypeFunc<T> {
-	return (props) => {
-		const def = DataFieldDefaults[props.meta.value.type];
-		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
-	};
-}
-
-function intType<T extends "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64"|"TMarkerCount">():ComponentFromTypeFunc<T> {
-	return (props) => {
-		const def = DataFieldDefaults[props.meta.value.type];
-		let mv = props.meta.value;
-		let min = mv.restrictions ? mv.restrictions.min : undefined;
-		let max = mv.restrictions ? mv.restrictions.max : undefined;
-		
-		return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
-	}
-};
-
-function realType<T extends "CFixed"|"real32">():ComponentFromTypeFunc<T>{
-	return (props) => {
-		const def = DataFieldDefaults[props.meta.value.type];
-		let mv = props.meta.value;
-		let min = mv.restrictions ? mv.restrictions.min : undefined;
-		let max = mv.restrictions ? mv.restrictions.max : undefined;
-		
-		return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
-	}
-};
-
-
 const componentFromType:{
 	[K in DataFieldSimpleTypes]:ComponentFromTypeFunc<K>;
 } = {
-	CString: stringType<"CString">(),
+	...(():ComponentFromTypeHelper<SimpleStringTypes> => {
+		let v = {} as ComponentFromTypeHelper<SimpleStringTypes>;
+		for(let key in DataFieldDefaults){
+			if(typeof DataFieldDefaults[key as keyof DataFieldDefaults] != 'string') continue;
+			let key2 = key as SimpleStringTypes;
+			
+			v[key2] = (props) => {
+				const def = DataFieldDefaults[props.meta.value.type];
+				return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
+			};
+		}
+		
+		return v;
+	})(),
+	
+	...(():ComponentFromTypeHelper<SimpleIntegerTypes> => {
+		let v = {} as ComponentFromTypeHelper<SimpleIntegerTypes>;
+		for(let key in DataFieldDefaults){
+			if(typeof DataFieldDefaults[key as keyof DataFieldDefaults] != 'number') continue;
+			if((SimpleRealTypesArray as readonly string[]).indexOf(key) !== -1) continue;
+			
+			let key2 = key as SimpleIntegerTypes;
+			
+			v[key2] = (props) => {
+				const def = DataFieldDefaults[props.meta.value.type];
+				let mv = props.meta.value;
+				let min = mv.restrictions ? mv.restrictions.min : undefined;
+				let max = mv.restrictions ? mv.restrictions.max : undefined;
+				
+				return <SimpleValueWrapper {...props}><CatalogFieldInt field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
+			};
+		}
+		
+		return v;
+	})(),
+	
+	...(():ComponentFromTypeHelper<SimpleRealTypes> => {
+		let v = {} as ComponentFromTypeHelper<SimpleRealTypes>;
+		for(let key in DataFieldDefaults){
+			if(typeof DataFieldDefaults[key as keyof DataFieldDefaults] != 'number') continue;
+			if((SimpleRealTypesArray as readonly string[]).indexOf(key) === -1) continue;
+			let key2 = key as SimpleRealTypes;
+			
+			v[key2] = (props) => {
+				const def = DataFieldDefaults[props.meta.value.type];
+				let mv = props.meta.value;
+				let min = mv.restrictions ? mv.restrictions.min : undefined;
+				let max = mv.restrictions ? mv.restrictions.max : undefined;
+				
+				return <SimpleValueWrapper {...props}><CatalogFieldReal field={props.field} default={def} min={min} max={max}/></SimpleValueWrapper>;
+			};
+		}
+		
+		return v;
+	})(),
+	
+	...(():ComponentFromTypeHelper<keyof CatalogLinks> => {
+		let v = {} as ComponentFromTypeHelper<keyof CatalogLinks>;
+		for(let catalogName of CatalogNameArray){
+			v[`C${catalogName}Link`] = (props) => {
+				const def = DataFieldDefaults[props.meta.value.type];
+				return <SimpleValueWrapper {...props}><CatalogFieldLink field={props.field} catalog={catalogName} default={def} /></SimpleValueWrapper>;
+			};
+		}
+		
+		return v;
+	})(),
 	
 	CStringLink: (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
@@ -196,43 +233,14 @@ const componentFromType:{
 		return <SimpleValueWrapper {...props}><CatalogEditorComment entry={props.field.entry}/></SimpleValueWrapper>
 	},
 	
-	CHotkeyLink: stringType<"CHotkeyLink">(),
-	TMarkerLink: stringType<"TMarkerLink">(),
-	TCooldownLink: stringType<"TCooldownLink">(),
-	CImagePath: stringType<"CImagePath">(),
 	bool: (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldBool field={props.field} default={def}/></SimpleValueWrapper>;
 	},
-	
-	int8: intType<"int8">(),
-	int16: intType<"int16">(),
-	int32: intType<"int32">(),
-	int64: intType<"int64">(),
-	uint8: intType<"uint8">(),
-	uint16: intType<"uint16">(),
-	uint32: intType<"uint32">(),
-	uint64: intType<"uint64">(),
-	TMarkerCount: intType<"TMarkerCount">(),
-	
-	CFixed: realType<"CFixed">(),
-	real32: realType<"real32">(),
-	
-	...(():LinksHelper => {
-		let v = {} as LinksHelper;
-		for(let catalogName of CatalogNameArray){
-			v[`C${catalogName}Link`] = (props) => {
-				const def = DataFieldDefaults[props.meta.value.type];
-				return <SimpleValueWrapper {...props}><CatalogFieldLink field={props.field} catalog={catalogName} default={def} /></SimpleValueWrapper>;
-			};
-		}
-		
-		return v;
-	})()
 };
 
-type LinksHelper = {
-	[K in keyof CatalogLinks]:ComponentFromTypeFunc<K>;
+type ComponentFromTypeHelper<T extends DataFieldSimpleTypes> = {
+	[K in T]:ComponentFromTypeFunc<K>;
 };
 
 function FieldComponentValue(props:FieldComponentSharedProps & {desc:FieldValue}){
@@ -266,7 +274,7 @@ function FieldComponentStruct(props:FieldComponentSharedProps & {desc:FieldTypeS
 	return <SimpleValueWrapper {...props}>
 		<Table striped size="sm" className="entry-subfields" >
 			<tbody>
-				{mapObject(
+				{mapObjectToArray(
 					props.desc,
 					(name, meta) => {
 						const subfield:CatalogField = {
@@ -424,17 +432,6 @@ function FieldComponentNamedArray(props:FieldComponentSharedProps & {desc:FieldT
 		</SimpleValueWrapper>;
 	}
 }
-
-function mapObject<T, U>(obj:T, fn:(key:string, value:T[keyof T])=>U):U[] {
-	let arr:U[] = [];
-	
-	for(let key in obj){
-		arr.push(fn(key, obj[key]));
-	}
-	
-	return arr;
-}
-
 
 function range<T>(n:number, fn:(i:number)=>T):T[] {
 	let arr = new Array<T>(n);

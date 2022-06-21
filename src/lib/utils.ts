@@ -31,3 +31,23 @@ export function hotkeyPositionToLetter(row:number, column:number):string {
 	
 	return "";
 }
+
+export function mapObjectToArray<T, U>(obj:T, fn:(key:string, value:T[keyof T])=>U):U[] {
+	let arr:U[] = [];
+	
+	for(let key in obj){
+		arr.push(fn(key, obj[key]));
+	}
+	
+	return arr;
+}
+
+export function mapObject<T, U>(obj:T, fn:(key:string, value:T[keyof T])=>U):Record<string, U> {
+	let ret:Record<string, U> = {};
+	
+	for(let key in obj){
+		ret[key] = fn(key, obj[key]);
+	}
+	
+	return ret;
+}
