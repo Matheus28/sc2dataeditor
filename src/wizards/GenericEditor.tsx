@@ -127,7 +127,7 @@ const SimpleValueWrapper = (props:FieldComponentSharedProps & {children:React.Re
 	</tr>;
 };
 
-function stringType<T extends "CString"|"CHotkeyLink"|"TMarkerLink"|"TCooldownLink">():ComponentFromTypeFunc<T> {
+function stringType<T extends "CString"|"CHotkeyLink"|"TMarkerLink"|"TCooldownLink"|"CImagePath">():ComponentFromTypeFunc<T> {
 	return (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldString field={props.field} default={def}/></SimpleValueWrapper>;
@@ -199,6 +199,7 @@ const componentFromType:{
 	CHotkeyLink: stringType<"CHotkeyLink">(),
 	TMarkerLink: stringType<"TMarkerLink">(),
 	TCooldownLink: stringType<"TCooldownLink">(),
+	CImagePath: stringType<"CImagePath">(),
 	bool: (props) => {
 		const def = DataFieldDefaults[props.meta.value.type];
 		return <SimpleValueWrapper {...props}><CatalogFieldBool field={props.field} default={def}/></SimpleValueWrapper>;

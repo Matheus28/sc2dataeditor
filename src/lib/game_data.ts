@@ -285,6 +285,7 @@ export const DataFieldDefaults = {
 	"uint64": 0,
 	"CFixed": 0.0,
 	"real32": 0.0,
+	"CImagePath": "",
 	...(():Record<keyof CatalogLinks, string> => {
 		let v = {} as Record<keyof CatalogLinks, string>;
 		for(let i of CatalogNameArray) v[`C${i}Link`] = "";
