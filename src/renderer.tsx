@@ -115,7 +115,9 @@ const CatalogBrowser = function(props:{rootDir:string}){
 	</React.StrictMode>;
 }
 
-//D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map
+let rootMapDir = "./out/test.SC2Map";
+rootMapDir = "D:/Projects/kerrigan-survival-2/Kerrigan_Survival2.SC2Map"
+
 root.render(
-	<CatalogBrowser rootDir="./out/test.SC2Map"/>
+	<CatalogBrowser rootDir={rootMapDir}/>
 );

@@ -950,7 +950,7 @@ export const unparsedGameData:{
 	
 	enums:Record<string, { // ESomethingSomething
 		prefix:string; // e_somethingSomething
-		values: [string, ...string[]]; // first element is default
+		values: [string, ...string[]]; // second element is default... I know... but first is -1
 	}>;
 } = {
 	"classes": {
@@ -18470,6 +18470,7 @@ export const unparsedGameData:{
 		"EEffectCreepFlag": {
 			"prefix": "e_effectCreepFlag",
 			"values": [
+				"Unknown",
 				"RemoveCreep",
 				"Permanent",
 				"Immediate",

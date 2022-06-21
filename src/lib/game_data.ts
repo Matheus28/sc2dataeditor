@@ -518,15 +518,34 @@ export const structNames = new Set<string>();
 export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubtype>> = (() => {
 	let parsed = {} as Record<CatalogName, Record<string, CatalogSubtype>>;
 	
-	let parsedEnums:Record<string, ReturnType<typeof simpleEnum>> = {};
+	let parsedRawEnums:Record<string, ReturnType<typeof simpleEnum>> = {};
 	let parsedStructs:Record<string, FieldType> = {};
 	
-	function getEnum(name:string):ReturnType<typeof simpleEnum> {
-		if(name in parsedEnums) return parsedEnums[name];
+	function getRawEnum(name:string):ReturnType<typeof simpleEnum> {
+		if(name in parsedRawEnums) return parsedRawEnums[name];
 		
 		assert(name in unparsedGameData.enums);
 		
-		return parsedEnums[name] = simpleEnum(unparsedGameData.enums[name].values);
+		return parsedRawEnums[name] = simpleEnum(unparsedGameData.enums[name].values);
+	}
+	
+	function getEnumFixedDefault(name:string):ReturnType<typeof simpleEnum> {
+		let values = getRawEnum(name).value.values.concat() as NonEmptyArray<string>;
+		
+		// Workaround so the second element is the default one
+		if(values.length >= 2){
+			let tmp = values[0];
+			values[0] = values[1];
+			values[1] = tmp;
+		}
+		
+		return simpleEnum(values);
+	}
+	
+	function getEnumNoUnknown(name:string):ReturnType<typeof simpleEnum> {
+		let values = getRawEnum(name).value.values.slice(1) as NonEmptyArray<string>;
+		
+		return simpleEnum(values);
 	}
 	
 	let simpleTypes:Record<string, ReturnType<typeof simpleType>> = {};
@@ -536,7 +555,7 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			return simpleTypes[name] = simpleType(name);
 		}
 		
-		if(name in unparsedGameData.enums) return getEnum(name);
+		if(name in unparsedGameData.enums) return getEnumFixedDefault(name);
 		
 		return getStructType(name);
 	}
@@ -558,7 +577,7 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			
 			if(unparsedField.indexEnum){
 				assert(unparsedField.array);
-				return namedArray(getEnum(unparsedField.indexEnum), getType(unparsedField.type));
+				return namedArray(getEnumNoUnknown(unparsedField.indexEnum), getType(unparsedField.type));
 			}else if(unparsedField.array){
 				return array(getType(unparsedField.type));
 			}else{

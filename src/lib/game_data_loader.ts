@@ -302,7 +302,7 @@ async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 	});
 	
 	return await Promise.all(filenames.map(async filename => {
-		let v = await loadDataspace(index.rootMapDir, filename, false, null);
+		let v = await loadDataspace(index.rootMapDir, filename, false, index);
 		if(!v) throw new Error(`Couldn't open file for dataspace ${filename}`);
 		return v;
 	}));
@@ -575,45 +575,6 @@ function dataspaceNameToFilename(rootMapDir:string, name:string):string {
 	return base + name + ".xml";
 }
 
-// Merges dataspaces, kinda shallowy. Meant for dependencies so it's easier & faster to look up stuff inside them
-// b will override a in case of conflicts
-function mergeDataspaces(name:string, a:Dataspace, b:Dataspace):Dataspace {
-	let catalogs = createEmptyDataspaceCatalogs();
-	
-	for(let i in catalogs){
-		assert(CatalogNameArray.includes(i as any));
-		let j = i as keyof Dataspace["catalogs"];
-		
-		// First add b
-		catalogs[j].entries = b.catalogs[j].entries.concat();
-		catalogs[j].entryByID = Object.assign({}, b.catalogs[j].entryByID);
-		
-		let arr:XMLNode[] = [];
-		for(let k in a.catalogs[j].entryByID){
-			if(k in catalogs[j].entryByID){
-				console.warn("Duplicate entry for " + k + " when merging dataspaces");
-				continue;
-			}
-			
-			let node = a.catalogs[j].entryByID[k];
-			catalogs[j].entryByID[k] = node;
-			arr.push(node);
-		}
-		
-		catalogs[j].entries = arr.concat(catalogs[j].entries);
-		
-	}
-	
-	return {
-		name,
-		catalogs,
-		data_: null, // Since this isn't meant to be saved
-		isImplicit: false,
-		index: null, // will be set by user,
-		structDefaults: Object.assign({}, a.structDefaults, b.structDefaults),
-	}
-}
-
 export function newDataspace(name:string, isImplicit:boolean):Dataspace {
 	return {
 		name,
@@ -638,15 +599,16 @@ export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
 type RawNode = {
 	// tagname => ParsedNode[] 
 	":@"?:Record<string,string>;
-} | {"#text":string} | {"$comment":[{"#text":string}]};
+} | {"#text":string|number} | {"$comment":[{"#text":string|number}]};
 
 export function parseXML(str:string):XMLParseResult {
 	function normalizeNode(node:RawNode):XMLNode|undefined {
 		if("$comment" in node){
-			return newCommentNode(node.$comment[0]["#text"]);
+			return newCommentNode(node.$comment[0]["#text"].toString());
 		}
 		
 		if("#text" in node){
+			node["#text"] = node["#text"].toString();
 			if(node["#text"].trim().length == 0){
 				return undefined;
 			}
