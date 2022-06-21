@@ -5,7 +5,7 @@ import { getEntries, getEntry, getFieldValue, setFieldValue } from '../../worker
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
 import SelectEntry, { makeSelectOption, SelectOption } from './SelectEntry';
-import { resolveTokens, valueSourceToClassName } from './utils';
+import { resolveTokens, unresolveTokens, valueSourceToClassName } from './utils';
 
 interface Props {
 	field:CatalogField;
@@ -18,10 +18,17 @@ export default function(props:Props){
 	const [value, setValue] = React.useState<SelectOption|null>(null);
 	const [isLoading, setLoading] = React.useState(true);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
+	const [writtenValueIsResolved, setWrittenValueIsResolved] = React.useState(true);
+	const [tokens, setTokens] = React.useState<Record<string,string>>({});
+	
+	const fieldValueChangeRef = React.useRef<{}>({});
 	
 	React.useEffect(() => {
+		setValue(null);
 		setLoading(true);
 		setSource(undefined);
+		setWrittenValueIsResolved(true);
+		setTokens({});
 		
 		let abort = false;
 		
@@ -53,13 +60,15 @@ export default function(props:Props){
 			if(abort) return;
 			
 			setLoading(false);
+			setWrittenValueIsResolved(resolvedValue === vv.value);
+			setTokens(vv.tokens);
 			setValue(makeSelectOption({
 				id: resolvedValue,
 				catalog: props.catalog,
 				dataspace: entry !== undefined ? entry.dataspace : undefined,
 				source: entry !== undefined && entry.source !== undefined ? entry.source : null,
 				exists: entry !== undefined,
-			}, true))
+			}, true));
 		});
 		
 		return function(){
@@ -70,12 +79,27 @@ export default function(props:Props){
 	const onChange = (newValue:SelectOption|null) => {
 		setValue(newValue);
 		setSource(ValueSource.Self);
+		
+		let tokenValue = {};
+		fieldValueChangeRef.current = tokenValue;
+		setFieldValue(props.field, newValue ? newValue.value.id : "").then((v) => {
+			if(fieldValueChangeRef.current != tokenValue) return;
+			
+			setTokens(v.tokens);
+			setWrittenValueIsResolved(v.writtenValueIsResolved);
+		});
 	};
+	
+	const resolvedValue = value ? resolveTokens(value.value.id, tokens) : "";
+	const unresolvedValue = value ? unresolveTokens(value.value.id, tokens) : "";
+	const valueID = value ? value.value.id : "";
 	
 	let className = "";
 	if(source) className += " " + valueSourceToClassName(source);
 	if(value && !value.value.exists) className += " is-invalid";
 	
-	
-	return <SelectEntry className={className} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
+	return <>
+		<SelectEntry className={className} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
+		{!writtenValueIsResolved && valueID !== unresolvedValue && <Form.Text muted>Stored as {unresolvedValue}</Form.Text>}
+	</>;
 };
