@@ -3,7 +3,7 @@ import { Form, Stack } from 'react-bootstrap';
 import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { resolveTokens, valueSourceToClassName } from './utils';
+import { resolveTokens, unresolveTokens, valueSourceToClassName } from './utils';
 import assert from 'assert';
 
 type SubElements = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -34,7 +34,6 @@ export default function<
 	const [value, setValue] = React.useState<string>(defaultValueAsString);
 	const [valueOnBlur, setValueOnBlur] = React.useState<string|undefined>(undefined);
 	const [tokens, setTokens] = React.useState<Record<string,string>>({});
-	const [writtenValueIsResolved, setWrittenValueIsResolved] = React.useState(true);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
 	const [isDisabled, setDisabled] = React.useState(true);
 	
@@ -47,7 +46,6 @@ export default function<
 		setValue(defaultValueAsString);
 		setValueOnBlur(undefined);
 		setTokens({});
-		setWrittenValueIsResolved(true);
 		setSource(undefined);
 		setDisabled(true);
 		
@@ -70,10 +68,10 @@ export default function<
 				};
 			}
 			
+			let unresolved = unresolveTokens(v.value, v.tokens);
 			let resolved = resolveTokens(v.value, v.tokens);
-			setValue(v.value);
+			setValue(unresolved);
 			setSource(v.source);
-			setWrittenValueIsResolved(v.value === resolved);
 			setTokens(v.tokens);
 			
 			if(props.onLoad) props.onLoad(v.value, resolved, v.source);
@@ -137,14 +135,11 @@ export default function<
 					setFieldValue(props.field, str).then(v => {
 						if(fieldValueChangeRef.current != refValue) return;
 						
-						const writtenValue = v.writtenValueIsResolved ? v.resolvedValue : v.unresolvedValue;
-						
-						const onBlurValue = writtenValue;
+						const onBlurValue = v.unresolvedValue;
 						
 						let resolved = resolveTokens(str, v.tokens);
 						
 						setTokens(v.tokens);
-						setWrittenValueIsResolved(v.writtenValueIsResolved);
 						doValueOnBlur(onBlurValue);
 						
 						if(props.onChange) props.onChange(str, resolved, v.source);
@@ -163,15 +158,6 @@ export default function<
 	
 	return <>
 		{elem}
-		{
-			writtenValueIsResolved
-			?
-				(value !== resolvedValue && (
-					<Form.Text muted>This entry does not allow inheritance, value will be flattened to:<br/>{resolvedValue}</Form.Text>
-				))
-			:
-				(value !== resolvedValue && <Form.Text muted>{resolvedValue}</Form.Text>)
-		}
-		
+		{value !== resolvedValue && <Form.Text muted>{resolvedValue}</Form.Text>}
 	</>
 };

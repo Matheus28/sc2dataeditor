@@ -172,7 +172,7 @@ const componentFromType:{
 					<tr>
 						<td>Link</td>
 						<td className="entry-field-value">
-							<CatalogFieldString field={props.field} default={def} onLoad={setLink} onChange={setLink}/>
+							<CatalogFieldString field={props.field} default={def} onLoad={(_unresolved, resolved) => setLink(resolved)} onChange={(_unresolved, resolved) => setLink(resolved)}/>
 						</td>
 					</tr>
 					

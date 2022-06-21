@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { CatalogField } from '../../worker';
+import { CatalogField, ValueSource } from '../../worker';
 import CatalogFieldSimple from './CatalogFieldSimple';
 
 interface Props {
@@ -8,8 +8,8 @@ interface Props {
 	
 	default:string;
 	
-	onLoad?:undefined|((v:string)=>void);
-	onChange?:undefined|((v:string)=>void);
+	onLoad?:undefined|((unresolved:string, resolved:string, source:ValueSource)=>void);
+	onChange?:undefined|((unresolved:string, resolved:string, source:ValueSource)=>void);
 }
 
 export default function(props:Props){

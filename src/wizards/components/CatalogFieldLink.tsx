@@ -18,7 +18,6 @@ export default function(props:Props){
 	const [value, setValue] = React.useState<SelectOption|null>(null);
 	const [isLoading, setLoading] = React.useState(true);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
-	const [writtenValueIsResolved, setWrittenValueIsResolved] = React.useState(true);
 	const [tokens, setTokens] = React.useState<Record<string,string>>({});
 	
 	const fieldValueChangeRef = React.useRef<{}>({});
@@ -27,7 +26,6 @@ export default function(props:Props){
 		setValue(null);
 		setLoading(true);
 		setSource(undefined);
-		setWrittenValueIsResolved(true);
 		setTokens({});
 		
 		let abort = false;
@@ -60,7 +58,6 @@ export default function(props:Props){
 			if(abort) return;
 			
 			setLoading(false);
-			setWrittenValueIsResolved(resolvedValue === vv.value);
 			setTokens(vv.tokens);
 			setValue(makeSelectOption({
 				id: resolvedValue,
@@ -86,11 +83,9 @@ export default function(props:Props){
 			if(fieldValueChangeRef.current != tokenValue) return;
 			
 			setTokens(v.tokens);
-			setWrittenValueIsResolved(v.writtenValueIsResolved);
 		});
 	};
 	
-	const resolvedValue = value ? resolveTokens(value.value.id, tokens) : "";
 	const unresolvedValue = value ? unresolveTokens(value.value.id, tokens) : "";
 	const valueID = value ? value.value.id : "";
 	
@@ -100,6 +95,6 @@ export default function(props:Props){
 	
 	return <>
 		<SelectEntry className={className} isLoading={isLoading} catalog={props.catalog} value={value} onChange={onChange}/>
-		{!writtenValueIsResolved && valueID !== unresolvedValue && <Form.Text muted>Stored as {unresolvedValue}</Form.Text>}
+		{valueID !== unresolvedValue && <Form.Text muted>{unresolvedValue}</Form.Text>}
 	</>;
 };
