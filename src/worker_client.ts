@@ -107,6 +107,8 @@ export function setFieldValue(_field:CatalogField, _value:string):Promise<{
 	source:ValueSource;
 	tokens:Record<string,string>;
 	unresolvedValue:string;
+	resolvedValue:string;
+	writtenValueIsResolved:boolean;
 }> {
 	return sendMessage("setFieldValue", arguments);
 }

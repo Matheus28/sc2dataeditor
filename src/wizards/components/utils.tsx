@@ -1,3 +1,4 @@
+import assert from "assert";
 import { unreachable } from "../../lib/utils";
 import { ValueSource } from "../../worker";
 
@@ -16,8 +17,8 @@ export function valueSourceToVariant(v:ValueSource):string {
 	unreachable(v);
 }
 
-export function resolveTokens(value:string, tokens:Record<string, string>):string {
-	return value.replaceAll(/##([a-z0-9_]+)##/gim, function(all, id){
+export function resolveTokens(str:string, tokens:Record<string, string>):string {
+	return str.replaceAll(/##([a-z0-9_]+)##/gim, function(all, id){
 		if(id in tokens){
 			return tokens[id];
 		}else{
@@ -27,18 +28,32 @@ export function resolveTokens(value:string, tokens:Record<string, string>):strin
 }
 
 // Build unresolved value by undoing handwritten values back to their tokens
-export function unresolveTokens(value:string, tokens:Record<string, string>):string {
-	let tokenKeys = Object.keys(tokens);
+export function unresolveTokens(str:string, tokens:Record<string, string>):string {
+	let reverseTokens:Record<string, string> = {};
 	
-	// Prefer longer keys first
-	tokenKeys.sort((a, b) => {
+	for(let key in tokens){
+		let value = tokens[key];
+		
+		// Prefer shorter key if they both have the same value
+		if(value in reverseTokens && key.length >= reverseTokens[value].length) continue;
+		
+		reverseTokens[value] = key;
+	}
+	
+	let tokenValues = Object.keys(reverseTokens);
+	
+	// Prefer longer values first
+	tokenValues.sort((a, b) => {
 		if(a.length != b.length) return a.length > b.length ? -1 : 1;
 		return 0;
 	});
 	
-	for(let key of tokenKeys){
-		value.replaceAll(`##${key}##`, tokens[key]);
+	for(let value of tokenValues){
+		str = str.replaceAll(value, `##${reverseTokens[value]}##`);
 	}
 	
-	return value;
+	return str;
 }
+
+assert.equal(resolveTokens("hi ##id##!", {id:"person"}), "hi person!");
+assert.equal(unresolveTokens("hi person!", {id:"person"}), "hi ##id##!");

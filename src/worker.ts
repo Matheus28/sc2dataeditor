@@ -100,12 +100,12 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWit
 }
 
 interface SelfTokens {
-	readonly id:string;
-	readonly parent:string;
-	readonly [x:string]:string;
+	id:string;
+	parent:string;
+	[x:string]:string;
 }
 
-function getSelfTokens(cur:XMLNodeEntry):SelfTokens {
+function getSelfTokens(cur:XMLNodeEntry):Readonly<SelfTokens> {
 	let attr = cur.attr;
 	let isDefault = cur.attr.default === "1";
 	if(isDefault){
@@ -526,27 +526,26 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {'Research1':true, '1':true, 'Research3':true, 'Research4':true}, mapping);
 }
 
-function setFieldValue(field:CatalogField, newValue:string):{
-	source:ValueSource;
-	tokens:Record<string,string>;
-	unresolvedValue:string;
-}{
+function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<WorkerClient["setFieldValue"]>>{
 	assert(field.name.length >= 1);
 	
 	let vv = accessEntry(field.entry, true);
 	
-	let unresolvedValue:string;
 	let thisEntryTokens = getTokensForNewField(vv.node);
+	let unresolvedValue:string = unresolveTokens(newValue, thisEntryTokens);
+	let resolvedValue:string = resolveTokens(newValue, thisEntryTokens);
 	
 	const isDefaultEntry = vv.node.attr["default"] === "1";
 	
-	if(isDefaultEntry){
-		unresolvedValue = unresolveTokens(newValue, thisEntryTokens);
+	// For non-default entries, the editor just writes down the resolved tokens that it can
+	// It can read tokens and resolve them still, but when it writes to the xml it always does it like this
+	// So we'll do the same
+	const writtenValueIsResolved = !isDefaultEntry;
+	
+	if(writtenValueIsResolved){
+		newValue = resolvedValue;
 	}else{
-		// For non-default entries, the editor just writes down the resolved tokens that it can
-		// It can read tokens and resolve them still, but when it writes to the catalog it always does it like this
-		unresolvedValue = newValue;
-		newValue = resolveTokens(newValue, thisEntryTokens);
+		newValue = unresolvedValue;
 	}
 	
 	
@@ -569,6 +568,8 @@ function setFieldValue(field:CatalogField, newValue:string):{
 					source: cur.source,
 					tokens: cur.tokens,
 					unresolvedValue: cur.value,
+					resolvedValue: resolved,
+					writtenValueIsResolved: (cur.value) == resolved,
 				};
 			}
 		}
@@ -580,6 +581,8 @@ function setFieldValue(field:CatalogField, newValue:string):{
 		source: ValueSource.Self,
 		tokens: thisEntryTokens,
 		unresolvedValue,
+		resolvedValue,
+		writtenValueIsResolved,
 	};
 	
 	let name = field.name[field.name.length - 1];

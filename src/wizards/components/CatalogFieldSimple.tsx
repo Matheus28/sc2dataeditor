@@ -14,6 +14,7 @@ interface ControlProps {
 	value:string|boolean;
 	checked:boolean;
 	onChange:React.ChangeEventHandler<SubElements>;
+	onBlur:React.FocusEventHandler<SubElements>;
 	isInvalid:boolean;
 }
 
@@ -29,17 +30,27 @@ export default function<
 	onChange?:undefined|((unresolved:string, resolved:string, source:ValueSource)=>void);
 }){
 	const defaultValueAsString = typeof props.default == "boolean" ? (props.default?"1":"0") : props.default.toString();
+	
 	const [value, setValue] = React.useState<string>(defaultValueAsString);
-	const [resolvedValue, setResolvedValue] = React.useState<string>(defaultValueAsString);
+	const [valueOnBlur, setValueOnBlur] = React.useState<string|undefined>(undefined);
+	const [tokens, setTokens] = React.useState<Record<string,string>>({});
+	const [writtenValueIsResolved, setWrittenValueIsResolved] = React.useState(true);
 	const [source, setSource] = React.useState<ValueSource|undefined>();
 	const [isDisabled, setDisabled] = React.useState(true);
+	
 	const ref = React.useRef<SubElements>();
 	const fieldValueChangeRef = React.useRef<{}>({});
 	
 	// Try to load field from dataspace
 	useDeepCompareEffect(() => {
-		setDisabled(true);
+		// Reset every state here
+		setValue(defaultValueAsString);
+		setValueOnBlur(undefined);
+		setTokens({});
+		setWrittenValueIsResolved(true);
 		setSource(undefined);
+		setDisabled(true);
+		
 		fieldValueChangeRef.current = {};
 		
 		if(props.field.entry.id.length == 0) return;
@@ -62,7 +73,9 @@ export default function<
 			let resolved = resolveTokens(v.value, v.tokens);
 			setValue(v.value);
 			setSource(v.source);
-			setResolvedValue(resolved);
+			setWrittenValueIsResolved(v.value === resolved);
+			setTokens(v.tokens);
+			
 			if(props.onLoad) props.onLoad(v.value, resolved, v.source);
 		});
 		
@@ -85,12 +98,27 @@ export default function<
 		}
 	}
 	
+	const doValueOnBlur = (x:string) => {
+		if(ref.current && document.activeElement === ref.current){
+			setValueOnBlur(x);
+		}else{
+			setValueOnBlur(undefined);
+			setValue(x);
+		}
+	};
+	
 	const extraProps:ControlProps = {
 		className: props.control.props.className||"",
 		disabled: isDisabled,
 		value: (typeof props.default == "boolean" ? (value!="0") : value),
 		checked: (typeof props.default == "boolean" ? (value!="0") : false),
 		isInvalid: !isValid,
+		onBlur: () => {
+			if(valueOnBlur !== undefined){
+				setValue(valueOnBlur);
+				setValueOnBlur(undefined);
+			}
+		},
 		onChange: (e) => {
 			let str = e.target.value;
 			if(e.target instanceof HTMLInputElement){
@@ -109,9 +137,16 @@ export default function<
 					setFieldValue(props.field, str).then(v => {
 						if(fieldValueChangeRef.current != refValue) return;
 						
+						const writtenValue = v.writtenValueIsResolved ? v.resolvedValue : v.unresolvedValue;
+						
+						const onBlurValue = writtenValue;
+						
 						let resolved = resolveTokens(str, v.tokens);
-						setValue(v.unresolvedValue);
-						setResolvedValue(str);
+						
+						setTokens(v.tokens);
+						setWrittenValueIsResolved(v.writtenValueIsResolved);
+						doValueOnBlur(onBlurValue);
+						
 						if(props.onChange) props.onChange(str, resolved, v.source);
 					});
 				}
@@ -124,10 +159,19 @@ export default function<
 	
 	let elem = React.cloneElement<P>(props.control, {...extraProps as any, ref}); // FIXME: what is this type bug?
 	
+	const resolvedValue = resolveTokens(value, tokens);
+	
 	return <>
 		{elem}
-		{resolvedValue != value && <Form.Text muted>
-			{resolvedValue}
-		</Form.Text>}
+		{
+			writtenValueIsResolved
+			?
+				(value !== resolvedValue && (
+					<Form.Text muted>This entry does not allow inheritance, value will be flattened to:<br/>{resolvedValue}</Form.Text>
+				))
+			:
+				(value !== resolvedValue && <Form.Text muted>{resolvedValue}</Form.Text>)
+		}
+		
 	</>
 };
