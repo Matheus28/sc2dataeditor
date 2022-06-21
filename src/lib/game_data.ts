@@ -530,15 +530,11 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 	}
 	
 	function getEnumFixedDefault(name:string):ReturnType<typeof simpleEnum> {
-		let values = getRawEnum(name).value.values.concat() as NonEmptyArray<string>;
+		let values = getRawEnum(name).value.values;
 		
 		// Workaround so the second element is the default one
-		if(values.length >= 2){
-			let tmp = values[0];
-			values[0] = values[1];
-			values[1] = tmp;
-		}
-		
+		// Move first element to last
+		values = values.slice(1).concat(values[0]) as NonEmptyArray<string>;
 		return simpleEnum(values);
 	}
 	
