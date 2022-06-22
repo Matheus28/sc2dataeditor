@@ -336,6 +336,10 @@ for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
 	}
 }
 
+export function isValidCatalogName(v:string):v is CatalogName {
+	return (CatalogNameArray as readonly string[]).indexOf(v) !== -1;
+}
+
 export function isValidTagname(tagname:string):boolean {
 	return tagname in tagnameToCatalog;
 }
@@ -762,6 +766,23 @@ export interface CatalogEntry {
 }
 
 export type CatalogFieldName = (string|[string, string|number])[];
+export function catalogFieldNameToRef(v:CatalogFieldName):string {
+	return v.map(vv => {
+		if(typeof vv == "string") return vv;
+		return `${vv[0]}[${vv[1]}]`;
+	}).join(".");
+}
+
+function refToCatalogFieldName(v:string):CatalogFieldName {
+	let arr = v.split(".");
+	
+	return arr.map(v => {
+		let m = v.match(/^([^\[]+)\[([^\]]+)\]$/);
+		if(!m) return v;
+		
+		return [m[1], m[2]];
+	});
+}
 
 export interface CatalogField {
 	entry:CatalogEntry;
@@ -786,6 +807,27 @@ export interface CatalogField {
 	// Note that in both cases, string indexes are just aliases for a number. Research1 is 0. Minerals is 0.
 	
 	name:CatalogFieldName;
+}
+
+export function catalogFieldToRef(v:CatalogField):string {
+	return `${v.entry.catalog},${v.entry.id},${catalogFieldNameToRef(v.name)}`;
+}
+
+export function refToCatalogField(v:string):CatalogField|undefined {
+	let arr = v.split(',');
+	if(arr.length != 3) return undefined;
+	if(!isValidCatalogName(arr[0])) return undefined;
+	
+	let name = refToCatalogFieldName(arr[2]);
+	
+	return {
+		entry: {
+			id: arr[1],
+			catalog: arr[0],
+		},
+		
+		name,
+	}
 }
 
 // Does not look into parents!

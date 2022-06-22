@@ -1,6 +1,6 @@
 import assert from 'assert';
 import * as React from 'react';
-import { Accordion, Alert, Button, Card, Form, Spinner, Table } from 'react-bootstrap';
+import { Accordion, Alert, Button, Card, Col, Form, Row, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
 import { CatalogLinks, CatalogName, CatalogNameArray, CatalogTypesInstance, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleFieldValue, SimpleFieldValueByType, SimpleIntegerTypes, SimpleRealTypes, SimpleRealTypesArray, SimpleStringTypes } from '../lib/game_data';
 import { mapObjectToArray } from '../lib/utils';
@@ -59,43 +59,43 @@ export default function(props:Props){
 		);
 	};
 	
-	return <>
-		<Card>
+	return <Form>
+		<Row className="mb-3"><Col><Card>
 			<Card.Body>
-				<Form>
-					<Form.Group className="mb-3">
-						<SelectEntry canCreate value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={onEntryChange}/>
-					</Form.Group>
-					
-					{entry && <>
-						<Form.Group className="mb-3">
-							<Form.Label>Type</Form.Label>
-							<SelectEntryType
-								entry={entry.value}
-								value={entryType}
-								onLoad={setEntryType}
-								onChange={setEntryType}
-							/>
-						</Form.Group>
-					</>}
-					
-					{(()=>{
-						if(!entry || entryType === undefined) return null;
-						
-						return <Table className="entry-fields" striped bordered size="sm">
-							<thead>
-								<tr>
-									<th>Property</th>
-									<th>Value</th>
-								</tr>
-							</thead>
-							<tbody>{addFieldsAndParent(entry.value, entry.value.catalog, entryType)}</tbody>
-						</Table>
-					})()}
-				</Form>
+				<Form.Group>
+					<SelectEntry canCreate value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={onEntryChange}/>
+				</Form.Group>
 			</Card.Body>
-		</Card>
-	</>;
+		</Card></Col></Row>
+	
+		{entry && <Row className="mb-3"><Col><Card>
+			<Card.Body>
+				<Form.Group>
+					<Form.Label>Type</Form.Label>
+					<SelectEntryType
+						entry={entry.value}
+						value={entryType}
+						onLoad={setEntryType}
+						onChange={setEntryType}
+					/>
+				</Form.Group>
+			</Card.Body>
+		</Card></Col></Row>}
+		
+		{entry && entryType && <Row className="mb-3"><Col><Card>
+			<Card.Body>
+				<Table className="entry-fields" striped bordered size="sm">
+					<thead>
+						<tr>
+							<th>Property</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody>{addFieldsAndParent(entry.value, entry.value.catalog, entryType)}</tbody>
+				</Table>
+			</Card.Body>
+		</Card></Col></Row>}
+	</Form>;
 }
 
 interface FieldComponentSharedProps {

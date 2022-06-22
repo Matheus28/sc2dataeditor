@@ -1,4 +1,5 @@
 import assert from "assert";
+import { readFileSync } from "fs";
 import { catalogContents, unparsedGameData } from "./game_data_unparsed";
 import { mapObject } from "./utils";
 
@@ -506,6 +507,12 @@ const numberRestrictions:{
 	CWeapon
 */
 
+
+let unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
+	JSON.parse(readFileSync("./data/enums.json", "utf8")),
+	JSON.parse(readFileSync("./data/enums_extra.json", "utf8"))
+);
+
 export const structNames = new Set<string>();
 export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubtype>> = (() => {
 	let parsed = {} as Record<CatalogName, Record<string, CatalogSubtype>>;
@@ -516,12 +523,11 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 	function getRawEnum(name:string):ReturnType<typeof simpleEnum> {
 		if(name in parsedRawEnums) return parsedRawEnums[name];
 		
-		assert(name in unparsedGameData.enums);
+		assert(name in unparsedEnums);
 		
 		let values:Record<string, number> = {};
-		let cur = -1;
-		for(let v of unparsedGameData.enums[name].values){
-			values[v] = cur++;
+		for(let v of Object.values(unparsedEnums[name])){
+			values[v.name] = v.index;
 		}
 		
 		return parsedRawEnums[name] = simpleEnum(values);
@@ -545,7 +551,7 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			return simpleTypes[name] = simpleType(name);
 		}
 		
-		if(name in unparsedGameData.enums) return getRawEnum(name);
+		if(name in unparsedEnums) return getRawEnum(name);
 		
 		return getStructType(name);
 	}
