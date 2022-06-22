@@ -435,11 +435,14 @@ export const DataFieldDefaults = {
 	"TFootprintMask": "", //TODO: verify
 	"TFootprintOffsets": "", //TODO: verify
 	
+	// Links
 	...(():Record<keyof CatalogLinks, string> => {
 		let v = {} as Record<keyof CatalogLinks, string>;
 		for(let i of CatalogNameArray) v[`C${i}Link`] = "";
 		return v;
 	})()
+	
+	//FIXME: CBehaviorLinkArray
 };
 
 export const SimpleRealTypesArray = ["CFacing", "CFangle", "CFangleArc", "CFixed", "CGameAcceleration", "CGameRate", "CGameSpeed", "CGameTime", "CMissileAcceleration", "CMissileSpeed", "TUnitRadius", "THostedPropPriority", "real32"] as const;
