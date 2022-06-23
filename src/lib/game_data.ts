@@ -272,6 +272,8 @@ export const DataFieldDefaults = {
 	"TMarkerCount": 1,
 	"TSoundBalance": 0,
 	"TSoundWeight": 0,
+	"TPreemptLevel": 0,
+	"TBattleProductId": 0,
 	"flag8": 0,
 	"int16": 0,
 	"int32": 0,
@@ -290,6 +292,7 @@ export const DataFieldDefaults = {
 	"uint32": 0,
 	"uint64": 0,
 	"uint8": 0,
+	"TPlayerId": 0,
 	
 	// Floats
 	"CFacing": 0.0,
@@ -317,7 +320,9 @@ export const DataFieldDefaults = {
 	"CAssetPath": "",
 	"CCurveComponentNameKey": "",
 	"CCurveNameKey": "",
+	"CCutscenePath": "",
 	"CDataSoupKey": "",
+	"CDescPath": "", // Path to ui frame?
 	"CFacialPath": "",
 	"CFontStylePath": "",
 	"CHotkeyLink": "",
@@ -340,6 +345,7 @@ export const DataFieldDefaults = {
 	"CSubNameKey": "",
 	"CSyncModelDataPath": "",
 	"CTexturePath": "",
+	"TBattleLicenseName": "",
 	"TCatalogFieldPath": "",
 	"TCatalogFieldValue": "",
 	"TChargeLink": "",
@@ -348,10 +354,13 @@ export const DataFieldDefaults = {
 	"TConversationStateInfoId": "",
 	"TConversationStateOpId": "",
 	"TConversationStateVariation": "",
+	"TConversationTag": "",
 	"TCooldownLink": "",
 	"TEditorCategories": "",
 	"TGalaxyFunction": "",
+	"THyperlinkId": "",
 	"TMarkerLink": "",
+	"TMountCategory": "",
 	"TPowerLink": "",
 	"TTechAlias": "",
 	"TTriggerLibId": "",
@@ -434,15 +443,20 @@ export const DataFieldDefaults = {
 	"TFootprintBorders": "", //TODO: verify
 	"TFootprintMask": "", //TODO: verify
 	"TFootprintOffsets": "", //TODO: verify
+	"CLabelExpression": "", // Complicated... follows a specific format, not used anywhere?
+	"CIdSetPlayers": "", // Seems to be a string separated by commas with either: number, or number range `2-12`
+	"CIdSetTeams": "", // Seems to be a string separated by commas with either: number, or number range `2-12`
 	
 	// Links
 	...(():Record<keyof CatalogLinks, string> => {
 		let v = {} as Record<keyof CatalogLinks, string>;
 		for(let i of CatalogNameArray) v[`C${i}Link`] = "";
 		return v;
-	})()
+	})(),
 	
-	//FIXME: CBehaviorLinkArray
+	//FIXME:
+	"CCatalogGameLink": "", // A refenrence to any catalog link in the format Catalog,ID
+	"CBehaviorLinkArray": "", // Array of CBehaviorLink separated by commas
 };
 
 export const SimpleRealTypesArray = ["CFacing", "CFangle", "CFangleArc", "CFixed", "CGameAcceleration", "CGameRate", "CGameSpeed", "CGameTime", "CMissileAcceleration", "CMissileSpeed", "TUnitRadius", "THostedPropPriority", "real32"] as const;
@@ -457,7 +471,7 @@ export type SimpleStringTypes = {
 }[keyof DataFieldDefaults];
 
 export function isSimpleType(v:string):v is DataFieldSimpleTypes {
-	return v in DataFieldDefaults
+	return v in DataFieldDefaults;
 }
 
 const numberRestrictions:{
@@ -512,8 +526,8 @@ const numberRestrictions:{
 
 
 let unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
-	JSON.parse(readFileSync("./data/enums.json", "utf8")),
-	JSON.parse(readFileSync("./data/enums_extra.json", "utf8"))
+	JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8")),
+	JSON.parse(readFileSync("./data/enums_manual.json", "utf8"))
 );
 
 export const structNames = new Set<string>();
@@ -525,6 +539,12 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 	
 	function getRawEnum(name:string):ReturnType<typeof simpleEnum> {
 		if(name in parsedRawEnums) return parsedRawEnums[name];
+		
+		if(!(name in unparsedEnums)){
+			assert(name[0] == 'E');
+			console.warn(`Enum ${name} referred to but doesn't exist, making fake one`);
+			return simpleEnum({ Unknown: -1 });
+		}
 		
 		assert(name in unparsedEnums);
 		
@@ -554,15 +574,18 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 			return simpleTypes[name] = simpleType(name);
 		}
 		
-		if(name in unparsedEnums) return getRawEnum(name);
+		if(name in unparsedEnums || name[0] == 'E') return getRawEnum(name);
 		
-		return getStructType(name);
+		if(name[0] == 'S') return getStructType(name);
+		
+		console.warn(`Type ${name} is referred to but not defined, pretending it's a string`);
+		return getType("CString");
 	}
 	
 	function getStructType(name:string):FieldTypeStruct {
 		if(name in parsedStructs) return parsedStructs[name];
 		
-		if(name[0] == 'S') structNames.add(name);
+		structNames.add(name);
 		assert(name in unparsedGameData.classes, `Type ${name} is referred to but not defined`);
 		
 		let unparsedClass = unparsedGameData.classes[name];
