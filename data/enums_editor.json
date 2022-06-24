@@ -6867,6 +6867,20 @@
 			"name": "ZOffsetOnly"
 		}
 	},
+	"EActorSiteOpOrientAttachPointToType": {
+		"e_actorSiteOpOrientAttachPointToBearings": {
+			"index": 0,
+			"name": "Bearings"
+		},
+		"e_actorSiteOpOrientAttachPointToPosition": {
+			"index": 1,
+			"name": "Position"
+		},
+		"e_actorSiteOpOrientAttachPointToRotation": {
+			"index": 2,
+			"name": "Rotation"
+		}
+	},
 	"EActorSiteOpPhysicsImpactType": {
 		"e_actorSiteOpPhysicsImpactNormal": {
 			"index": 0,
@@ -16569,6 +16583,958 @@
 		"e_cmdTooMuchVespene": {
 			"index": 46,
 			"name": "TooMuchVespene"
+		},
+		"e_cmdAddOnTooFarFromBuilding": {
+			"index": 47,
+			"name": "AddOnTooFarFromBuilding"
+		},
+		"e_cmdAlreadySpawningLarva": {
+			"index": 48,
+			"name": "AlreadySpawningLarva"
+		},
+		"e_cmdAlreadyTargeted": {
+			"index": 49,
+			"name": "AlreadyTargeted"
+		},
+		"e_cmdBuildTechRequirementsNotMet": {
+			"index": 50,
+			"name": "BuildTechRequirementsNotMet"
+		},
+		"e_cmdBuildingIsUnderConstruction": {
+			"index": 51,
+			"name": "BuildingIsUnderConstruction"
+		},
+		"e_cmdCantAddMoreCharges": {
+			"index": 52,
+			"name": "CantAddMoreCharges"
+		},
+		"e_cmdCantAttackWeaponsDisabled": {
+			"index": 53,
+			"name": "CantAttackWeaponsDisabled"
+		},
+		"e_cmdCantAttackWithoutAmmo": {
+			"index": 54,
+			"name": "CantAttackWithoutAmmo"
+		},
+		"e_cmdCantBuildLocationBlocked": {
+			"index": 55,
+			"name": "CantBuildLocationBlocked"
+		},
+		"e_cmdCantBuildLocationInvalid": {
+			"index": 56,
+			"name": "CantBuildLocationInvalid"
+		},
+		"e_cmdCantBuildMissingPathingReqs": {
+			"index": 57,
+			"name": "CantBuildMissingPathingReqs"
+		},
+		"e_cmdCantBuildOnDenseTerrain": {
+			"index": 58,
+			"name": "CantBuildOnDenseTerrain"
+		},
+		"e_cmdCantBuildOnThat": {
+			"index": 59,
+			"name": "CantBuildOnThat"
+		},
+		"e_cmdCantBuildOnThat_Prot": {
+			"index": 60,
+			"name": "CantBuildOnThat_Prot"
+		},
+		"e_cmdCantBuildOnThat_Terr": {
+			"index": 61,
+			"name": "CantBuildOnThat_Terr"
+		},
+		"e_cmdCantBuildOnThat_Zerg": {
+			"index": 62,
+			"name": "CantBuildOnThat_Zerg"
+		},
+		"e_cmdCantBuildTooCloseToCreepSource": {
+			"index": 63,
+			"name": "CantBuildTooCloseToCreepSource"
+		},
+		"e_cmdCantBuildTooCloseToDropOff": {
+			"index": 64,
+			"name": "CantBuildTooCloseToDropOff"
+		},
+		"e_cmdCantBuildTooCloseToResources": {
+			"index": 65,
+			"name": "CantBuildTooCloseToResources"
+		},
+		"e_cmdCantBuildTooFarFromBuildPowerSource": {
+			"index": 66,
+			"name": "CantBuildTooFarFromBuildPowerSource"
+		},
+		"e_cmdCantBuildTooFarFromCreepSource": {
+			"index": 67,
+			"name": "CantBuildTooFarFromCreepSource"
+		},
+		"e_cmdCantBuildTooFarFromWater": {
+			"index": 68,
+			"name": "CantBuildTooFarFromWater"
+		},
+		"e_cmdCantDropThisItem": {
+			"index": 69,
+			"name": "CantDropThisItem"
+		},
+		"e_cmdCantFindCancelOrder": {
+			"index": 70,
+			"name": "CantFindCancelOrder"
+		},
+		"e_cmdCantFindDropOff": {
+			"index": 71,
+			"name": "CantFindDropOff"
+		},
+		"e_cmdCantFindEnoughTargets": {
+			"index": 72,
+			"name": "CantFindEnoughTargets"
+		},
+		"e_cmdCantFindPlacementLocation": {
+			"index": 73,
+			"name": "CantFindPlacementLocation"
+		},
+		"e_cmdCantFindTeleportLocation": {
+			"index": 74,
+			"name": "CantFindTeleportLocation"
+		},
+		"e_cmdCantHarvestThatResource": {
+			"index": 75,
+			"name": "CantHarvestThatResource"
+		},
+		"e_cmdCantHoldAnyMoreAmmo": {
+			"index": 76,
+			"name": "CantHoldAnyMoreAmmo"
+		},
+		"e_cmdCantHoldAnyMoreItems": {
+			"index": 77,
+			"name": "CantHoldAnyMoreItems"
+		},
+		"e_cmdCantHoldThat": {
+			"index": 78,
+			"name": "CantHoldThat"
+		},
+		"e_cmdCantLandLocationBlocked": {
+			"index": 79,
+			"name": "CantLandLocationBlocked"
+		},
+		"e_cmdCantLandLocationInvalid": {
+			"index": 80,
+			"name": "CantLandLocationInvalid"
+		},
+		"e_cmdCantLandMissingPathingReqs": {
+			"index": 81,
+			"name": "CantLandMissingPathingReqs"
+		},
+		"e_cmdCantLandOnDenseTerrain": {
+			"index": 82,
+			"name": "CantLandOnDenseTerrain"
+		},
+		"e_cmdCantLandTooCloseToCreepSource": {
+			"index": 83,
+			"name": "CantLandTooCloseToCreepSource"
+		},
+		"e_cmdCantLandTooCloseToResources": {
+			"index": 84,
+			"name": "CantLandTooCloseToResources"
+		},
+		"e_cmdCantLandTooFarFromBuildPowerSource": {
+			"index": 85,
+			"name": "CantLandTooFarFromBuildPowerSource"
+		},
+		"e_cmdCantLandTooFarFromCreepSource": {
+			"index": 86,
+			"name": "CantLandTooFarFromCreepSource"
+		},
+		"e_cmdCantLandTooFarFromTrainPowerSource": {
+			"index": 87,
+			"name": "CantLandTooFarFromTrainPowerSource"
+		},
+		"e_cmdCantLandTooFarFromWater": {
+			"index": 88,
+			"name": "CantLandTooFarFromWater"
+		},
+		"e_cmdCantLoadImmobileUnits": {
+			"index": 89,
+			"name": "CantLoadImmobileUnits"
+		},
+		"e_cmdCantLoadOtherPlayersUnits": {
+			"index": 90,
+			"name": "CantLoadOtherPlayersUnits"
+		},
+		"e_cmdCantLoadThatUnit": {
+			"index": 91,
+			"name": "CantLoadThatUnit"
+		},
+		"e_cmdCantLockdown": {
+			"index": 92,
+			"name": "CantLockdown"
+		},
+		"e_cmdCantMindControl": {
+			"index": 93,
+			"name": "CantMindControl"
+		},
+		"e_cmdCantMoveThisItem": {
+			"index": 94,
+			"name": "CantMoveThisItem"
+		},
+		"e_cmdCantPawnThisUnit": {
+			"index": 95,
+			"name": "CantPawnThisUnit"
+		},
+		"e_cmdCantQueueThatOrder": {
+			"index": 96,
+			"name": "CantQueueThatOrder"
+		},
+		"e_cmdCantRaise": {
+			"index": 97,
+			"name": "CantRaise"
+		},
+		"e_cmdCantRechargeImmobileUnits": {
+			"index": 98,
+			"name": "CantRechargeImmobileUnits"
+		},
+		"e_cmdCantRechargeOtherPlayersUnits": {
+			"index": 99,
+			"name": "CantRechargeOtherPlayersUnits"
+		},
+		"e_cmdCantRechargeUnderConstructionUnits": {
+			"index": 100,
+			"name": "CantRechargeUnderConstructionUnits"
+		},
+		"e_cmdCantSeeBuildLocation": {
+			"index": 101,
+			"name": "CantSeeBuildLocation"
+		},
+		"e_cmdCantSeeLandLocation": {
+			"index": 102,
+			"name": "CantSeeLandLocation"
+		},
+		"e_cmdCantSpend": {
+			"index": 103,
+			"name": "CantSpend"
+		},
+		"e_cmdCantTargetAirUnits": {
+			"index": 104,
+			"name": "CantTargetAirUnits"
+		},
+		"e_cmdCantTargetArmoredUnits": {
+			"index": 105,
+			"name": "CantTargetArmoredUnits"
+		},
+		"e_cmdCantTargetBiologicalUnits": {
+			"index": 106,
+			"name": "CantTargetBiologicalUnits"
+		},
+		"e_cmdCantTargetCaster": {
+			"index": 107,
+			"name": "CantTargetCaster"
+		},
+		"e_cmdCantTargetCloakedUnits": {
+			"index": 108,
+			"name": "CantTargetCloakedUnits"
+		},
+		"e_cmdCantTargetDazedUnits": {
+			"index": 109,
+			"name": "CantTargetDazedUnits"
+		},
+		"e_cmdCantTargetDeadUnits": {
+			"index": 110,
+			"name": "CantTargetDeadUnits"
+		},
+		"e_cmdCantTargetDestructibles": {
+			"index": 111,
+			"name": "CantTargetDestructibles"
+		},
+		"e_cmdCantTargetDetectedUnits": {
+			"index": 112,
+			"name": "CantTargetDetectedUnits"
+		},
+		"e_cmdCantTargetDoodads": {
+			"index": 113,
+			"name": "CantTargetDoodads"
+		},
+		"e_cmdCantTargetEnemyUnits": {
+			"index": 114,
+			"name": "CantTargetEnemyUnits"
+		},
+		"e_cmdCantTargetEnergyCapableUnits": {
+			"index": 115,
+			"name": "CantTargetEnergyCapableUnits"
+		},
+		"e_cmdCantTargetExhaustedResources": {
+			"index": 116,
+			"name": "CantTargetExhaustedResources"
+		},
+		"e_cmdCantTargetFlyers": {
+			"index": 117,
+			"name": "CantTargetFlyers"
+		},
+		"e_cmdCantTargetFriendlyUnits": {
+			"index": 118,
+			"name": "CantTargetFriendlyUnits"
+		},
+		"e_cmdCantTargetGroundUnits": {
+			"index": 119,
+			"name": "CantTargetGroundUnits"
+		},
+		"e_cmdCantTargetHeroicUnits": {
+			"index": 120,
+			"name": "CantTargetHeroicUnits"
+		},
+		"e_cmdCantTargetHiddenUnits": {
+			"index": 121,
+			"name": "CantTargetHiddenUnits"
+		},
+		"e_cmdCantTargetIdentical": {
+			"index": 122,
+			"name": "CantTargetIdentical"
+		},
+		"e_cmdCantTargetInvulnerableUnits": {
+			"index": 123,
+			"name": "CantTargetInvulnerableUnits"
+		},
+		"e_cmdCantTargetItems": {
+			"index": 124,
+			"name": "CantTargetItems"
+		},
+		"e_cmdCantTargetLightUnits": {
+			"index": 125,
+			"name": "CantTargetLightUnits"
+		},
+		"e_cmdCantTargetMassiveUnits": {
+			"index": 126,
+			"name": "CantTargetMassiveUnits"
+		},
+		"e_cmdCantTargetMechanicalUnits": {
+			"index": 127,
+			"name": "CantTargetMechanicalUnits"
+		},
+		"e_cmdCantTargetMissile": {
+			"index": 128,
+			"name": "CantTargetMissile"
+		},
+		"e_cmdCantTargetNeutralUnits": {
+			"index": 129,
+			"name": "CantTargetNeutralUnits"
+		},
+		"e_cmdCantTargetOuter": {
+			"index": 130,
+			"name": "CantTargetOuter"
+		},
+		"e_cmdCantTargetPassiveUnits": {
+			"index": 131,
+			"name": "CantTargetPassiveUnits"
+		},
+		"e_cmdCantTargetPreventDefeatUnits": {
+			"index": 132,
+			"name": "CantTargetPreventDefeatUnits"
+		},
+		"e_cmdCantTargetPreventRevealUnits": {
+			"index": 133,
+			"name": "CantTargetPreventRevealUnits"
+		},
+		"e_cmdCantTargetPsionicUnits": {
+			"index": 134,
+			"name": "CantTargetPsionicUnits"
+		},
+		"e_cmdCantTargetResistantUnits": {
+			"index": 135,
+			"name": "CantTargetResistantUnits"
+		},
+		"e_cmdCantTargetRoboticUnits": {
+			"index": 136,
+			"name": "CantTargetRoboticUnits"
+		},
+		"e_cmdCantTargetShieldCapableUnits": {
+			"index": 137,
+			"name": "CantTargetShieldCapableUnits"
+		},
+		"e_cmdCantTargetSimilarUnits": {
+			"index": 138,
+			"name": "CantTargetSimilarUnits"
+		},
+		"e_cmdCantTargetStructures": {
+			"index": 139,
+			"name": "CantTargetStructures"
+		},
+		"e_cmdCantTargetStunnedUnits": {
+			"index": 140,
+			"name": "CantTargetStunnedUnits"
+		},
+		"e_cmdCantTargetSummonedUnits": {
+			"index": 141,
+			"name": "CantTargetSummonedUnits"
+		},
+		"e_cmdCantTargetThatUnit": {
+			"index": 142,
+			"name": "CantTargetThatUnit"
+		},
+		"e_cmdCantTargetUncommandableUnits": {
+			"index": 143,
+			"name": "CantTargetUncommandableUnits"
+		},
+		"e_cmdCantTargetUnderConstructionUnits": {
+			"index": 144,
+			"name": "CantTargetUnderConstructionUnits"
+		},
+		"e_cmdCantTargetUnitWithEnergy": {
+			"index": 145,
+			"name": "CantTargetUnitWithEnergy"
+		},
+		"e_cmdCantTargetUnitWithShields": {
+			"index": 146,
+			"name": "CantTargetUnitWithShields"
+		},
+		"e_cmdCantTargetUnitsInAStasisField": {
+			"index": 147,
+			"name": "CantTargetUnitsInAStasisField"
+		},
+		"e_cmdCantTargetUnitsWithLife": {
+			"index": 148,
+			"name": "CantTargetUnitsWithLife"
+		},
+		"e_cmdCantTargetUnstoppableUnits": {
+			"index": 149,
+			"name": "CantTargetUnstoppableUnits"
+		},
+		"e_cmdCantTargetUser1": {
+			"index": 150,
+			"name": "CantTargetUser1"
+		},
+		"e_cmdCantTargetWorkerUnits": {
+			"index": 151,
+			"name": "CantTargetWorkerUnits"
+		},
+		"e_cmdCantTargetWreckage": {
+			"index": 152,
+			"name": "CantTargetWreckage"
+		},
+		"e_cmdCantTargetYourOwnUnits": {
+			"index": 153,
+			"name": "CantTargetYourOwnUnits"
+		},
+		"e_cmdCantTrade": {
+			"index": 154,
+			"name": "CantTrade"
+		},
+		"e_cmdCantTrainTooFarFromTrainPowerSource": {
+			"index": 155,
+			"name": "CantTrainTooFarFromTrainPowerSource"
+		},
+		"e_cmdCantUnloadUnitsThere": {
+			"index": 156,
+			"name": "CantUnloadUnitsThere"
+		},
+		"e_cmdCantUseInfoPanel": {
+			"index": 157,
+			"name": "CantUseInfoPanel"
+		},
+		"e_cmdCantUseMinimap": {
+			"index": 158,
+			"name": "CantUseMinimap"
+		},
+		"e_cmdCantWarpInUnitsThere": {
+			"index": 159,
+			"name": "CantWarpInUnitsThere"
+		},
+		"e_cmdCooldown": {
+			"index": 160,
+			"name": "Cooldown"
+		},
+		"e_cmdCouldntAllocateUnit": {
+			"index": 161,
+			"name": "CouldntAllocateUnit"
+		},
+		"e_cmdCouldntReachTarget": {
+			"index": 162,
+			"name": "CouldntReachTarget"
+		},
+		"e_cmdEnergySuppressed": {
+			"index": 163,
+			"name": "EnergySuppressed"
+		},
+		"e_cmdError": {
+			"index": 164,
+			"name": "Error"
+		},
+		"e_cmdFoodUsageImpossible": {
+			"index": 165,
+			"name": "FoodUsageImpossible"
+		},
+		"e_cmdFoodUsageImpossible_Prot": {
+			"index": 166,
+			"name": "FoodUsageImpossible_Prot"
+		},
+		"e_cmdFoodUsageImpossible_Terr": {
+			"index": 167,
+			"name": "FoodUsageImpossible_Terr"
+		},
+		"e_cmdFoodUsageImpossible_Zerg": {
+			"index": 168,
+			"name": "FoodUsageImpossible_Zerg"
+		},
+		"e_cmdInvalidItemClass": {
+			"index": 169,
+			"name": "InvalidItemClass"
+		},
+		"e_cmdIsNotFungalGrowthed": {
+			"index": 170,
+			"name": "IsNotFungalGrowthed"
+		},
+		"e_cmdIsNotWarpBubble": {
+			"index": 171,
+			"name": "IsNotWarpBubble"
+		},
+		"e_cmdLifeSuppressed": {
+			"index": 172,
+			"name": "LifeSuppressed"
+		},
+		"e_cmdMULEUnitCheck": {
+			"index": 173,
+			"name": "MULEUnitCheck"
+		},
+		"e_cmdMineralField": {
+			"index": 174,
+			"name": "MineralField"
+		},
+		"e_cmdMustBuildRefineryFirst": {
+			"index": 175,
+			"name": "MustBuildRefineryFirst"
+		},
+		"e_cmdMustBuildRefineryFirst_Prot": {
+			"index": 176,
+			"name": "MustBuildRefineryFirst_Prot"
+		},
+		"e_cmdMustBuildRefineryFirst_Zerg": {
+			"index": 177,
+			"name": "MustBuildRefineryFirst_Zerg"
+		},
+		"e_cmdMustLockdownUnitFirst": {
+			"index": 178,
+			"name": "MustLockdownUnitFirst"
+		},
+		"e_cmdMustTargetAirUnits": {
+			"index": 179,
+			"name": "MustTargetAirUnits"
+		},
+		"e_cmdMustTargetArmoredUnits": {
+			"index": 180,
+			"name": "MustTargetArmoredUnits"
+		},
+		"e_cmdMustTargetBiologicalStructures": {
+			"index": 181,
+			"name": "MustTargetBiologicalStructures"
+		},
+		"e_cmdMustTargetBiologicalUnits": {
+			"index": 182,
+			"name": "MustTargetBiologicalUnits"
+		},
+		"e_cmdMustTargetCaster": {
+			"index": 183,
+			"name": "MustTargetCaster"
+		},
+		"e_cmdMustTargetCloakedUnits": {
+			"index": 184,
+			"name": "MustTargetCloakedUnits"
+		},
+		"e_cmdMustTargetDazedUnits": {
+			"index": 185,
+			"name": "MustTargetDazedUnits"
+		},
+		"e_cmdMustTargetDeadUnits": {
+			"index": 186,
+			"name": "MustTargetDeadUnits"
+		},
+		"e_cmdMustTargetDestructibles": {
+			"index": 187,
+			"name": "MustTargetDestructibles"
+		},
+		"e_cmdMustTargetDetectedUnits": {
+			"index": 188,
+			"name": "MustTargetDetectedUnits"
+		},
+		"e_cmdMustTargetDoodads": {
+			"index": 189,
+			"name": "MustTargetDoodads"
+		},
+		"e_cmdMustTargetEnemyUnits": {
+			"index": 190,
+			"name": "MustTargetEnemyUnits"
+		},
+		"e_cmdMustTargetEnergyCapableUnits": {
+			"index": 191,
+			"name": "MustTargetEnergyCapableUnits"
+		},
+		"e_cmdMustTargetFlyers": {
+			"index": 192,
+			"name": "MustTargetFlyers"
+		},
+		"e_cmdMustTargetFriendlyUnits": {
+			"index": 193,
+			"name": "MustTargetFriendlyUnits"
+		},
+		"e_cmdMustTargetGroundStructures": {
+			"index": 194,
+			"name": "MustTargetGroundStructures"
+		},
+		"e_cmdMustTargetGroundUnits": {
+			"index": 195,
+			"name": "MustTargetGroundUnits"
+		},
+		"e_cmdMustTargetHatchery": {
+			"index": 196,
+			"name": "MustTargetHatchery"
+		},
+		"e_cmdMustTargetHeroicUnits": {
+			"index": 197,
+			"name": "MustTargetHeroicUnits"
+		},
+		"e_cmdMustTargetHiddenUnits": {
+			"index": 198,
+			"name": "MustTargetHiddenUnits"
+		},
+		"e_cmdMustTargetIdentical": {
+			"index": 199,
+			"name": "MustTargetIdentical"
+		},
+		"e_cmdMustTargetInvulnerableUnits": {
+			"index": 200,
+			"name": "MustTargetInvulnerableUnits"
+		},
+		"e_cmdMustTargetItems": {
+			"index": 201,
+			"name": "MustTargetItems"
+		},
+		"e_cmdMustTargetLightUnits": {
+			"index": 202,
+			"name": "MustTargetLightUnits"
+		},
+		"e_cmdMustTargetMassiveUnits": {
+			"index": 203,
+			"name": "MustTargetMassiveUnits"
+		},
+		"e_cmdMustTargetMechanicalUnits": {
+			"index": 204,
+			"name": "MustTargetMechanicalUnits"
+		},
+		"e_cmdMustTargetMissile": {
+			"index": 205,
+			"name": "MustTargetMissile"
+		},
+		"e_cmdMustTargetNeutralUnits": {
+			"index": 206,
+			"name": "MustTargetNeutralUnits"
+		},
+		"e_cmdMustTargetOuter": {
+			"index": 207,
+			"name": "MustTargetOuter"
+		},
+		"e_cmdMustTargetOwnedGroundUnits": {
+			"index": 208,
+			"name": "MustTargetOwnedGroundUnits"
+		},
+		"e_cmdMustTargetPassiveUnits": {
+			"index": 209,
+			"name": "MustTargetPassiveUnits"
+		},
+		"e_cmdMustTargetPawnableUnit": {
+			"index": 210,
+			"name": "MustTargetPawnableUnit"
+		},
+		"e_cmdMustTargetPreventDefeatUnits": {
+			"index": 211,
+			"name": "MustTargetPreventDefeatUnits"
+		},
+		"e_cmdMustTargetPreventRevealUnits": {
+			"index": 212,
+			"name": "MustTargetPreventRevealUnits"
+		},
+		"e_cmdMustTargetPsionicUnits": {
+			"index": 213,
+			"name": "MustTargetPsionicUnits"
+		},
+		"e_cmdMustTargetResistantUnits": {
+			"index": 214,
+			"name": "MustTargetResistantUnits"
+		},
+		"e_cmdMustTargetResources": {
+			"index": 215,
+			"name": "MustTargetResources"
+		},
+		"e_cmdMustTargetRoboticUnits": {
+			"index": 216,
+			"name": "MustTargetRoboticUnits"
+		},
+		"e_cmdMustTargetShieldCapableUnits": {
+			"index": 217,
+			"name": "MustTargetShieldCapableUnits"
+		},
+		"e_cmdMustTargetSimilarUnits": {
+			"index": 218,
+			"name": "MustTargetSimilarUnits"
+		},
+		"e_cmdMustTargetStructures": {
+			"index": 219,
+			"name": "MustTargetStructures"
+		},
+		"e_cmdMustTargetStunnedUnits": {
+			"index": 220,
+			"name": "MustTargetStunnedUnits"
+		},
+		"e_cmdMustTargetSummonedUnits": {
+			"index": 221,
+			"name": "MustTargetSummonedUnits"
+		},
+		"e_cmdMustTargetSupplyDepots": {
+			"index": 222,
+			"name": "MustTargetSupplyDepots"
+		},
+		"e_cmdMustTargetUncommandableUnits": {
+			"index": 223,
+			"name": "MustTargetUncommandableUnits"
+		},
+		"e_cmdMustTargetUnderConstructionUnits": {
+			"index": 224,
+			"name": "MustTargetUnderConstructionUnits"
+		},
+		"e_cmdMustTargetUnit": {
+			"index": 225,
+			"name": "MustTargetUnit"
+		},
+		"e_cmdMustTargetUnitWithEnergy": {
+			"index": 226,
+			"name": "MustTargetUnitWithEnergy"
+		},
+		"e_cmdMustTargetUnitWithLife": {
+			"index": 227,
+			"name": "MustTargetUnitWithLife"
+		},
+		"e_cmdMustTargetUnitWithShields": {
+			"index": 228,
+			"name": "MustTargetUnitWithShields"
+		},
+		"e_cmdMustTargetUnitsInAStasisField": {
+			"index": 229,
+			"name": "MustTargetUnitsInAStasisField"
+		},
+		"e_cmdMustTargetUnstoppableUnits": {
+			"index": 230,
+			"name": "MustTargetUnstoppableUnits"
+		},
+		"e_cmdMustTargetUser1": {
+			"index": 231,
+			"name": "MustTargetUser1"
+		},
+		"e_cmdMustTargetVisibleLocation": {
+			"index": 232,
+			"name": "MustTargetVisibleLocation"
+		},
+		"e_cmdMustTargetVisibleUnit": {
+			"index": 233,
+			"name": "MustTargetVisibleUnit"
+		},
+		"e_cmdMustTargetWalkableLocation": {
+			"index": 234,
+			"name": "MustTargetWalkableLocation"
+		},
+		"e_cmdMustTargetWorkerUnits": {
+			"index": 235,
+			"name": "MustTargetWorkerUnits"
+		},
+		"e_cmdMustTargetWreckage": {
+			"index": 236,
+			"name": "MustTargetWreckage"
+		},
+		"e_cmdMustTargetYourOwnUnits": {
+			"index": 237,
+			"name": "MustTargetYourOwnUnits"
+		},
+		"e_cmdNoCalldownAvailable": {
+			"index": 238,
+			"name": "NoCalldownAvailable"
+		},
+		"e_cmdNoCargoToUnload": {
+			"index": 239,
+			"name": "NoCargoToUnload"
+		},
+		"e_cmdNoItemsToDrop": {
+			"index": 240,
+			"name": "NoItemsToDrop"
+		},
+		"e_cmdNoWarpBubbleMinerals": {
+			"index": 241,
+			"name": "NoWarpBubbleMinerals"
+		},
+		"e_cmdNotCorruptioned": {
+			"index": 242,
+			"name": "NotCorruptioned"
+		},
+		"e_cmdNotEnoughCharges": {
+			"index": 243,
+			"name": "NotEnoughCharges"
+		},
+		"e_cmdNotEnoughEnergy": {
+			"index": 244,
+			"name": "NotEnoughEnergy"
+		},
+		"e_cmdNotEnoughFood": {
+			"index": 245,
+			"name": "NotEnoughFood"
+		},
+		"e_cmdNotEnoughFood_Prot": {
+			"index": 246,
+			"name": "NotEnoughFood_Prot"
+		},
+		"e_cmdNotEnoughFood_Terr": {
+			"index": 247,
+			"name": "NotEnoughFood_Terr"
+		},
+		"e_cmdNotEnoughFood_Zerg": {
+			"index": 248,
+			"name": "NotEnoughFood_Zerg"
+		},
+		"e_cmdNotEnoughLife": {
+			"index": 249,
+			"name": "NotEnoughLife"
+		},
+		"e_cmdNotEnoughMinerals": {
+			"index": 250,
+			"name": "NotEnoughMinerals"
+		},
+		"e_cmdNotEnoughRage": {
+			"index": 251,
+			"name": "NotEnoughRage"
+		},
+		"e_cmdNotEnoughRoomToLoadUnit": {
+			"index": 252,
+			"name": "NotEnoughRoomToLoadUnit"
+		},
+		"e_cmdNotEnoughScrap": {
+			"index": 253,
+			"name": "NotEnoughScrap"
+		},
+		"e_cmdNotEnoughShields": {
+			"index": 254,
+			"name": "NotEnoughShields"
+		},
+		"e_cmdNotEnoughWarpEnergy": {
+			"index": 255,
+			"name": "NotEnoughWarpEnergy"
+		},
+		"e_cmdNotStunned": {
+			"index": 256,
+			"name": "NotStunned"
+		},
+		"e_cmdNotUnstableMutation": {
+			"index": 257,
+			"name": "NotUnstableMutation"
+		},
+		"e_cmdNotWhileOccupied": {
+			"index": 258,
+			"name": "NotWhileOccupied"
+		},
+		"e_cmdOrderQueueIsFull": {
+			"index": 259,
+			"name": "OrderQueueIsFull"
+		},
+		"e_cmdQueueIsFull": {
+			"index": 260,
+			"name": "QueueIsFull"
+		},
+		"e_cmdRallyQueueIsFull": {
+			"index": 261,
+			"name": "RallyQueueIsFull"
+		},
+		"e_cmdRequiresHealTarget": {
+			"index": 262,
+			"name": "RequiresHealTarget"
+		},
+		"e_cmdRequiresRepairTarget": {
+			"index": 263,
+			"name": "RequiresRepairTarget"
+		},
+		"e_cmdShieldsSuppressed": {
+			"index": 264,
+			"name": "ShieldsSuppressed"
+		},
+		"e_cmdTargetHasNoInventory": {
+			"index": 265,
+			"name": "TargetHasNoInventory"
+		},
+		"e_cmdTargetIsOutOfArc": {
+			"index": 266,
+			"name": "TargetIsOutOfArc"
+		},
+		"e_cmdTargetIsOutOfRange": {
+			"index": 267,
+			"name": "TargetIsOutOfRange"
+		},
+		"e_cmdTargetIsTooClose": {
+			"index": 268,
+			"name": "TargetIsTooClose"
+		},
+		"e_cmdTechRequirementsNotMet": {
+			"index": 269,
+			"name": "TechRequirementsNotMet"
+		},
+		"e_cmdTimeWarpTargetFilters": {
+			"index": 270,
+			"name": "TimeWarpTargetFilters"
+		},
+		"e_cmdTooMuchEnergy": {
+			"index": 271,
+			"name": "TooMuchEnergy"
+		},
+		"e_cmdTooMuchFood": {
+			"index": 272,
+			"name": "TooMuchFood"
+		},
+		"e_cmdTooMuchLife": {
+			"index": 273,
+			"name": "TooMuchLife"
+		},
+		"e_cmdTooMuchMinerals": {
+			"index": 274,
+			"name": "TooMuchMinerals"
+		},
+		"e_cmdTooMuchRage": {
+			"index": 275,
+			"name": "TooMuchRage"
+		},
+		"e_cmdTooMuchScrap": {
+			"index": 276,
+			"name": "TooMuchScrap"
+		},
+		"e_cmdTooMuchShields": {
+			"index": 277,
+			"name": "TooMuchShields"
+		},
+		"e_cmdTransportIsHoldingPosition": {
+			"index": 278,
+			"name": "TransportIsHoldingPosition"
+		},
+		"e_cmdUnitCantMove": {
+			"index": 279,
+			"name": "UnitCantMove"
+		},
+		"e_cmdUnknown": {
+			"index": 280,
+			"name": "Unknown"
+		},
+		"e_cmdUnspecifiedError": {
+			"index": 281,
+			"name": "UnspecifiedError"
+		},
+		"e_cmdWaypointListFull": {
+			"index": 282,
+			"name": "WaypointListFull"
+		},
+		"e_cmdYouCantControlThatUnit": {
+			"index": 283,
+			"name": "YouCantControlThatUnit"
+		},
+		"e_cmdYouCantIssueCommandsToThatUnit": {
+			"index": 284,
+			"name": "YouCantIssueCommandsToThatUnit"
 		}
 	},
 	"ECommanderMasteryTalentType": {
@@ -21453,6 +22419,638 @@
 		"e_gameUIStringShieldDamageRatioColon": {
 			"index": 2,
 			"name": "ShieldDamageRatioColon"
+		},
+		"e_gameUIStringAIAllies": {
+			"index": 3,
+			"name": "AIAllies"
+		},
+		"e_gameUIStringAbilsColon": {
+			"index": 4,
+			"name": "AbilsColon"
+		},
+		"e_gameUIStringAbilsDisabled": {
+			"index": 5,
+			"name": "AbilsDisabled"
+		},
+		"e_gameUIStringActive": {
+			"index": 6,
+			"name": "Active"
+		},
+		"e_gameUIStringAll": {
+			"index": 7,
+			"name": "All"
+		},
+		"e_gameUIStringAllies": {
+			"index": 8,
+			"name": "Allies"
+		},
+		"e_gameUIStringArmor": {
+			"index": 9,
+			"name": "Armor"
+		},
+		"e_gameUIStringArmorColon": {
+			"index": 10,
+			"name": "ArmorColon"
+		},
+		"e_gameUIStringArmored": {
+			"index": 11,
+			"name": "Armored"
+		},
+		"e_gameUIStringArmySelect": {
+			"index": 12,
+			"name": "ArmySelect"
+		},
+		"e_gameUIStringAssignedHarvesters": {
+			"index": 13,
+			"name": "AssignedHarvesters"
+		},
+		"e_gameUIStringAtUnit": {
+			"index": 14,
+			"name": "AtUnit"
+		},
+		"e_gameUIStringAttackSpeedColon": {
+			"index": 15,
+			"name": "AttackSpeedColon"
+		},
+		"e_gameUIStringAttackSpeedFast": {
+			"index": 16,
+			"name": "AttackSpeedFast"
+		},
+		"e_gameUIStringAttackSpeedNormal": {
+			"index": 17,
+			"name": "AttackSpeedNormal"
+		},
+		"e_gameUIStringAttackSpeedSlow": {
+			"index": 18,
+			"name": "AttackSpeedSlow"
+		},
+		"e_gameUIStringAttackSpeedVeryFast": {
+			"index": 19,
+			"name": "AttackSpeedVeryFast"
+		},
+		"e_gameUIStringAttackSpeedVerySlow": {
+			"index": 20,
+			"name": "AttackSpeedVerySlow"
+		},
+		"e_gameUIStringAttackSuppressed": {
+			"index": 21,
+			"name": "AttackSuppressed"
+		},
+		"e_gameUIStringAttacksColon": {
+			"index": 22,
+			"name": "AttacksColon"
+		},
+		"e_gameUIStringAutocastActivate": {
+			"index": 23,
+			"name": "AutocastActivate"
+		},
+		"e_gameUIStringAutocastDeactivate": {
+			"index": 24,
+			"name": "AutocastDeactivate"
+		},
+		"e_gameUIStringAvailableColon": {
+			"index": 25,
+			"name": "AvailableColon"
+		},
+		"e_gameUIStringAverage": {
+			"index": 26,
+			"name": "Average"
+		},
+		"e_gameUIStringBattleChatConversationReceivedFormat": {
+			"index": 27,
+			"name": "BattleChatConversationReceivedFormat"
+		},
+		"e_gameUIStringBattleChatConversationSentFormat": {
+			"index": 28,
+			"name": "BattleChatConversationSentFormat"
+		},
+		"e_gameUIStringBattleChatPartyReceivedFormat": {
+			"index": 29,
+			"name": "BattleChatPartyReceivedFormat"
+		},
+		"e_gameUIStringBattleChatPartySentFormat": {
+			"index": 30,
+			"name": "BattleChatPartySentFormat"
+		},
+		"e_gameUIStringBattleChatPrivateReceivedFormat": {
+			"index": 31,
+			"name": "BattleChatPrivateReceivedFormat"
+		},
+		"e_gameUIStringBattleChatPrivateSentFormat": {
+			"index": 32,
+			"name": "BattleChatPrivateSentFormat"
+		},
+		"e_gameUIStringBeaconMode": {
+			"index": 33,
+			"name": "BeaconMode"
+		},
+		"e_gameUIStringBehaviorsColon": {
+			"index": 34,
+			"name": "BehaviorsColon"
+		},
+		"e_gameUIStringBiological": {
+			"index": 35,
+			"name": "Biological"
+		},
+		"e_gameUIStringBonusColon": {
+			"index": 36,
+			"name": "BonusColon"
+		},
+		"e_gameUIStringBonusVersus": {
+			"index": 37,
+			"name": "BonusVersus"
+		},
+		"e_gameUIStringBuildTime": {
+			"index": 38,
+			"name": "BuildTime"
+		},
+		"e_gameUIStringBuilding": {
+			"index": 39,
+			"name": "Building"
+		},
+		"e_gameUIStringCanAttackAir": {
+			"index": 40,
+			"name": "CanAttackAir"
+		},
+		"e_gameUIStringCanAttackAny": {
+			"index": 41,
+			"name": "CanAttackAny"
+		},
+		"e_gameUIStringCanAttackGround": {
+			"index": 42,
+			"name": "CanAttackGround"
+		},
+		"e_gameUIStringCancelUnit": {
+			"index": 43,
+			"name": "CancelUnit"
+		},
+		"e_gameUIStringChargeCooldownColon": {
+			"index": 44,
+			"name": "ChargeCooldownColon"
+		},
+		"e_gameUIStringCloaked": {
+			"index": 45,
+			"name": "Cloaked"
+		},
+		"e_gameUIStringComputer": {
+			"index": 46,
+			"name": "Computer"
+		},
+		"e_gameUIStringControlGroup": {
+			"index": 47,
+			"name": "ControlGroup"
+		},
+		"e_gameUIStringConversationFormat": {
+			"index": 48,
+			"name": "ConversationFormat"
+		},
+		"e_gameUIStringCooldownColon": {
+			"index": 49,
+			"name": "CooldownColon"
+		},
+		"e_gameUIStringCooldownRemainingColon": {
+			"index": 50,
+			"name": "CooldownRemainingColon"
+		},
+		"e_gameUIStringCountColon": {
+			"index": 51,
+			"name": "CountColon"
+		},
+		"e_gameUIStringDamageColon": {
+			"index": 52,
+			"name": "DamageColon"
+		},
+		"e_gameUIStringDamageDealtColon": {
+			"index": 53,
+			"name": "DamageDealtColon"
+		},
+		"e_gameUIStringDamageDealtMaximumColon": {
+			"index": 54,
+			"name": "DamageDealtMaximumColon"
+		},
+		"e_gameUIStringDamageDealtMinimumColon": {
+			"index": 55,
+			"name": "DamageDealtMinimumColon"
+		},
+		"e_gameUIStringDamageDealtScaledColon": {
+			"index": 56,
+			"name": "DamageDealtScaledColon"
+		},
+		"e_gameUIStringDamageDealtUnscaledColon": {
+			"index": 57,
+			"name": "DamageDealtUnscaledColon"
+		},
+		"e_gameUIStringDamageVersusColon": {
+			"index": 58,
+			"name": "DamageVersusColon"
+		},
+		"e_gameUIStringDefensiveShieldColon": {
+			"index": 59,
+			"name": "DefensiveShieldColon"
+		},
+		"e_gameUIStringDetectionSuppressed": {
+			"index": 60,
+			"name": "DetectionSuppressed"
+		},
+		"e_gameUIStringDetector": {
+			"index": 61,
+			"name": "Detector"
+		},
+		"e_gameUIStringDetectorColon": {
+			"index": 62,
+			"name": "DetectorColon"
+		},
+		"e_gameUIStringDurationColon": {
+			"index": 63,
+			"name": "DurationColon"
+		},
+		"e_gameUIStringEnergy": {
+			"index": 64,
+			"name": "Energy"
+		},
+		"e_gameUIStringEnergyColon": {
+			"index": 65,
+			"name": "EnergyColon"
+		},
+		"e_gameUIStringEnergyRateColon": {
+			"index": 66,
+			"name": "EnergyRateColon"
+		},
+		"e_gameUIStringExperienceColon": {
+			"index": 67,
+			"name": "ExperienceColon"
+		},
+		"e_gameUIStringFlyer": {
+			"index": 68,
+			"name": "Flyer"
+		},
+		"e_gameUIStringIdleWorkerColon": {
+			"index": 69,
+			"name": "IdleWorkerColon"
+		},
+		"e_gameUIStringInProgress": {
+			"index": 70,
+			"name": "InProgress"
+		},
+		"e_gameUIStringInstant": {
+			"index": 71,
+			"name": "Instant"
+		},
+		"e_gameUIStringInventoryPawn": {
+			"index": 72,
+			"name": "InventoryPawn"
+		},
+		"e_gameUIStringInventoryPickup": {
+			"index": 73,
+			"name": "InventoryPickup"
+		},
+		"e_gameUIStringInventoryUse": {
+			"index": 74,
+			"name": "InventoryUse"
+		},
+		"e_gameUIStringInvulnerable": {
+			"index": 75,
+			"name": "Invulnerable"
+		},
+		"e_gameUIStringKilled": {
+			"index": 76,
+			"name": "Killed"
+		},
+		"e_gameUIStringKills": {
+			"index": 77,
+			"name": "Kills"
+		},
+		"e_gameUIStringKillsColon": {
+			"index": 78,
+			"name": "KillsColon"
+		},
+		"e_gameUIStringLarge": {
+			"index": 79,
+			"name": "Large"
+		},
+		"e_gameUIStringLevelColon": {
+			"index": 80,
+			"name": "LevelColon"
+		},
+		"e_gameUIStringLevelColonNumber": {
+			"index": 81,
+			"name": "LevelColonNumber"
+		},
+		"e_gameUIStringLevelNumber": {
+			"index": 82,
+			"name": "LevelNumber"
+		},
+		"e_gameUIStringLife": {
+			"index": 83,
+			"name": "Life"
+		},
+		"e_gameUIStringLifeArmorColon": {
+			"index": 84,
+			"name": "LifeArmorColon"
+		},
+		"e_gameUIStringLifeColon": {
+			"index": 85,
+			"name": "LifeColon"
+		},
+		"e_gameUIStringLifeRateColon": {
+			"index": 86,
+			"name": "LifeRateColon"
+		},
+		"e_gameUIStringLocalPlayer": {
+			"index": 87,
+			"name": "LocalPlayer"
+		},
+		"e_gameUIStringMassive": {
+			"index": 88,
+			"name": "Massive"
+		},
+		"e_gameUIStringMechanical": {
+			"index": 89,
+			"name": "Mechanical"
+		},
+		"e_gameUIStringMelee": {
+			"index": 90,
+			"name": "Melee"
+		},
+		"e_gameUIStringMinimumRangeColon": {
+			"index": 91,
+			"name": "MinimumRangeColon"
+		},
+		"e_gameUIStringMoveSpeedColon": {
+			"index": 92,
+			"name": "MoveSpeedColon"
+		},
+		"e_gameUIStringMoveSpeedFast": {
+			"index": 93,
+			"name": "MoveSpeedFast"
+		},
+		"e_gameUIStringMoveSpeedImmobile": {
+			"index": 94,
+			"name": "MoveSpeedImmobile"
+		},
+		"e_gameUIStringMoveSpeedNormal": {
+			"index": 95,
+			"name": "MoveSpeedNormal"
+		},
+		"e_gameUIStringMoveSpeedSlow": {
+			"index": 96,
+			"name": "MoveSpeedSlow"
+		},
+		"e_gameUIStringMoveSpeedVeryFast": {
+			"index": 97,
+			"name": "MoveSpeedVeryFast"
+		},
+		"e_gameUIStringMoveSpeedVerySlow": {
+			"index": 98,
+			"name": "MoveSpeedVerySlow"
+		},
+		"e_gameUIStringNextLevelColon": {
+			"index": 99,
+			"name": "NextLevelColon"
+		},
+		"e_gameUIStringObservers": {
+			"index": 100,
+			"name": "Observers"
+		},
+		"e_gameUIStringParty": {
+			"index": 101,
+			"name": "Party"
+		},
+		"e_gameUIStringPeak": {
+			"index": 102,
+			"name": "Peak"
+		},
+		"e_gameUIStringPeriodColon": {
+			"index": 103,
+			"name": "PeriodColon"
+		},
+		"e_gameUIStringPowerColon": {
+			"index": 104,
+			"name": "PowerColon"
+		},
+		"e_gameUIStringPrivate": {
+			"index": 105,
+			"name": "Private"
+		},
+		"e_gameUIStringPylon": {
+			"index": 106,
+			"name": "Pylon"
+		},
+		"e_gameUIStringQueueCountColon": {
+			"index": 107,
+			"name": "QueueCountColon"
+		},
+		"e_gameUIStringQueueSizeColon": {
+			"index": 108,
+			"name": "QueueSizeColon"
+		},
+		"e_gameUIStringQueued": {
+			"index": 109,
+			"name": "Queued"
+		},
+		"e_gameUIStringRadarColon": {
+			"index": 110,
+			"name": "RadarColon"
+		},
+		"e_gameUIStringRadarSuppressed": {
+			"index": 111,
+			"name": "RadarSuppressed"
+		},
+		"e_gameUIStringRadiusColon": {
+			"index": 112,
+			"name": "RadiusColon"
+		},
+		"e_gameUIStringRage": {
+			"index": 113,
+			"name": "Rage"
+		},
+		"e_gameUIStringRageColon": {
+			"index": 114,
+			"name": "RageColon"
+		},
+		"e_gameUIStringRageRateColon": {
+			"index": 115,
+			"name": "RageRateColon"
+		},
+		"e_gameUIStringRangeColon": {
+			"index": 116,
+			"name": "RangeColon"
+		},
+		"e_gameUIStringRanged": {
+			"index": 117,
+			"name": "Ranged"
+		},
+		"e_gameUIStringRankColon": {
+			"index": 118,
+			"name": "RankColon"
+		},
+		"e_gameUIStringReferees": {
+			"index": 119,
+			"name": "Referees"
+		},
+		"e_gameUIStringRemainingColon": {
+			"index": 120,
+			"name": "RemainingColon"
+		},
+		"e_gameUIStringRemainingPattern": {
+			"index": 121,
+			"name": "RemainingPattern"
+		},
+		"e_gameUIStringRequirementsColon": {
+			"index": 122,
+			"name": "RequirementsColon"
+		},
+		"e_gameUIStringRequirementsOr": {
+			"index": 123,
+			"name": "RequirementsOr"
+		},
+		"e_gameUIStringRevealed": {
+			"index": 124,
+			"name": "Revealed"
+		},
+		"e_gameUIStringShieldArmorColon": {
+			"index": 125,
+			"name": "ShieldArmorColon"
+		},
+		"e_gameUIStringShieldRateColon": {
+			"index": 126,
+			"name": "ShieldRateColon"
+		},
+		"e_gameUIStringShields": {
+			"index": 127,
+			"name": "Shields"
+		},
+		"e_gameUIStringShieldsColon": {
+			"index": 128,
+			"name": "ShieldsColon"
+		},
+		"e_gameUIStringSightColon": {
+			"index": 129,
+			"name": "SightColon"
+		},
+		"e_gameUIStringSightMaximumColon": {
+			"index": 130,
+			"name": "SightMaximumColon"
+		},
+		"e_gameUIStringSightMinimumColon": {
+			"index": 131,
+			"name": "SightMinimumColon"
+		},
+		"e_gameUIStringSightShared": {
+			"index": 132,
+			"name": "SightShared"
+		},
+		"e_gameUIStringSmall": {
+			"index": 133,
+			"name": "Small"
+		},
+		"e_gameUIStringSpectators": {
+			"index": 134,
+			"name": "Spectators"
+		},
+		"e_gameUIStringSpeedColon": {
+			"index": 135,
+			"name": "SpeedColon"
+		},
+		"e_gameUIStringSpell": {
+			"index": 136,
+			"name": "Spell"
+		},
+		"e_gameUIStringSplash": {
+			"index": 137,
+			"name": "Splash"
+		},
+		"e_gameUIStringStasis": {
+			"index": 138,
+			"name": "Stasis"
+		},
+		"e_gameUIStringSupplyMadeColon": {
+			"index": 139,
+			"name": "SupplyMadeColon"
+		},
+		"e_gameUIStringSupplyUsedColon": {
+			"index": 140,
+			"name": "SupplyUsedColon"
+		},
+		"e_gameUIStringTargetAir": {
+			"index": 141,
+			"name": "TargetAir"
+		},
+		"e_gameUIStringTargetAny": {
+			"index": 142,
+			"name": "TargetAny"
+		},
+		"e_gameUIStringTargetGround": {
+			"index": 143,
+			"name": "TargetGround"
+		},
+		"e_gameUIStringTargetsColon": {
+			"index": 144,
+			"name": "TargetsColon"
+		},
+		"e_gameUIStringThisLevelColon": {
+			"index": 145,
+			"name": "ThisLevelColon"
+		},
+		"e_gameUIStringTooltipAppenderTemplate": {
+			"index": 146,
+			"name": "TooltipAppenderTemplate"
+		},
+		"e_gameUIStringTotal": {
+			"index": 147,
+			"name": "Total"
+		},
+		"e_gameUIStringTypeColon": {
+			"index": 148,
+			"name": "TypeColon"
+		},
+		"e_gameUIStringUnitsProducedColon": {
+			"index": 149,
+			"name": "UnitsProducedColon"
+		},
+		"e_gameUIStringUnknownString": {
+			"index": 150,
+			"name": "UnknownString"
+		},
+		"e_gameUIStringUnloadCargo": {
+			"index": 151,
+			"name": "UnloadCargo"
+		},
+		"e_gameUIStringUnpowered": {
+			"index": 152,
+			"name": "Unpowered"
+		},
+		"e_gameUIStringUpgradesAtColon": {
+			"index": 153,
+			"name": "UpgradesAtColon"
+		},
+		"e_gameUIStringUpgradesProducedColon": {
+			"index": 154,
+			"name": "UpgradesProducedColon"
+		},
+		"e_gameUIStringVisionSuppressed": {
+			"index": 155,
+			"name": "VisionSuppressed"
+		},
+		"e_gameUIStringVitalDamageGainColon": {
+			"index": 156,
+			"name": "VitalDamageGainColon"
+		},
+		"e_gameUIStringVitalDamageLeechColon": {
+			"index": 157,
+			"name": "VitalDamageLeechColon"
+		},
+		"e_gameUIStringWeaponSpeedColon": {
+			"index": 158,
+			"name": "WeaponSpeedColon"
+		},
+		"e_gameUIStringWeaponsDisabledColon": {
+			"index": 159,
+			"name": "WeaponsDisabledColon"
+		},
+		"e_gameUIStringWeaponsEnabledColon": {
+			"index": 160,
+			"name": "WeaponsEnabledColon"
 		}
 	},
 	"EGameVariantOption": {
@@ -24683,6 +26281,24 @@
 		"e_overrideColorSelfMinimap": {
 			"index": 4,
 			"name": "SelfMinimap"
+		}
+	},
+	"EParticipantType": {
+		"e_participantObserver": {
+			"index": 0,
+			"name": "Observer"
+		},
+		"e_participantParticipant": {
+			"index": 1,
+			"name": "Participant"
+		},
+		"e_participantReferee": {
+			"index": 2,
+			"name": "Referee"
+		},
+		"e_participantSpectator": {
+			"index": 3,
+			"name": "Spectator"
 		}
 	},
 	"EPath": {
@@ -28213,6 +29829,32 @@
 			"name": "Selected"
 		}
 	},
+	"ETechCategory": {
+		"e_techCatAbil": {
+			"index": 0,
+			"name": "Abil"
+		},
+		"e_techCatBeha": {
+			"index": 1,
+			"name": "Beha"
+		},
+		"e_techCatEfct": {
+			"index": 2,
+			"name": "Efct"
+		},
+		"e_techCatPowr": {
+			"index": 3,
+			"name": "Powr"
+		},
+		"e_techCatTech": {
+			"index": 4,
+			"name": "Tech"
+		},
+		"e_techCatUnit": {
+			"index": 5,
+			"name": "Unit"
+		}
+	},
 	"ETechCountState": {
 		"e_techStateComplete": {
 			"index": 0,
@@ -29211,6 +30853,98 @@
 		"e_unitAttributeUnknown": {
 			"index": 1,
 			"name": "Unknown"
+		},
+		"e_unitAttributeArmored": {
+			"index": 2,
+			"name": "Armored"
+		},
+		"e_unitAttributeBiological": {
+			"index": 3,
+			"name": "Biological"
+		},
+		"e_unitAttributeBonusAgainstArmored": {
+			"index": 4,
+			"name": "BonusAgainstArmored"
+		},
+		"e_unitAttributeBonusAgainstBiological": {
+			"index": 5,
+			"name": "BonusAgainstBiological"
+		},
+		"e_unitAttributeBonusAgainstHeroic": {
+			"index": 6,
+			"name": "BonusAgainstHeroic"
+		},
+		"e_unitAttributeBonusAgainstHover": {
+			"index": 7,
+			"name": "BonusAgainstHover"
+		},
+		"e_unitAttributeBonusAgainstLight": {
+			"index": 8,
+			"name": "BonusAgainstLight"
+		},
+		"e_unitAttributeBonusAgainstMassive": {
+			"index": 9,
+			"name": "BonusAgainstMassive"
+		},
+		"e_unitAttributeBonusAgainstMechanical": {
+			"index": 10,
+			"name": "BonusAgainstMechanical"
+		},
+		"e_unitAttributeBonusAgainstPsionic": {
+			"index": 11,
+			"name": "BonusAgainstPsionic"
+		},
+		"e_unitAttributeBonusAgainstRobotic": {
+			"index": 12,
+			"name": "BonusAgainstRobotic"
+		},
+		"e_unitAttributeBonusAgainstStructure": {
+			"index": 13,
+			"name": "BonusAgainstStructure"
+		},
+		"e_unitAttributeBonusAgainstSummoned": {
+			"index": 14,
+			"name": "BonusAgainstSummoned"
+		},
+		"e_unitAttributeHeroic": {
+			"index": 15,
+			"name": "Heroic"
+		},
+		"e_unitAttributeHover": {
+			"index": 16,
+			"name": "Hover"
+		},
+		"e_unitAttributeLight": {
+			"index": 17,
+			"name": "Light"
+		},
+		"e_unitAttributeMassive": {
+			"index": 18,
+			"name": "Massive"
+		},
+		"e_unitAttributeMechanical": {
+			"index": 19,
+			"name": "Mechanical"
+		},
+		"e_unitAttributePsionic": {
+			"index": 20,
+			"name": "Psionic"
+		},
+		"e_unitAttributeRobotic": {
+			"index": 21,
+			"name": "Robotic"
+		},
+		"e_unitAttributeStructure": {
+			"index": 22,
+			"name": "Structure"
+		},
+		"e_unitAttributeSummoned": {
+			"index": 23,
+			"name": "Summoned"
+		},
+		"e_unitAttributeUser1": {
+			"index": 24,
+			"name": "User1"
 		}
 	},
 	"EUnitCollide": {

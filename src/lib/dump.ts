@@ -221,20 +221,29 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		"EActorSiteOpTetherEnableType": "e_actorSiteOpTetherFlag",
 		"ETechCategory": "e_techCat",
 		"EParticipantType": "e_participant", // guess... verify
+		"EActorSiteOpOrientAttachPointToType": "e_actorSiteOpOrientAttachPointTo",
 	};
 	
-	let strings = await fs.readFile(`${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/Editor/EditorCatalogStrings.txt`, "utf8");
-	let arr = strings.split(/\r?\n/g,).map(v => v.split("=")[0].trim()).filter(v => v.length > 0);
-	arr.sort();
+	function processStrings(v:string){
+		return v.split(/\r?\n/g,).map(v => v.split("=")[0].trim()).filter(v => v.length > 0);
+	}
 	
-	let set = new Set(arr);
+	let editorStrings = await fs.readFile(`${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/Editor/EditorCatalogStrings.txt`, "utf8");
+	let gameStrings = await fs.readFile(`${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/GameStrings.txt`, "utf8");
+	let editorArr = processStrings(editorStrings);
+	editorArr.sort();
+	
+	let gameArr = processStrings(gameStrings).filter(v => v.startsWith("e_"));
+	gameArr.sort();
+	
+	let set = new Set(editorArr);
 	
 	let enums:Record<string, EnumType> = {};
 	
 	const manualEnums:Record<string, EnumType> = JSON.parse(await fs.readFile(`${__dirname}/../../data/enums_manual.json`, "utf8"));
 	
 	const enumList:string[] = [];
-	for(let key of arr){
+	for(let key of editorArr){
 		if(!key.startsWith("EDSTR_ENUMNAME_")) continue;
 		enumList.push(key.slice("EDSTR_ENUMNAME_".length));
 	}
@@ -245,19 +254,32 @@ type EnumType = Record<string, { index:number; name:string; }>;
 			continue;
 		}
 		
-		let prefixName = `EDSTR_ENUMVAL_e_${enumName[1].toLowerCase() + enumName.slice(2)}`.toLowerCase();
+		let prefixName = `e_${enumName[1].toLowerCase() + enumName.slice(2)}`.toLowerCase();
 		if(enumName in prefixOverrides){
-			prefixName = `EDSTR_ENUMVAL_${prefixOverrides[enumName]}`.toLowerCase();
+			prefixName = `${prefixOverrides[enumName]}`.toLowerCase();
 		}
 		
 		
 		let values:EnumType = {};
 		// O(N^2) but I'm too lazy to code it properly
 		let index = 0;
-		for(let key of arr){
-			if(!key.toLowerCase().startsWith(prefixName)) continue;
+		for(let key of editorArr){
+			if(!key.toLowerCase().startsWith(`edstr_enumval_` + prefixName)) continue;
 			
-			values[key.slice(`EDSTR_ENUMVAL_`.length)] = {
+			key = key.slice(`EDSTR_ENUMVAL_`.length);
+			if(key in values) continue;
+			
+			values[key] = {
+				index: index++, // just a guess
+				name: key.slice(prefixName.length),
+			}
+		}
+		
+		for(let key of gameArr){
+			if(!key.toLowerCase().startsWith(prefixName)) continue;
+			if(key in values) continue;
+			
+			values[key] = {
 				index: index++, // just a guess
 				name: key.slice(prefixName.length),
 			}

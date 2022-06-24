@@ -4547,13 +4547,6 @@
 			"Label": "CActorLabelKey"
 		}
 	},
-	"SActorMsgSetPhysicsState": {
-		"parent": null,
-		"fields": {
-			"State": "EPhysicsState",
-			"Delay": "CRange"
-		}
-	},
 	"SActorMsgSetPosition": {
 		"parent": null,
 		"fields": {
@@ -13734,35 +13727,43 @@
 			"RangedWeaponRange": "CFixed",
 			"DamageTakenScaled": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"DamageTakenFraction": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"DamageTakenUnscaled": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"DamageTakenMaximum": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"DamageTakenMinimum": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"DamageTotalMultiplier": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"UnifiedDamageDealtFraction": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"UnifiedDamageTakenFraction": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageKind"
 			},
 			"EnergyArmorBonus": "CFixed",
 			"EnergyArmorMultiplier": "CFixed",
@@ -13786,7 +13787,8 @@
 			},
 			"VitalRegenMultiplier": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EUnitVital"
 			},
 			"VitalDamageGainScoreArray": {
 				"type": "SScoreValueUpdate",
@@ -17685,7 +17687,8 @@
 			"ActorKey": "CDataSoupKey",
 			"MorphFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EEffectMorph"
 			},
 			"MorphUnit": "CUnitLink",
 			"TypeFallbackUnit": "SEffectWhichUnit",
