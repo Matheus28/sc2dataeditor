@@ -1,6 +1,6 @@
 import assert from "assert";
 import { CatalogName, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex } from './lib/game_data_loader';
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex, forEachDataspace } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import { resolveTokens, unresolveTokens } from "./wizards/components/utils";
@@ -82,15 +82,17 @@ type EntryNodeWithDataspace = { node:XMLNodeEntry, dataspace:Dataspace };
 function accessEntry(entry:CatalogEntry, createIfNotExists:true):EntryNodeWithDataspace;
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined;
 function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined {
-	{
-		let dataspace = map.index.implicitDataspaces[entry.catalog];
+	let ret:EntryNodeWithDataspace|undefined;
+	if(!forEachDataspace(map.index, true, true, (dataspace) => {
 		let cur = accessDataspaceEntry(dataspace, entry, false);
-		if(cur) return {node: cur, dataspace};
-	}
-	
-	for(let dataspace of map.index.dataspaces){
-		let cur = accessDataspaceEntry(dataspace, entry, false);
-		if(cur) return {node: cur, dataspace};
+		if(cur){
+			ret = {node: cur, dataspace};
+			return false;
+		}
+		
+		return true;
+	})){
+		return ret; // Never undefined here
 	}
 	
 	if(!createIfNotExists) return undefined;
@@ -342,7 +344,7 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 				console.error(`Invalid parent for ${node["attr"]["id"]}. Type doesn't match`);
 			}
 		}else{
-			console.error(`Invalid parent for ${node["attr"]["id"]}. It doesn't exist`);
+			console.error(`Invalid parent for ${node["attr"]["id"]}. It doesn't exist: ${node.attr.parent}`);
 		}
 	}
 	
