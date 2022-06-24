@@ -454,7 +454,7 @@ export const DataFieldDefaults = {
 	"CIdSetTeams": "", // Seems to be a string separated by commas with either: number, or number range `2-12`
 	"CAttachKeys": "", // The editor literally doesn't have a way to edit this field type... in CAttachMethodBestMatch_Keys
 	"SProductReleaseDate": "", // %d/%d/%d
-	"SGameContentCreationData": "", // %d/%d/%d
+	"SGameContentCreationData": "", // ???
 	
 	// Links
 	...(():Record<keyof CatalogLinks, string> => {
