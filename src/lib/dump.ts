@@ -222,6 +222,7 @@ type EnumType = Record<string, { index:number; name:string; }>;
 	
 	let enums:Record<string, EnumType> = {};
 	
+	const manualEnums:Record<string, EnumType> = JSON.parse(await fs.readFile(`${__dirname}/../../data/enums_manual.json`, "utf8"));
 	
 	for(let enumName of enumsFromStringsNeeded){
 		if(!set.has(`EDSTR_ENUMNAME_${enumName}`)){
@@ -250,6 +251,17 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		if(Object.keys(values).length == 0){
 			console.log(`${enumName} has no values in EditorCatalogStrings.txt (${prefixName})`);
 			continue;
+		}
+		
+		if(enumName in manualEnums){
+			let manual = manualEnums[enumName];
+			for(let [k,v] of Object.entries(manual)){
+				if(v.index < 0) delete manual[k];
+			}
+			
+			if(Object.keys(values).length > Object.keys(manual).length){
+				console.log(`Investigate manual enum ${enumName}. Found more values than we have there`);
+			}
 		}
 		
 		enums[enumName] = values;

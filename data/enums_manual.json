@@ -7799,16 +7799,6 @@
 			"name": "Or"
 		}
 	},
-	"EEffectApplyBehaviorFlag": {
-		"e_effectApplyBehaviorFlagUnknown": {
-			"index": -1,
-			"name": "Unknown"
-		},
-		"e_effectApplyBehaviorFlagUseDuration": {
-			"index": 0,
-			"name": "UseDuration"
-		}
-	},
 	"EEffectCancelOrderFlag": {
 		"e_effectCancelOrderFlagUnknown": {
 			"index": -1,
