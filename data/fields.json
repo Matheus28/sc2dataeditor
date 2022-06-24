@@ -15981,6 +15981,7 @@
 	},
 	"CAccumulatorAbilLevel": {
 		"parent": "CAccumulatorLevel",
+		"abstract": true,
 		"fields": {}
 	},
 	"CAccumulatorUnitLevel": {

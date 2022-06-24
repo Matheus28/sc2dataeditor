@@ -13,6 +13,8 @@ const headerLines = new Set(`
 //GENERATED CODE====================================================================================
 `.trim().split(/\r?\n/g).map(v => v.trim()));
 
+type EnumType = Record<string, { index:number; name:string; }>;
+
 (async function(){
 	const dir = `${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/base.sc2data/TriggerLibs/GameData/`;
 	
@@ -39,7 +41,6 @@ const headerLines = new Set(`
 		
 		let curEnum:CurEnumType|undefined;
 		
-		type EnumType = Record<string, { index:number; name:string; }>;
 		
 		let enums:Record<string, EnumType> = {};
 		function flushEnum(curEnum:CurEnumType){
@@ -112,7 +113,7 @@ const headerLines = new Set(`
 	}, {});
 	
 	try { await fs.mkdir(`${__dirname}/../../data/`); } catch {}
-	await fs.writeFile(`${__dirname}/../../data/enums.json`, JSON.stringify(enums, null, '\t'), 'utf8');
+	await fs.writeFile(`${__dirname}/../../data/enums_galaxy.json`, JSON.stringify(enums, null, '\t'), 'utf8');
 	
 	
 	assert("EGameCatalog" in enums);
@@ -134,4 +135,98 @@ const headerLines = new Set(`
 	autogenGalaxy += "}\n";
 	
 	await fs.writeFile(`${__dirname}/../../out/dump.galaxy`, autogenGalaxy);
-})();
+})().then(async function(){
+	const enumsFromStringsNeeded = [
+		"EAbilAttackFlag",
+		"EAbilBatteryFlag",
+		"EAbilBehaviorCycleMode",
+		"EAbilLastTarget",
+		"EAbilOrderDisplayType",
+		"EAccumulatorApplicationRule",
+		"EAccumulatorAttributePointsFlag",
+		"EAccumulatorBehaviorType",
+		"EAccumulatorOperation",
+		"EActorModelAspectDuring",
+		"EActorModelAspectModelOwnerType",
+		"EActorModelAspectObservedPlayerType",
+		"EActorModelAspectObservingPoV",
+		"EActorModelAspectPerson",
+		"EActorModelAspectRegardsAs",
+		"EActorModelAspectTest",
+		"EActorPhysicsDataFlag",
+		"EActorPlayerIdSource",
+		"EActorQuadDecorationFlag",
+		"EActorQuadDecorationFunction",
+		"EActorSoundPlayMode",
+		"EActorSoundValueSource",
+		"EAttackTypeResponse",
+		"EBehaviorHeroicState",
+		"EBehaviorPowerSourceFlag",
+		"EChargeFlag",
+		"ECursorRangeMode",
+		"EDamageResponseCategory",
+		"EDamageResponseDamageValue",
+		"EDamageResponseHandledValue",
+		"EDamageTypeResponse",
+		"EEffectModifyFacing",
+		"EEffectModifyTurret",
+		"EEffectModifyTurretFlag",
+		"EEffectRemoveBehaviorAlignment",
+		"EGlueTheme",
+		"EImplementionLevel",
+		"EListWalkMode",
+		"EMuteControl",
+		"EPlayerLeaveFlag",
+		"EPurchaseWarningCondition",
+		"EQuickCastMode",
+		"ESelectionTransferFlag",
+		"ESoundDataFlag",
+		"ESoundDupePriority",
+		"ESoundMaxMethod",
+		"ESoundMaxPrioritization",
+		"ETargetModeValidation",
+		"EUnitGender",
+		"EVitalsAccumulatorModificationType",
+		"EVolumeControl",
+	];
+	
+	let strings = await fs.readFile(`${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/Editor/EditorCatalogStrings.txt`, "utf8");
+	let arr = strings.split(/\r?\n/g,).map(v => v.split("=")[0].trim()).filter(v => v.length > 0);
+	arr.sort();
+	
+	let set = new Set(arr);
+	
+	let enums:Record<string, EnumType> = {};
+	
+	
+	for(let enumName of enumsFromStringsNeeded){
+		if(!set.has(`EDSTR_ENUMNAME_${enumName}`)){
+			console.log(`No ${enumName} in EditorCatalogStrings.txt`);
+			continue;
+		}
+		
+		let prefixName = `EDSTR_ENUMVAL_e_${enumName[1].toLowerCase() + enumName.slice(2)}`.toLowerCase();
+		if(prefixName == "edstr_enumval_e_vitalsaccumulatormodificationtype") prefixName = "EDSTR_ENUMVAL_e_vitalsAccumulatorModification";
+		
+		let values:EnumType = {};
+		// O(N^2) but I'm too lazy to code it properly
+		let index = 0;
+		for(let key of arr){
+			if(!key.toLowerCase().startsWith(prefixName)) continue;
+			
+			values[key.slice(`EDSTR_ENUMVAL_`.length)] = {
+				index: index++, // just a guess
+				name: key.slice(prefixName.length),
+			}
+		}
+		
+		if(Object.keys(values).length == 0){
+			console.log(`${enumName} has no values in EditorCatalogStrings.txt (${prefixName})`);
+			continue;
+		}
+		
+		enums[enumName] = values;
+	}
+	
+	await fs.writeFile(`${__dirname}/../../data/enums_editor.json`, JSON.stringify(enums, null, '\t'), "utf8");
+});

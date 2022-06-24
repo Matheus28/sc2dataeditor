@@ -15466,5 +15466,26 @@
 			"index": 2,
 			"name": "ByDistanceFromTarget"
 		}
+	},
+	"EUnitGender": {
+		"e_genderDefault": {
+			"index": -1,
+			"name": "Default"
+		},
+		
+		"e_genderMale": {
+			"index": 0,
+			"name": "Male"
+		},
+		
+		"e_genderFemale": {
+			"index": 1,
+			"name": "Female"
+		},
+		
+		"e_genderNeutral": {
+			"index": 2,
+			"name": "Neutral"
+		}
 	}
 }

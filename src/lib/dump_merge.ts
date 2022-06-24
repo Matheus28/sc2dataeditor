@@ -61,7 +61,7 @@ const specificFieldFlagIndexEnum:Record<string,string> = {
 
 // When adding new structs, we need to specify these
 const specificParents:Record<string, string|null> = {
-	// "CAbilAttackModifier": ,
+	"CAbilAttackModifier": "CAbil",
 	"CAccumulator": null,
 	"CAccumulatorAbilLevel": "CAccumulatorLevel",
 	"CAccumulatorArithmetic": "CAccumulator",
@@ -214,7 +214,7 @@ const specificParents:Record<string, string|null> = {
 
 // When adding new structs, we need to specify here if it's abstract
 const specificAbstract:Record<string, true> = {
-	
+	"CAccumulatorAbilLevel": true,
 };
 
 (async function(){

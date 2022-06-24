@@ -526,6 +526,7 @@ const numberRestrictions:{
 
 
 let unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
+	JSON.parse(readFileSync("./data/enums_editor.json", "utf8")),
 	JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8")),
 	JSON.parse(readFileSync("./data/enums_manual.json", "utf8"))
 );
