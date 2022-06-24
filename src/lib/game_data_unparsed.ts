@@ -124,6 +124,7 @@ export const catalogContents:Record<CatalogName, string[]> = {
 		"CEffectRemoveBehavior",
 		"CEffectRemoveKinetic",
 		"CEffectRemoveTrackedUnit",
+		"CEffectResponse",
 		"CEffectReturnMagazine",
 		"CEffectSet",
 		"CEffectSwitch",

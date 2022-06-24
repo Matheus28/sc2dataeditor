@@ -572,7 +572,9 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 		
 		let rawEnum = getRawEnum(name);
 		let values = Object.assign({}, rawEnum.value.values);
-		delete values[rawEnum.value.reverseValues[-1]]; // Delete the unknown entry
+		
+		let unknown = rawEnum.value.reverseValues[-1];
+		if(unknown !== undefined) delete values[unknown]; // Delete the unknown entry
 		
 		return parsedNoUnknownEnums[name] = simpleEnum(values);
 	}

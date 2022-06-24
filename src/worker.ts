@@ -515,12 +515,7 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	let vv = accessEntry(field.entry, false);
 	if(!vv) return undefined;
 	
-	
-	let entry = getFieldContainer(field.name, vv.node, false);
-	if(!entry) return undefined;
-	
 	let arrName2 = field.name[field.name.length - 1];
-	
 	if(typeof arrName2 != 'string'){
 		throw new Error("You must refer to the array without an index");
 	}
@@ -529,8 +524,11 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 	
 	let ret:Record<string,{removed:boolean;source:ValueSource}> = {}
 	
-	function addEntryIndexes(entry:XMLNode, source:ValueSource){
-		let tmp = getArrayFieldIndexesInternal(entry, arrName);
+	function addEntryIndexes(entry:XMLNodeEntry, source:ValueSource){
+		let container = getFieldContainer(field.name, entry, false);
+		if(!container) return;
+		
+		let tmp = getArrayFieldIndexesInternal(container, arrName);
 		if(tmp){
 			for(let index in tmp){
 				if(!(index in ret)){
@@ -544,6 +542,7 @@ function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean
 		}
 	}
 	
+	let entry = vv.node;
 	addEntryIndexes(entry, ValueSource.Self);
 	
 	for(;;){
