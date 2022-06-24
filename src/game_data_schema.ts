@@ -111,7 +111,7 @@ ${Object.entries(DataFieldDefaults).map(([typeName, typeDefaultValue]) => {
 ${Object.entries(unparsedEnums).map(([enumName, enumContents]) => {
 	let tmp = `<xs:complexType name="${fixName(enumName)}"><xs:attribute name="value" type="simple_${fixName(enumName)}"/></xs:complexType>`;
 	tmp += `<xs:simpleType name="simple_${fixName(enumName)}"><xs:restriction base="xs:string">`;
-	tmp += Object.values(enumContents).map(v => `<xs:enumeration value="${v.name}"/><xs:enumeration value="${v.index}"/>`).join('\n');
+	tmp += Object.values(enumContents).map(v => `<xs:enumeration value="${v.name}"/>`).join('\n');
 	if(enumName in addToEnum){
 		tmp += addToEnum[enumName].map(vv => `<xs:enumeration value="${vv}"/>`).join("\n");
 	}
