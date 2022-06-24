@@ -943,6 +943,16 @@
 			"name": "Replace"
 		}
 	},
+	"ESoundMaxPrioritization": {
+		"e_soundDupePrioritizationAge": {
+			"index": 0,
+			"name": "Age"
+		},
+		"e_soundDupePrioritizationDistance": {
+			"index": 1,
+			"name": "Distance"
+		}
+	},
 	"ETargetModeValidation": {
 		"e_targetModeValidationNone": {
 			"index": 0,
