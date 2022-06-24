@@ -309,12 +309,22 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 		// We have reached the top of the chain, like CEffectCreep and we want its parent
 		// Now we check the meta parent for that (CEffect)
 		if(!useMetaChain) return undefined;
-		let meta = CatalogTypesInstance[getCatalogNameByTagname(node.tagname)][node.tagname];
-		if(meta.parent == null) return undefined;
 		
-		def = getDefaultEntryForType(meta.parent);
-		if(def === undefined) return undefined;
-		return { node: def.node, dataspace: def.dataspace, isDefault: true };
+		let tagname = node.tagname;
+		
+		for(;;){
+			let meta = CatalogTypesInstance[getCatalogNameByTagname(tagname)][tagname];
+			if(meta.parent == null) return undefined;
+			
+			def = getDefaultEntryForType(meta.parent);
+			if(def === undefined){
+				// Skip to next one up in the meta chain
+				tagname = meta.parent;
+				continue;
+			}
+			
+			return { node: def.node, dataspace: def.dataspace, isDefault: true };
+		}
 	}
 	
 	let parent = def; // This will be our fallback parent
