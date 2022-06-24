@@ -971,6 +971,20 @@
 			"name": "Neutral"
 		}
 	},
+	"EVitalsAccumulatorModificationType": {
+		"e_vitalsAccumulatorModificationPerUnit": {
+			"index": 0,
+			"name": "PerUnit"
+		},
+		"e_vitalsAccumulatorModificationPerUnitMaxVital": {
+			"index": 1,
+			"name": "PerUnitMaxVital"
+		},
+		"e_vitalsAccumulatorModificationRelative": {
+			"index": 2,
+			"name": "Relative"
+		}
+	},
 	"EVolumeControl": {
 		"e_volumeControlMusic": {
 			"index": 0,

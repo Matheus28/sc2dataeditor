@@ -206,7 +206,7 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		}
 		
 		let prefixName = `EDSTR_ENUMVAL_e_${enumName[1].toLowerCase() + enumName.slice(2)}`.toLowerCase();
-		if(prefixName == "edstr_enumval_e_vitalsaccumulatormodificationtype") prefixName = "EDSTR_ENUMVAL_e_vitalsAccumulatorModification";
+		if(prefixName == "edstr_enumval_e_vitalsaccumulatormodificationtype") prefixName = "EDSTR_ENUMVAL_e_vitalsAccumulatorModification".toLowerCase();
 		
 		let values:EnumType = {};
 		// O(N^2) but I'm too lazy to code it properly
