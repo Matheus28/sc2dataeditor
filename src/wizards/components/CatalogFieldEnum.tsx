@@ -12,13 +12,24 @@ interface Props {
 }
 
 export default function(props:Props){
+	const [extraValue, setExtraValue] = React.useState<string|undefined>();
+	React.useEffect(() => {
+		setExtraValue(undefined);
+	}, [props.field, props.enumType]);
+	
 	return <CatalogFieldSimple
 		field={props.field}
 		default={props.enumType.reverseValues[0]}
+		onLoad={(_, resolved) => {
+			if(resolved in props.enumType.values) return;
+			setExtraValue(resolved);
+		}}
 		control={<Form.Select>
 			{mapObjectToArray(props.enumType.values, (value, index) => {
 				return <option key={index} value={value}>{value}</option>;
 			})}
+			
+			{extraValue !== undefined && <option key={-1} value={extraValue}>{extraValue}</option>}
 		</Form.Select>}
 	/>;
 };
