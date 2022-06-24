@@ -1024,5 +1024,813 @@
 			"index": 6,
 			"name": "Unknown"
 		}
+	},
+	"EAbilAttackModifierFlag": {
+		"e_abilAttackModifierFlagAttackOnce": {
+			"index": 0,
+			"name": "AttackOnce"
+		},
+		"e_abilAttackModifierFlagAutoCast": {
+			"index": 1,
+			"name": "AutoCast"
+		},
+		"e_abilAttackModifierFlagAutoCastOffOwnerLeave": {
+			"index": 2,
+			"name": "AutoCastOffOwnerLeave"
+		},
+		"e_abilAttackModifierFlagAutoCastOn": {
+			"index": 3,
+			"name": "AutoCastOn"
+		},
+		"e_abilAttackModifierFlagBestUnit": {
+			"index": 4,
+			"name": "BestUnit"
+		},
+		"e_abilAttackModifierFlagSmart": {
+			"index": 5,
+			"name": "Smart"
+		}
+	},
+	"EActorModelMaterialType": {
+		"e_actorModelMaterialTypeGlaze": {
+			"index": 0,
+			"name": "Glaze"
+		},
+		"e_actorModelMaterialTypeReplacement": {
+			"index": 1,
+			"name": "Replacement"
+		}
+	},
+	"EActorSiteOpTetherEnableType": {
+		"e_actorSiteOpTetherFlagDisabled": {
+			"index": 0,
+			"name": "Disabled"
+		},
+		"e_actorSiteOpTetherFlagMax": {
+			"index": 1,
+			"name": "Max"
+		},
+		"e_actorSiteOpTetherFlagMin": {
+			"index": 2,
+			"name": "Min"
+		},
+		"e_actorSiteOpTetherFlagMinMax": {
+			"index": 3,
+			"name": "MinMax"
+		}
+	},
+	"EActorSiteOrbiterType": {
+		"e_actorSiteOrbiterTypeAbsolute": {
+			"index": 0,
+			"name": "Absolute"
+		},
+		"e_actorSiteOrbiterTypeRelative": {
+			"index": 1,
+			"name": "Relative"
+		}
+	},
+	"EActorTiltType": {
+		"e_actorTiltTypeAny": {
+			"index": 0,
+			"name": "Any"
+		},
+		"e_actorTiltTypeMover": {
+			"index": 1,
+			"name": "Mover"
+		},
+		"e_actorTiltTypeNoMover": {
+			"index": 2,
+			"name": "NoMover"
+		}
+	},
+	"EArtifactType": {
+		"e_artifactTypeGem": {
+			"index": 0,
+			"name": "Gem"
+		},
+		"e_artifactTypeGlyph": {
+			"index": 1,
+			"name": "Glyph"
+		},
+		"e_artifactTypeTrinket": {
+			"index": 2,
+			"name": "Trinket"
+		}
+	},
+	"EAMBestMatchFlag": {
+		"e_amBestMatchFlagFullMatch": {
+			"index": 0,
+			"name": "FullMatch"
+		},
+		"e_amBestMatchFlagNoMismatchQueryProps": {
+			"index": 1,
+			"name": "NoMismatchQueryProps"
+		}
+	},
+	"EBehaviorUnitTrackerAtMaxRule": {
+		"e_behaviorUnitTrackerAtMaxRuleIgnore": {
+			"index": 0,
+			"name": "Ignore"
+		},
+		"e_behaviorUnitTrackerAtMaxRuleReplaceOldest": {
+			"index": 1,
+			"name": "ReplaceOldest"
+		}
+	},
+	"EBehaviorUnitTrackerSnapRule": {
+		"e_behaviorUnitTrackerSnapRuleClosest": {
+			"index": 0,
+			"name": "Closest"
+		},
+		"e_behaviorUnitTrackerSnapRuleRandom": {
+			"index": 1,
+			"name": "Random"
+		}
+	},
+	"EEffectApplyBehaviorFlag": {
+		"e_effectApplyBehaviorFlagSetAttributeBasePoints": {
+			"index": 0,
+			"name": "SetAttributeBasePoints"
+		},
+		"e_effectApplyBehaviorFlagSetAttributePoints": {
+			"index": 1,
+			"name": "SetAttributePoints"
+		},
+		"e_effectApplyBehaviorFlagSetAttributePointsDelta": {
+			"index": 2,
+			"name": "SetAttributePointsDelta"
+		},
+		"e_effectApplyBehaviorFlagUseDuration": {
+			"index": 3,
+			"name": "UseDuration"
+		}
+	},
+	"EEffectContainer": {
+		"e_effectContainerAny": {
+			"index": 0,
+			"name": "Any"
+		},
+		"e_effectContainerInventory": {
+			"index": 1,
+			"name": "Inventory"
+		},
+		"e_effectContainerMagazine": {
+			"index": 2,
+			"name": "Magazine"
+		},
+		"e_effectContainerTransport": {
+			"index": 3,
+			"name": "Transport"
+		}
+	},
+	"EExclusivityAction": {
+		"e_exclusivityActionFail": {
+			"index": 0,
+			"name": "Fail"
+		},
+		"e_exclusivityActionQueue": {
+			"index": 1,
+			"name": "Queue"
+		},
+		"e_exclusivityActionStomp": {
+			"index": 2,
+			"name": "Stomp"
+		}
+	},
+	"EExclusivityQueueAction": {
+		"e_exclusivityQueueActionFail": {
+			"index": 0,
+			"name": "Fail"
+		},
+		"e_exclusivityQueueActionStomp": {
+			"index": 1,
+			"name": "Stomp"
+		}
+	},
+	"EResponseContinueMethod": {
+		"e_responseContinueMethodAlways": {
+			"index": 0,
+			"name": "Always"
+		},
+		"e_responseContinueMethodBreak": {
+			"index": 1,
+			"name": "Break"
+		},
+		"e_responseContinueMethodFailure": {
+			"index": 2,
+			"name": "Failure"
+		},
+		"e_responseContinueMethodSuccess": {
+			"index": 3,
+			"name": "Success"
+		}
+	},
+	"EResponseUnitBirthType": {
+		"e_responseUnitBirthTypeBuilt": {
+			"index": 0,
+			"name": "Built"
+		},
+		"e_responseUnitBirthTypeCheatCreated": {
+			"index": 1,
+			"name": "CheatCreated"
+		},
+		"e_responseUnitBirthTypeEffectCreated": {
+			"index": 2,
+			"name": "EffectCreated"
+		},
+		"e_responseUnitBirthTypeMorphed": {
+			"index": 3,
+			"name": "Morphed"
+		},
+		"e_responseUnitBirthTypeTrained": {
+			"index": 4,
+			"name": "Trained"
+		},
+		"e_responseUnitBirthTypeTriggerCreated": {
+			"index": 5,
+			"name": "TriggerCreated"
+		}
+	},
+	"ESkillPoint": {
+		"e_skillPointCurrent": {
+			"index": 0,
+			"name": "Current"
+		},
+		"e_skillPointExtra": {
+			"index": 1,
+			"name": "Extra"
+		},
+		"e_skillPointTotal": {
+			"index": 2,
+			"name": "Total"
+		},
+		"e_skillPointUsed": {
+			"index": 3,
+			"name": "Used"
+		}
+	},
+	"ESoundExclusivityFlag": {
+		"e_soundExclusivityFlagSupressionInterrupts": {
+			"index": 0,
+			"name": "SupressionInterrupts"
+		}
+	},
+	"ESoundMixSnapshotFlag": {
+		"e_soundMixSnapshotFlagApplyCategoryDuckingGlobal": {
+			"index": 0,
+			"name": "ApplyCategoryDuckingGlobal"
+		},
+		"e_soundMixSnapshotFlagApplyCategoryDuckingNonLocal": {
+			"index": 1,
+			"name": "ApplyCategoryDuckingNonLocal"
+		}
+	},
+	"EUnitTestState": {
+		"e_unitTestStateAcquiringSuppressed": {
+			"index": 0,
+			"name": "AcquiringSuppressed"
+		},
+		"e_unitTestStateAlive": {
+			"index": 1,
+			"name": "Alive"
+		},
+		"e_unitTestStateApplyingFootprint": {
+			"index": 2,
+			"name": "ApplyingFootprint"
+		},
+		"e_unitTestStateArmorDisabled": {
+			"index": 3,
+			"name": "ArmorDisabled"
+		},
+		"e_unitTestStateArmySelect": {
+			"index": 4,
+			"name": "ArmySelect"
+		},
+		"e_unitTestStateAttackSuppressed": {
+			"index": 5,
+			"name": "AttackSuppressed"
+		},
+		"e_unitTestStateBeacon": {
+			"index": 6,
+			"name": "Beacon"
+		},
+		"e_unitTestStateBenign": {
+			"index": 7,
+			"name": "Benign"
+		},
+		"e_unitTestStateBuildOnSuppressed": {
+			"index": 8,
+			"name": "BuildOnSuppressed"
+		},
+		"e_unitTestStateBuried": {
+			"index": 9,
+			"name": "Buried"
+		},
+		"e_unitTestStateCameraFollowable": {
+			"index": 10,
+			"name": "CameraFollowable"
+		},
+		"e_unitTestStateCloakSuppressed": {
+			"index": 11,
+			"name": "CloakSuppressed"
+		},
+		"e_unitTestStateCloaked": {
+			"index": 12,
+			"name": "Cloaked"
+		},
+		"e_unitTestStateCollisionDisabled": {
+			"index": 13,
+			"name": "CollisionDisabled"
+		},
+		"e_unitTestStateCombatSuppressed": {
+			"index": 14,
+			"name": "CombatSuppressed"
+		},
+		"e_unitTestStateCurrentlyRevivable": {
+			"index": 15,
+			"name": "CurrentlyRevivable"
+		},
+		"e_unitTestStateDamageVisibilitySuppressed": {
+			"index": 16,
+			"name": "DamageVisibilitySuppressed"
+		},
+		"e_unitTestStateDazed": {
+			"index": 17,
+			"name": "Dazed"
+		},
+		"e_unitTestStateDead": {
+			"index": 18,
+			"name": "Dead"
+		},
+		"e_unitTestStateDecaying": {
+			"index": 19,
+			"name": "Decaying"
+		},
+		"e_unitTestStateDestructible": {
+			"index": 20,
+			"name": "Destructible"
+		},
+		"e_unitTestStateDetector": {
+			"index": 21,
+			"name": "Detector"
+		},
+		"e_unitTestStateDying": {
+			"index": 22,
+			"name": "Dying"
+		},
+		"e_unitTestStateEnergyRegenSuppressed": {
+			"index": 23,
+			"name": "EnergyRegenSuppressed"
+		},
+		"e_unitTestStateFidgetingAllowed": {
+			"index": 24,
+			"name": "FidgetingAllowed"
+		},
+		"e_unitTestStateGateEnforcementSuppressed": {
+			"index": 25,
+			"name": "GateEnforcementSuppressed"
+		},
+		"e_unitTestStateHallucination": {
+			"index": 26,
+			"name": "Hallucination"
+		},
+		"e_unitTestStateHarvesting": {
+			"index": 27,
+			"name": "Harvesting"
+		},
+		"e_unitTestStateHarvestingCounted": {
+			"index": 28,
+			"name": "HarvestingCounted"
+		},
+		"e_unitTestStateHero": {
+			"index": 29,
+			"name": "Hero"
+		},
+		"e_unitTestStateHidden": {
+			"index": 30,
+			"name": "Hidden"
+		},
+		"e_unitTestStateHideWaypoints": {
+			"index": 31,
+			"name": "HideWaypoints"
+		},
+		"e_unitTestStateHighlighted": {
+			"index": 32,
+			"name": "Highlighted"
+		},
+		"e_unitTestStateHoldingPosition": {
+			"index": 33,
+			"name": "HoldingPosition"
+		},
+		"e_unitTestStateHosting": {
+			"index": 34,
+			"name": "Hosting"
+		},
+		"e_unitTestStateIdle": {
+			"index": 35,
+			"name": "Idle"
+		},
+		"e_unitTestStateIgnorePlayerAlliedFlags": {
+			"index": 36,
+			"name": "IgnorePlayerAlliedFlags"
+		},
+		"e_unitTestStateIgnoredByPlacement": {
+			"index": 37,
+			"name": "IgnoredByPlacement"
+		},
+		"e_unitTestStateInMovementThinkAndAgeLoop": {
+			"index": 38,
+			"name": "InMovementThinkAndAgeLoop"
+		},
+		"e_unitTestStateInProgress": {
+			"index": 39,
+			"name": "InProgress"
+		},
+		"e_unitTestStateInStasis": {
+			"index": 40,
+			"name": "InStasis"
+		},
+		"e_unitTestStateInsideMagazine": {
+			"index": 41,
+			"name": "InsideMagazine"
+		},
+		"e_unitTestStateInsidePlayerTransport": {
+			"index": 42,
+			"name": "InsidePlayerTransport"
+		},
+		"e_unitTestStateInsideTransport": {
+			"index": 43,
+			"name": "InsideTransport"
+		},
+		"e_unitTestStateInsideUnitTransport": {
+			"index": 44,
+			"name": "InsideUnitTransport"
+		},
+		"e_unitTestStateInteractable": {
+			"index": 45,
+			"name": "Interactable"
+		},
+		"e_unitTestStateInteracting": {
+			"index": 46,
+			"name": "Interacting"
+		},
+		"e_unitTestStateInvulnerabilitySuppressed": {
+			"index": 47,
+			"name": "InvulnerabilitySuppressed"
+		},
+		"e_unitTestStateInvulnerable": {
+			"index": 48,
+			"name": "Invulnerable"
+		},
+		"e_unitTestStateItemUsageSuppressed": {
+			"index": 49,
+			"name": "ItemUsageSuppressed"
+		},
+		"e_unitTestStateJumping": {
+			"index": 50,
+			"name": "Jumping"
+		},
+		"e_unitTestStateKiting": {
+			"index": 51,
+			"name": "Kiting"
+		},
+		"e_unitTestStateLifeRegenSuppressed": {
+			"index": 52,
+			"name": "LifeRegenSuppressed"
+		},
+		"e_unitTestStateMagazine": {
+			"index": 53,
+			"name": "Magazine"
+		},
+		"e_unitTestStateMissile": {
+			"index": 54,
+			"name": "Missile"
+		},
+		"e_unitTestStateMissileNullified": {
+			"index": 55,
+			"name": "MissileNullified"
+		},
+		"e_unitTestStateMorphing": {
+			"index": 56,
+			"name": "Morphing"
+		},
+		"e_unitTestStateMovable": {
+			"index": 57,
+			"name": "Movable"
+		},
+		"e_unitTestStateMovingImpossible": {
+			"index": 58,
+			"name": "MovingImpossible"
+		},
+		"e_unitTestStateMovingSuppressed": {
+			"index": 59,
+			"name": "MovingSuppressed"
+		},
+		"e_unitTestStateNoDraw": {
+			"index": 60,
+			"name": "NoDraw"
+		},
+		"e_unitTestStateOrderQueuePaused": {
+			"index": 61,
+			"name": "OrderQueuePaused"
+		},
+		"e_unitTestStateOrderQueueUninterruptible": {
+			"index": 62,
+			"name": "OrderQueueUninterruptible"
+		},
+		"e_unitTestStatePassengerSuppressed": {
+			"index": 63,
+			"name": "PassengerSuppressed"
+		},
+		"e_unitTestStatePassive": {
+			"index": 64,
+			"name": "Passive"
+		},
+		"e_unitTestStatePathing": {
+			"index": 65,
+			"name": "Pathing"
+		},
+		"e_unitTestStatePaused": {
+			"index": 66,
+			"name": "Paused"
+		},
+		"e_unitTestStatePawnable": {
+			"index": 67,
+			"name": "Pawnable"
+		},
+		"e_unitTestStatePenaltyRevealed": {
+			"index": 68,
+			"name": "PenaltyRevealed"
+		},
+		"e_unitTestStatePermanentlyInvulnerable": {
+			"index": 69,
+			"name": "PermanentlyInvulnerable"
+		},
+		"e_unitTestStatePlayerRevivable": {
+			"index": 70,
+			"name": "PlayerRevivable"
+		},
+		"e_unitTestStatePrecursor": {
+			"index": 71,
+			"name": "Precursor"
+		},
+		"e_unitTestStateProgressRevealed": {
+			"index": 72,
+			"name": "ProgressRevealed"
+		},
+		"e_unitTestStateProvidingFood": {
+			"index": 73,
+			"name": "ProvidingFood"
+		},
+		"e_unitTestStatePushingSuppressed": {
+			"index": 74,
+			"name": "PushingSuppressed"
+		},
+		"e_unitTestStateRadar": {
+			"index": 75,
+			"name": "Radar"
+		},
+		"e_unitTestStateRequirementTestSuppressed": {
+			"index": 76,
+			"name": "RequirementTestSuppressed"
+		},
+		"e_unitTestStateResistant": {
+			"index": 77,
+			"name": "Resistant"
+		},
+		"e_unitTestStateResource": {
+			"index": 78,
+			"name": "Resource"
+		},
+		"e_unitTestStateResourceDropOff": {
+			"index": 79,
+			"name": "ResourceDropOff"
+		},
+		"e_unitTestStateRevivable": {
+			"index": 80,
+			"name": "Revivable"
+		},
+		"e_unitTestStateSelectableWhileDead": {
+			"index": 81,
+			"name": "SelectableWhileDead"
+		},
+		"e_unitTestStateShieldRegenSuppressed": {
+			"index": 82,
+			"name": "ShieldRegenSuppressed"
+		},
+		"e_unitTestStateSilenced": {
+			"index": 83,
+			"name": "Silenced"
+		},
+		"e_unitTestStateStartingUnit": {
+			"index": 84,
+			"name": "StartingUnit"
+		},
+		"e_unitTestStateStatsTrackAbilities": {
+			"index": 85,
+			"name": "StatsTrackAbilities"
+		},
+		"e_unitTestStateStatsTrackCreation": {
+			"index": 86,
+			"name": "StatsTrackCreation"
+		},
+		"e_unitTestStateStatsTrackDamageDone": {
+			"index": 87,
+			"name": "StatsTrackDamageDone"
+		},
+		"e_unitTestStateStatsTrackDamageReceived": {
+			"index": 88,
+			"name": "StatsTrackDamageReceived"
+		},
+		"e_unitTestStateStructure": {
+			"index": 89,
+			"name": "Structure"
+		},
+		"e_unitTestStateStunned": {
+			"index": 90,
+			"name": "Stunned"
+		},
+		"e_unitTestStateSummoned": {
+			"index": 91,
+			"name": "Summoned"
+		},
+		"e_unitTestStateTechSuppressed": {
+			"index": 92,
+			"name": "TechSuppressed"
+		},
+		"e_unitTestStateTownCamera": {
+			"index": 93,
+			"name": "TownCamera"
+		},
+		"e_unitTestStateTransport": {
+			"index": 94,
+			"name": "Transport"
+		},
+		"e_unitTestStateTreatStructureAsUnitForSelection": {
+			"index": 95,
+			"name": "TreatStructureAsUnitForSelection"
+		},
+		"e_unitTestStateTurnable": {
+			"index": 96,
+			"name": "Turnable"
+		},
+		"e_unitTestStateTurningImpossible": {
+			"index": 97,
+			"name": "TurningImpossible"
+		},
+		"e_unitTestStateTurningSuppressed": {
+			"index": 98,
+			"name": "TurningSuppressed"
+		},
+		"e_unitTestStateUnclickable": {
+			"index": 99,
+			"name": "Unclickable"
+		},
+		"e_unitTestStateUncloakable": {
+			"index": 100,
+			"name": "Uncloakable"
+		},
+		"e_unitTestStateUncommandable": {
+			"index": 101,
+			"name": "Uncommandable"
+		},
+		"e_unitTestStateUncursorable": {
+			"index": 102,
+			"name": "Uncursorable"
+		},
+		"e_unitTestStateUnderConstruction": {
+			"index": 103,
+			"name": "UnderConstruction"
+		},
+		"e_unitTestStateUndetectable": {
+			"index": 104,
+			"name": "Undetectable"
+		},
+		"e_unitTestStateUnhighlightable": {
+			"index": 105,
+			"name": "Unhighlightable"
+		},
+		"e_unitTestStateUnradarable": {
+			"index": 106,
+			"name": "Unradarable"
+		},
+		"e_unitTestStateUnselectable": {
+			"index": 107,
+			"name": "Unselectable"
+		},
+		"e_unitTestStateUnstoppable": {
+			"index": 108,
+			"name": "Unstoppable"
+		},
+		"e_unitTestStateUntargetable": {
+			"index": 109,
+			"name": "Untargetable"
+		},
+		"e_unitTestStateUntooltipable": {
+			"index": 110,
+			"name": "Untooltipable"
+		},
+		"e_unitTestStateUsingFood": {
+			"index": 111,
+			"name": "UsingFood"
+		},
+		"e_unitTestStateVisionSuppressed": {
+			"index": 112,
+			"name": "VisionSuppressed"
+		},
+		"e_unitTestStateWorker": {
+			"index": 113,
+			"name": "Worker"
+		},
+		"e_unitTestStateXPGainSuppressed": {
+			"index": 114,
+			"name": "XPGainSuppressed"
+		},
+		"e_unitTestStateXPGrantSuppressed": {
+			"index": 115,
+			"name": "XPGrantSuppressed"
+		},
+		"e_unitTestStateXPSharingSuppressed": {
+			"index": 116,
+			"name": "XPSharingSuppressed"
+		}
+	},
+	"EWeaponType": {
+		"e_weaponTypeMelee": {
+			"index": 0,
+			"name": "Melee"
+		},
+		"e_weaponTypeMeleeOrRanged": {
+			"index": 1,
+			"name": "MeleeOrRanged"
+		},
+		"e_weaponTypeRanged": {
+			"index": 2,
+			"name": "Ranged"
+		}
+	},
+	"EVoiceOverSkinState": {
+		"e_voiceOverSkinStateDisabled": {
+			"index": 0,
+			"name": "Disabled"
+		},
+		"e_voiceOverSkinStateShared": {
+			"index": 1,
+			"name": "Shared"
+		},
+		"e_voiceOverSkinStateUnshared": {
+			"index": 2,
+			"name": "Unshared"
+		}
+	},
+	"EVoiceOverSoundType": {
+		"e_voiceOverSoundTypeCustomName": {
+			"index": 0,
+			"name": "CustomName"
+		},
+		"e_voiceOverSoundTypeCustomSuffix": {
+			"index": 1,
+			"name": "CustomSuffix"
+		},
+		"e_voiceOverSoundTypeDefault": {
+			"index": 2,
+			"name": "Default"
+		},
+		"e_voiceOverSoundTypeNone": {
+			"index": 3,
+			"name": "None"
+		}
+	},
+	"EBundleFlag": {
+		"e_bundleFlagExternalSource": {
+			"index": 0,
+			"name": "ExternalSource"
+		},
+		"e_bundleFlagIsFeatured": {
+			"index": 1,
+			"name": "IsFeatured"
+		},
+		"e_bundleFlagIsFeaturedLarge": {
+			"index": 2,
+			"name": "IsFeaturedLarge"
+		},
+		"e_bundleFlagShowDynamicProductContent": {
+			"index": 3,
+			"name": "ShowDynamicProductContent"
+		},
+		"e_bundleFlagSuppressDiscount": {
+			"index": 4,
+			"name": "SuppressDiscount"
+		}
+	},
+	"EKineticFollow": {
+		"e_kineticFollowBearings": {
+			"index": 0,
+			"name": "Bearings"
+		},
+		"e_kineticFollowPosition": {
+			"index": 1,
+			"name": "Position"
+		}
 	}
 }

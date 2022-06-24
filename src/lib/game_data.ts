@@ -287,12 +287,13 @@ export const DataFieldDefaults = {
 	"TAttackTargetPriority": 0,
 	"TCargoCapacity": 0,
 	"TCliffLevel": 0,
+	"TCommanderLevel": 0,
+	"TPlayerId": 0,
 	"TPowerLevel": 0,
 	"uint16": 0,
 	"uint32": 0,
 	"uint64": 0,
 	"uint8": 0,
-	"TPlayerId": 0,
 	
 	// Floats
 	"CFacing": 0.0,
@@ -364,9 +365,12 @@ export const DataFieldDefaults = {
 	"TPowerLink": "",
 	"TTechAlias": "",
 	"TTriggerLibId": "",
+	"TProductHyperlinkId": "",
 	"TUpgradeEffectValue": "",
 	"TUserFieldId": "",
 	"TUserInstanceId": "",
+	"TVoiceOverGroupId": "",
+	"TVoiceOverSkinId": "",
 	
 	// FourCC, up to 4 char string
 	"CFourCC": "",
@@ -431,11 +435,13 @@ export const DataFieldDefaults = {
 	"CVariatorActorAngle": "", //TODO: verify
 	"CVariatorActorFangle": "", //TODO: verify
 	"CVariatorActorReal32": "", //TODO: verify
+	"CVariatorGameFangle": "", //TODO: verify
 	"CVariatorGameFixed": "", //TODO: verify
 	"CVolume": "", //TODO: verify
 	"CVolumeRange": "", //TODO: verify
 	"CYawPitchRoll": "", //TODO: verify
 	"CfRange": "", //TODO: verify
+	"CfQuad": "", //TODO: verify
 	"CiQuad": "", //TODO: verify
 	"CiRange": "", //TODO: verify
 	"TCargoSize": "", //TODO: verify
@@ -446,6 +452,9 @@ export const DataFieldDefaults = {
 	"CLabelExpression": "", // Complicated... follows a specific format, not used anywhere?
 	"CIdSetPlayers": "", // Seems to be a string separated by commas with either: number, or number range `2-12`
 	"CIdSetTeams": "", // Seems to be a string separated by commas with either: number, or number range `2-12`
+	"CAttachKeys": "", // The editor literally doesn't have a way to edit this field type... in CAttachMethodBestMatch_Keys
+	"SProductReleaseDate": "", // %d/%d/%d
+	"SGameContentCreationData": "", // %d/%d/%d
 	
 	// Links
 	...(():Record<keyof CatalogLinks, string> => {
@@ -587,7 +596,11 @@ export const CatalogTypesInstance:Record<CatalogName, Record<string, CatalogSubt
 		if(name in parsedStructs) return parsedStructs[name];
 		
 		structNames.add(name);
-		assert(name in unparsedGameData.classes, `Type ${name} is referred to but not defined`);
+		
+		if(!(name in unparsedGameData.classes)){
+			console.warn(`Type ${name} is referred to but not defined, creating empty definition`);
+			return parsedStructs[name] = struct(name, {});
+		}
 		
 		let unparsedClass = unparsedGameData.classes[name];
 		return parsedStructs[name] = struct(name, parseFields(unparsedClass.fields));

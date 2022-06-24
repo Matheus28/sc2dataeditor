@@ -188,6 +188,30 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		"EUnitGender",
 		"EVitalsAccumulatorModificationType",
 		"EVolumeControl",
+		"EAbilAttackModifierFlag",
+		"EActorModelMaterialType",
+		"EActorSiteOpTetherEnableType",
+		"EActorSiteOrbiterType",
+		"EActorTiltType",
+		"EArtifactType",
+		"EAMBestMatchFlag",
+		"EBehaviorUnitTrackerAtMaxRule",
+		"EBehaviorUnitTrackerSnapRule",
+		"EEffectApplyBehaviorFlag",
+		"EEffectContainer",
+		"EExclusivityAction",
+		"EExclusivityQueueAction",
+		"EResponseContinueMethod",
+		"EResponseUnitBirthType",
+		"ESkillPoint",
+		"ESoundExclusivityFlag",
+		"ESoundMixSnapshotFlag",
+		"EUnitTestState",
+		"EWeaponType",
+		"EVoiceOverSkinState",
+		"EVoiceOverSoundType",
+		"EBundleFlag",
+		"EKineticFollow",
 	];
 	
 	let strings = await fs.readFile(`${__dirname}/../../deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/Editor/EditorCatalogStrings.txt`, "utf8");
@@ -208,6 +232,8 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		let prefixName = `EDSTR_ENUMVAL_e_${enumName[1].toLowerCase() + enumName.slice(2)}`.toLowerCase();
 		if(prefixName == "edstr_enumval_e_vitalsaccumulatormodificationtype") prefixName = "EDSTR_ENUMVAL_e_vitalsAccumulatorModification".toLowerCase();
 		if(prefixName == "edstr_enumval_e_soundmaxprioritization") prefixName = "EDSTR_ENUMVAL_e_soundDupePrioritization".toLowerCase();
+		if(prefixName == "edstr_enumval_e_actorsiteoptetherenabletype") prefixName = "EDSTR_ENUMVAL_e_actorSiteOpTetherFlag".toLowerCase();
+		
 		
 		let values:EnumType = {};
 		// O(N^2) but I'm too lazy to code it properly

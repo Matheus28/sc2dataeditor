@@ -16202,7 +16202,7 @@
 			"Flags": {
 				"type": "bool",
 				"array": true,
-				"indexEnum": "EEffectBehaviorFlag"
+				"indexEnum": "EEffectApplyBehaviorFlag"
 			},
 			"Duration": "CGameTime"
 		}
@@ -17251,7 +17251,7 @@
 			"Flags": {
 				"type": "bool",
 				"array": true,
-				"indexEnum": "EAttachMethodBestMatchFlag"
+				"indexEnum": "EAMBestMatchFlag"
 			}
 		}
 	},

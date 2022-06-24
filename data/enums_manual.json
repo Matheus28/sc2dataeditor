@@ -15487,5 +15487,11 @@
 			"index": 2,
 			"name": "Neutral"
 		}
+	},
+	"ETextureFlag": {
+		"e_textureFlagUnknown": {
+			"index": -1,
+			"name": "Unknown"
+		}
 	}
 }

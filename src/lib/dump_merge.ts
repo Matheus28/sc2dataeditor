@@ -57,6 +57,8 @@ const specificFieldFlagIndexEnum:Record<string,string> = {
 	"STerrainSquibVisual_Flags": "EActorTerrainSquibVisualFlag",
 	"SDifficultyLevel_Flags": "EDifficultyFlag",
 	"SAnimFile_Flags": "EAnimLoadFlag",
+	"SEffectBehavior_Flags": "EEffectApplyBehaviorFlag",
+	"CAttachMethodBestMatch_Flags": "EAMBestMatchFlag",
 };
 
 // When adding new structs, we need to specify these
@@ -298,6 +300,7 @@ const specificAbstract:Record<string, true> = {
 					if(newType.indexEnum && oldType.indexEnum !== newType.indexEnum){
 						printStructName();
 						console.warn(`  Type array index mismatch for ${fieldName} in ${structName}: ${oldType.type}[${oldType.indexEnum||"Unknown"}] vs ${newType.type}[${newType.indexEnum||"Unknown"}]`);
+						continue;
 					}
 					
 					existingFields[fieldName] = simplifyWrittenType(newType, oldType);
