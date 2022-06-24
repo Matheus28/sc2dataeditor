@@ -16957,5 +16957,1695 @@
 			"AmountMissing": "CFixed",
 			"RegenModification": "CGameRate"
 		}
+	},
+	"CAbilAttackModifier": {
+		"parent": "CAbil",
+		"fields": {
+			"Levels": "uint32",
+			"VeterancyLevelMin": "uint32",
+			"VeterancyLevelSkip": "uint32",
+			"CmdButtonArray": {
+				"type": "SAbilCmdButton",
+				"array": true
+			},
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EAbilAttackModifierFlag"
+			},
+			"TargetType": "EEffectLocationType",
+			"Cost": {
+				"type": "SCost",
+				"array": true
+			},
+			"AutoCastFilters": "CTargetFilters",
+			"AutoCastValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"SmartPriority": "uint32",
+			"SmartValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"AttackModifierBehavior": "CBehaviorLink"
+		}
+	},
+	"CActorModelMaterial": {
+		"parent": "CActorModel",
+		"fields": {
+			"MaterialType": "EActorModelMaterialType",
+			"ModelMaterialFlags": {
+				"type": "bool",
+				"array": true
+			}
+		}
+	},
+	"CActorActionOverride": {
+		"parent": "CActorBase",
+		"fields": {
+			"MissileModel": "CModelLink",
+			"ImpactModel": "CModelLink",
+			"DamageModel": "CModelLink"
+		}
+	},
+	"CActorBlob": {
+		"parent": "CActorBase",
+		"fields": {
+			"InitScale": "C2Vector",
+			"MaxScale": "C2Vector",
+			"ScaleDeltaTime": "C2Vector"
+		}
+	},
+	"CActorCutscene": {
+		"parent": "CActorBearings",
+		"fields": {
+			"FilePath": "CCutscenePath"
+		}
+	},
+	"CActorEventMacroRunnable": {
+		"parent": "CActorBase",
+		"fields": {
+			"Do": {
+				"type": "SActorEvent",
+				"array": true
+			}
+		}
+	},
+	"CActorOverrides": {
+		"parent": "CActorBase",
+		"fields": {
+			"ModelOverrides": {
+				"type": "SActorOverrideModel",
+				"array": true
+			}
+		}
+	},
+	"CActorListPerPlayer": {
+		"parent": "CActorList",
+		"fields": {}
+	},
+	"CActorSiteOrbiter": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"AddToProximitySystem": "bool",
+			"HostForProps": "SActorRequest",
+			"Host": "SActorRequest",
+			"HostSiteOps": "SActorSiteOpsData",
+			"ScopeBearingsTracking": "EActorScopeBearingsTrackingType",
+			"MaxScale": "real32",
+			"SiteFlags": {
+				"type": "bool",
+				"array": true
+			},
+			"Type": "EActorSiteOrbiterType",
+			"BaseYaw": "CVariatorActorFangle",
+			"BaseYawPeriod": "CVariatorActorReal32",
+			"BasePitch": "CVariatorActorFangle",
+			"BasePitchPeriod": "CVariatorActorReal32",
+			"BaseRadiusInner": "CVariatorActorReal32",
+			"BaseRadiusOuter": "CVariatorActorReal32",
+			"BaseRadiusPeriod": "CVariatorActorReal32",
+			"EndYawPeriod": "CVariatorActorReal32",
+			"EndPitchPeriod": "CVariatorActorReal32",
+			"EndRollPeriod": "CVariatorActorReal32",
+			"EndRadiusInner": "CVariatorActorReal32",
+			"EndRadiusOuter": "CVariatorActorReal32",
+			"EndRadiusPeriod": "CVariatorActorReal32"
+		}
+	},
+	"CActorSiteOpGameCameraFollow": {
+		"parent": "CActorSiteOp",
+		"fields": {}
+	},
+	"CActorSiteOpDeltaSum": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"Deltas": {
+				"type": "SActorHostedDelta",
+				"array": true
+			},
+			"DeltaSumFlags": {
+				"type": "bool",
+				"array": true
+			}
+		}
+	},
+	"CActorSiteOpOrientAttachPointTo": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"AttachQuery": "SAttachQuery",
+			"Type": "EActorSiteOpOrientAttachPointToType"
+		}
+	},
+	"CActorSiteOpPersistentOffset": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"HostInitial": "SActorRequest",
+			"HostInitialSiteOps": "SActorSiteOpsData"
+		}
+	},
+	"CActorSiteOpOrbiter": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"Type": "EActorSiteOrbiterType",
+			"BaseYaw": "CVariatorActorFangle",
+			"BaseYawPeriod": "CVariatorActorReal32",
+			"BasePitch": "CVariatorActorFangle",
+			"BasePitchPeriod": "CVariatorActorReal32",
+			"BaseRadiusInner": "CVariatorActorReal32",
+			"BaseRadiusOuter": "CVariatorActorReal32",
+			"BaseRadiusPeriod": "CVariatorActorReal32",
+			"EndYawPeriod": "CVariatorActorReal32",
+			"EndPitchPeriod": "CVariatorActorReal32",
+			"EndRollPeriod": "CVariatorActorReal32",
+			"EndRadiusInner": "CVariatorActorReal32",
+			"EndRadiusOuter": "CVariatorActorReal32",
+			"EndRadiusPeriod": "CVariatorActorReal32"
+		}
+	},
+	"CActorSiteOpTether": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"HostTether": "SActorRequest",
+			"HostTetherSiteOps": "SActorSiteOpsData",
+			"EnableX": "EActorSiteOpTetherEnableType",
+			"EnableY": "EActorSiteOpTetherEnableType",
+			"EnableZ": "EActorSiteOpTetherEnableType",
+			"XMinimum": "real32",
+			"XMaximum": "real32",
+			"YMinimum": "real32",
+			"YMaximum": "real32",
+			"ZMinimum": "real32",
+			"ZMaximum": "real32"
+		}
+	},
+	"CActorSiteOpTilter": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"TiltType": "EActorTiltType",
+			"TiltAmount": "real32",
+			"AngleRate": "real32"
+		}
+	},
+	"CActorSiteOpCursor": {
+		"parent": "CActorSiteOp",
+		"fields": {}
+	},
+	"CActorSiteOpYawLimiter": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"HostYawLimiter": "SActorRequest",
+			"HostYawLimiterSiteOps": "SActorSiteOpsData",
+			"YawHalfAngle": "CActorAngle",
+			"ExtraYawAngle": "CActorAngle"
+		}
+	},
+	"CActorSiteOpPitchLimiter": {
+		"parent": "CActorSiteOp",
+		"fields": {
+			"HostPitchLimiter": "SActorRequest",
+			"HostPitchLimiterSiteOps": "SActorSiteOpsData",
+			"PitchHalfAngle": "CActorAngle"
+		}
+	},
+	"CActorBatch": {
+		"parent": "CActorBearings",
+		"fields": {
+			"HarnessActor": "CActorCreateKey",
+			"Count": "SAccumulatedUInt32"
+		}
+	},
+	"CActorUnitRing": {
+		"parent": "CActorModel",
+		"fields": {
+			"RingRadius": "real32"
+		}
+	},
+	"CActorMinimap": {
+		"parent": "CActorModel",
+		"fields": {}
+	},
+	"CArtifact": {
+		"parent": null,
+		"fields": {
+			"EditorCategories": "TEditorCategories",
+			"Name": "CStringLink",
+			"InfoText": "CStringLink",
+			"AttributeId": "CFourCC",
+			"Model": "CModelLink",
+			"RankArray": {
+				"type": "SArtifactRank",
+				"array": true
+			},
+			"Universe": "EHeroUniverse",
+			"TileCutsceneFile": "CAssetPath",
+			"PreviewCutsceneFile": "CAssetPath",
+			"HeroSelectCutsceneFile": "CAssetPath",
+			"ReleaseDate": "SHeroReleaseDate",
+			"AdditionalSearchText": "CStringLink",
+			"Talent": "CTalentLink",
+			"Type": "EArtifactType",
+			"HyperlinkId": "THyperlinkId",
+			"AllowedCommanderKeyArray": {
+				"type": "CIdentifier",
+				"array": true
+			},
+			"Item": {
+				"type": "CItemLink",
+				"array": true
+			},
+			"Upgrades": {
+				"type": "CUpgradeLink",
+				"array": true
+			},
+			"PlayerResponses": {
+				"type": "CPlayerResponseLink",
+				"array": true
+			},
+			"Face": "CButtonLink",
+			"ApplyTo": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EPlayerRelationship"
+			}
+		}
+	},
+	"CArtifactSlot": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"RequiredReward": "CRewardLink",
+			"ProductId": "TBattleProductId",
+			"AllowedTypes": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EArtifactType"
+			}
+		}
+	},
+	"CAttachMethodBestMatch": {
+		"parent": "CAttachMethod",
+		"fields": {
+			"Keys": "CAttachKeys",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EAttachMethodBestMatchFlag"
+			}
+		}
+	},
+	"CBehaviorAttackModifier": {
+		"parent": "CBehavior",
+		"fields": {
+			"Chance": "SAccumulatedFixed",
+			"TargetFilters": "CTargetFilters",
+			"ValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"UniqueSetId": "CIdentifier",
+			"AttackModifierFlags": {
+				"type": "bool",
+				"array": true
+			},
+			"WeaponIndexEnableArray": {
+				"type": "bool",
+				"array": true
+			},
+			"WeaponIndexDisableArray": {
+				"type": "bool",
+				"array": true
+			},
+			"MaxStackCount": "uint32",
+			"DamageDealtScaled": {
+				"type": "SAccumulatedFixed",
+				"array": true
+			},
+			"DamageDealtFraction": {
+				"type": "SAccumulatedFixed",
+				"array": true
+			},
+			"DamageDealtUnscaled": {
+				"type": "SAccumulatedFixed",
+				"array": true
+			},
+			"DamageTotalMultiplier": {
+				"type": "SAccumulatedFixed",
+				"array": true
+			},
+			"PreImpactEffect": "CEffectLink",
+			"ImpactDamageInheritEffect": "CEffectLink",
+			"MultishotSearchPattern": "CEffectLink"
+		}
+	},
+	"CBehaviorUnitTracker": {
+		"parent": "CBehavior",
+		"fields": {
+			"TrackingValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"MaxTrackedUnits": "uint32",
+			"UnitAddedAtMaxRule": "EBehaviorUnitTrackerAtMaxRule",
+			"ReplacedEffect": "CEffectLink",
+			"UnitTrackerFlags": {
+				"type": "bool",
+				"array": true
+			},
+			"WhichLocation": "SEffectWhichLocation",
+			"SnapRange": "CFixed",
+			"SnapCount": "SAccumulatedUInt32",
+			"SnapRule": "EBehaviorUnitTrackerSnapRule",
+			"SnapAngleAdjustment": "CFangle",
+			"SharedListPlayer": "SEffectWhichPlayer"
+		}
+	},
+	"CBundle": {
+		"parent": null,
+		"fields": {
+			"EditorCategories": "TEditorCategories",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EBundleFlag"
+			},
+			"Universe": "EHeroUniverse",
+			"BoostBonus": "CBoostLink",
+			"TileCutsceneFile": "CAssetPath",
+			"TileTexture": "CImagePath",
+			"MediumTileTexture": "CImagePath",
+			"LargeTileTexture": "CImagePath",
+			"PreviewCutsceneFile": "CAssetPath",
+			"ReleaseDate": "SHeroReleaseDate",
+			"HyperlinkId": "THyperlinkId",
+			"Description": "CStringLink",
+			"GameContentArray": {
+				"type": "SGameContentCreationData",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink",
+			"CinematicsImagePath": "CImagePath",
+			"LearnMoreBackgroundImage": "CImagePath",
+			"LearnMoreImage1": "CImagePath",
+			"LearnMoreImage2": "CImagePath",
+			"LearnMoreImage3": "CImagePath",
+			"LearnMoreTitleText1": "CStringLink",
+			"LearnMoreTitleText2": "CStringLink",
+			"LearnMoreTitleText3": "CStringLink",
+			"LearnMoreBodyText1": "CStringLink",
+			"LearnMoreBodyText2": "CStringLink",
+			"LearnMoreBodyText3": "CStringLink",
+			"SuppressCountryArray": {
+				"type": "CStringLink",
+				"array": true
+			},
+			"ExternalHyperlink": "CString"
+		}
+	},
+	"CBoost": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"TileTexture": "CImagePath",
+			"PreviewTexture": "CImagePath",
+			"HyperlinkId": "THyperlinkId",
+			"PreviewCutsceneFile": "CAssetPath",
+			"TileCutsceneFile": "CAssetPath",
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CCampaign": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"CampaignData": "SCampaignData",
+			"PurchaseProductIdArray": {
+				"type": "TBattleProductId",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink",
+			"ScreenshotImage1": "CImagePath",
+			"ScreenshotImage2": "CImagePath",
+			"ScreenshotImage3": "CImagePath",
+			"ScreenshotImage4": "CImagePath",
+			"ScreenshotImage5": "CImagePath",
+			"LearnMoreBackgroundImage": "CImagePath",
+			"LearnMoreImage1": "CImagePath",
+			"LearnMoreImage2": "CImagePath",
+			"LearnMoreImage3": "CImagePath",
+			"LearnMoreTitleText1": "CStringLink",
+			"LearnMoreTitleText2": "CStringLink",
+			"LearnMoreTitleText3": "CStringLink",
+			"LearnMoreBodyText1": "CStringLink",
+			"LearnMoreBodyText2": "CStringLink",
+			"LearnMoreBodyText3": "CStringLink"
+		}
+	},
+	"CColorStyle": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ColorEntry": {
+				"type": "SUIColorEntry",
+				"array": true
+			}
+		}
+	},
+	"CCommander": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"AttributeId": "CFourCC",
+			"LevelAchievementId": "uint64",
+			"Race": "CRaceLink",
+			"Campaign": "CCampaignLink",
+			"Description": "CStringLink",
+			"PurchaseMessage": "CStringLink",
+			"Details": "CStringLink",
+			"Portrait": "CImagePath",
+			"HomePanelImage": "CImagePath",
+			"CutsceneFilterSelf": "CIdentifier",
+			"CutsceneFilterAlly": "CIdentifier",
+			"UnitArray": {
+				"type": "SCommanderUnit",
+				"array": true
+			},
+			"TalentTreeArray": {
+				"type": "SCommanderTalentTree",
+				"array": true
+			},
+			"MasteryTalentArray": {
+				"type": "SCommanderMasteryTalent",
+				"array": true
+			},
+			"MasteryMaxRank": "uint32",
+			"UserReference": "CUserReference",
+			"LoadingImage": "CImagePath",
+			"LoadingImageAlly": "CImagePath",
+			"TraitIcon": "CImagePath",
+			"CommanderAbilTitle": "CStringLink",
+			"CommanderAbilArray": {
+				"type": "SCommanderAbil",
+				"array": true
+			},
+			"Movie": "CMoviePath",
+			"ProductId": "TBattleProductId",
+			"RequiredRewardArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"PurchaseImage": "CImagePath",
+			"StoreName": "CStringLink",
+			"ConsoleSkin": "CConsoleSkinLink",
+			"FeaturedImagePath": "CImagePath",
+			"FeaturedDescription": "CStringLink",
+			"ProfileImagePath": "CImagePath",
+			"StoreTypeName": "CStringLink",
+			"LearnMoreBackgroundImage": "CImagePath",
+			"LearnMoreImage1": "CImagePath",
+			"LearnMoreImage2": "CImagePath",
+			"LearnMoreImage3": "CImagePath",
+			"LearnMoreTitleText1": "CStringLink",
+			"LearnMoreTitleText2": "CStringLink",
+			"LearnMoreTitleText3": "CStringLink",
+			"LearnMoreBodyText1": "CStringLink",
+			"LearnMoreBodyText2": "CStringLink",
+			"LearnMoreBodyText3": "CStringLink",
+			"PrestigeArray": {
+				"type": "CButtonLink",
+				"array": true
+			},
+			"Color": "CColor",
+			"LoadingScreenCoordinates": "CRect",
+			"DataCollectionAllowed": {
+				"type": "CDataCollectionLink",
+				"array": true
+			},
+			"CommanderArtifactKeyArray": {
+				"type": "CIdentifier",
+				"array": true
+			},
+			"CommanderPrestigeAchievementId": "uint64"
+		}
+	},
+	"CConfig": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"GameContentArray": {
+				"type": "SGameContentCreationData",
+				"array": true
+			},
+			"BoostLicense": "CIdentifier",
+			"SilencePenaltyLicense": "uint32",
+			"FreeNonKRIGRLicense": "uint32",
+			"CommanderMastery": "CCommanderLink",
+			"CommanderDifficultyLevels": {
+				"type": "SCommanderDifficultyLevel",
+				"array": true
+			},
+			"CommanderAchievementCategoryId": "uint32",
+			"CoopCampaignAchievementCategoryId": "uint32"
+		}
+	},
+	"CConsoleSkin": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"RequiredReward": "CRewardLink",
+			"ReleaseDate": "SProductReleaseDate",
+			"MinimapPanelModel": "SConsoleSkinModel",
+			"InfoPanelModel": "SConsoleSkinModel",
+			"CommandPanelModel": "SConsoleSkinModel",
+			"MinimapPanelImage": "CImagePath",
+			"InfoPanelImage": "CImagePath",
+			"CommandPanelImage": "CImagePath",
+			"Light": "CString",
+			"StoreTypeName": "CStringLink",
+			"ThumbnailImage": "CImagePath",
+			"FeaturedImage": "CImagePath",
+			"Description": "CStringLink",
+			"SkinId": "CString"
+		}
+	},
+	"CDecalPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"Description": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"ProductId": "TBattleProductId",
+			"ReleaseDate": "SProductReleaseDate",
+			"DecalArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CDSPCustomCompressor": {
+		"parent": "CDSP",
+		"fields": {
+			"AttackMs": "uint32",
+			"Ratio": "real32",
+			"ReleaseMs": "uint32",
+			"ThresholdDB": "real32",
+			"MakeUpGainDB": "real32",
+			"DelayMs": "uint32"
+		}
+	},
+	"CDSPLimiter": {
+		"parent": "CDSP",
+		"fields": {
+			"ReleaseMs": "uint32",
+			"UseARC": "bool",
+			"ThresholdDB": "real32",
+			"MakeUpGainDB": "real32",
+			"SoftKneeWidthDB": "real32",
+			"ARCAttackMs": "uint32",
+			"ARCReleaseMs": "uint32",
+			"ARCMinReleaseMs": "uint32",
+			"ARCMaxReleaseMs": "uint32",
+			"ARCReleaseSweepMs": "uint32"
+		}
+	},
+	"CEffectAddTrackedUnit": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"TrackedUnit": "SEffectWhichUnit"
+		}
+	},
+	"CEffectClearTrackedUnits": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"ClearValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			}
+		}
+	},
+	"CEffectAddTrackedUnits": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"SourceBehaviorLink": "CBehaviorLink",
+			"SourceTrackerUnit": "SEffectWhichUnit",
+			"TargetBehaviorLink": "CBehaviorLink",
+			"TargetTrackerUnit": "SEffectWhichUnit"
+		}
+	},
+	"CEffectRemoveTrackedUnit": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"TrackedUnit": "SEffectWhichUnit"
+		}
+	},
+	"CEffectApplyKinetic": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"ImpactUnit": "SEffectWhichUnit",
+			"Kinetic": "CKineticLink"
+		}
+	},
+	"CEffectRandomPointInCircle": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"WhichLocation": "SEffectWhichLocation",
+			"Effect": "CEffectLink",
+			"Count": "uint32",
+			"Radius": "SAccumulatedFixed",
+			"RestrictToCircumference": "bool"
+		}
+	},
+	"CEffectEnumTrackedUnits": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"Effect": "CEffectLink",
+			"TrackedUnitFilters": "CTargetFilters",
+			"DistributDamage": "bool"
+		}
+	},
+	"CEffectEnumInventory": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"WhichUnit": "SEffectWhichUnit",
+			"SearchFilters": "CTargetFilters",
+			"MaxCount": "uint32",
+			"Effect": "CEffectLink",
+			"CheckOuter": "bool"
+		}
+	},
+	"CEffectLastTarget": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"LastTargetType": "EAbilLastTarget",
+			"WhichUnit": "SEffectWhichUnit",
+			"Effect": "CEffectLink"
+		}
+	},
+	"CEffectLoadContainer": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"ContainerType": "EEffectContainer",
+			"WhichUnit": "SEffectWhichUnit",
+			"ContainerUnit": "SEffectWhichUnit",
+			"ContainerAbil": "CAbilLink"
+		}
+	},
+	"CEffectMorph": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"WhichUnit": "SEffectWhichUnit",
+			"ActorKey": "CDataSoupKey",
+			"MorphFlags": {
+				"type": "bool",
+				"array": true
+			},
+			"MorphUnit": "CUnitLink",
+			"TypeFallbackUnit": "SEffectWhichUnit",
+			"AbilKeyFallback": "CAbilLink"
+		}
+	},
+	"CEffectRemoveKinetic": {
+		"parent": "CEffectResponse",
+		"fields": {
+			"ImpactUnit": "SEffectWhichUnit",
+			"KineticLink": "CKineticLink"
+		}
+	},
+	"CEffectUserData": {
+		"parent": "CEffect",
+		"fields": {
+			"Key": "CIdentifier",
+			"Amount": "SAccumulatedFixed",
+			"SourceKey": "CIdentifier",
+			"SourceFailBackValue": "CFixed",
+			"Operation": "EUpgradeOperation",
+			"ValidateMin": "SAccumulatedFixed",
+			"ValidateMax": "SAccumulatedFixed",
+			"EffectSuccess": "CEffectLink",
+			"EffectFailure": "CEffectLink",
+			"TargetLocationType": "EEffectLocationType",
+			"BehaviorScope": "SEffectWhichBehavior"
+		}
+	},
+	"CEmoticon": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"NameAlternate": "CStringLink",
+			"NameInvalid": "CStringLink",
+			"Description": "CStringLink",
+			"DescriptionLocked": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"Hidden": "bool",
+			"RequiredReward": "CRewardLink"
+		}
+	},
+	"CEmoticonPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"Description": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"ProductId": "TBattleProductId",
+			"RequiredCampaign": "SEmoticonPackCampaign",
+			"RequiredCommander": "CCommanderLink",
+			"RequiredRewardArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"ReleaseDate": "SProductReleaseDate",
+			"EmoticonArray": {
+				"type": "CEmoticonLink",
+				"array": true
+			},
+			"ParentBundle": "CBundleLink",
+			"Hidden": "bool",
+			"HideAchievement": "bool",
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CItemAbilPowerUp": {
+		"parent": "CItemAbil",
+		"fields": {
+			"CasterFilters": "CTargetFilters",
+			"KillAfterUse": "bool"
+		}
+	},
+	"CKinetic": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"EditorCategories": "TEditorCategories",
+			"Chance": "CFixed",
+			"Cycles": "uint32",
+			"Duration": "CGameTime"
+		},
+		"abstract": true
+	},
+	"CKineticFollow": {
+		"parent": "CKinetic",
+		"fields": {
+			"Where": "SEffectWhichLocation",
+			"Follow": "EKineticFollow"
+		}
+	},
+	"CKineticRotate": {
+		"parent": "CKinetic",
+		"fields": {
+			"Around": "SEffectWhichLocation",
+			"Pitch": "CVariatorGameFangle",
+			"Roll": "CVariatorGameFangle",
+			"Yaw": "CVariatorGameFangle"
+		}
+	},
+	"CKineticSequence": {
+		"parent": "CKinetic",
+		"fields": {
+			"KineticArray": {
+				"type": "CKineticLink",
+				"array": true
+			}
+		}
+	},
+	"CKineticSet": {
+		"parent": "CKinetic",
+		"fields": {
+			"KineticArray": {
+				"type": "CKineticLink",
+				"array": true
+			}
+		}
+	},
+	"CKineticTranslate": {
+		"parent": "CKinetic",
+		"fields": {
+			"XOffset": "CVariatorGameFixed",
+			"YOffset": "CVariatorGameFixed",
+			"ZOffset": "CVariatorGameFixed"
+		}
+	},
+	"CKineticDistance": {
+		"parent": "CKinetic",
+		"fields": {
+			"DistanceAwayFrom": "SEffectWhichLocation",
+			"Distance": "SAccumulatedFixed"
+		}
+	},
+	"CLensFlareSet": {
+		"parent": null,
+		"fields": {
+			"Flare": {
+				"type": "SFlareInfo",
+				"array": true
+			}
+		}
+	},
+	"CMount": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"InfoText": "CStringLink",
+			"AttributeId": "CFourCC",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EMountFlag"
+			},
+			"Model": "CModelLink",
+			"Attached": "bool",
+			"RequiredRewardArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"VOArray": {
+				"type": "CSoundLink",
+				"array": true
+			},
+			"VariationIcon": "CImagePath",
+			"VariationArray": {
+				"type": "CMountLink",
+				"array": true
+			},
+			"MountCategory": "TMountCategory"
+		}
+	},
+	"CPing": {
+		"parent": null,
+		"fields": {
+			"Model": "CModelLink",
+			"Sound": "CSoundLink",
+			"ActorSound": "CActorLink",
+			"Color": "CColor",
+			"Duration": "CFixed",
+			"Scale": "CFixed",
+			"Rotation": "CFixed",
+			"Tooltip": "CStringLink",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EPingFlag"
+			}
+		}
+	},
+	"CPortraitPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"Description": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"ProductId": "TBattleProductId",
+			"ReleaseDate": "SProductReleaseDate",
+			"PortraitArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CPremiumMap": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"StoreTypeName": "CStringLink",
+			"ReleaseDate": "SProductReleaseDate",
+			"HyperlinkId": "TProductHyperlinkId",
+			"ProductId": "TBattleProductId",
+			"LicenseId": "uint32",
+			"Price": "CStringLink",
+			"ScreenShotImageArray": {
+				"type": "CImagePath",
+				"array": true
+			},
+			"ScreenShotDescriptionArray": {
+				"type": "CStringLink",
+				"array": true
+			},
+			"Movie": "CMoviePath",
+			"MoviePreviewImage": "CImagePath",
+			"MovieDescription": "CStringLink",
+			"Description": "CStringLink",
+			"Title": "CStringLink",
+			"PayToPlay": "bool",
+			"SuppressedRegion": "CFourCC",
+			"ShortDescription": "CStringLink",
+			"LanguageWarning": "CStringLink",
+			"ScreenShotImageThumbnailArray": {
+				"type": "CImagePath",
+				"array": true
+			},
+			"MovieImageThumbnail": "CImagePath",
+			"CustomFeaturedDescription": "CStringLink"
+		}
+	},
+	"CRaceBannerPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"Description": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"ProductId": "TBattleProductId",
+			"ReleaseDate": "SProductReleaseDate",
+			"RaceBannerArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CRewardTrophy": {
+		"parent": "CReward",
+		"fields": {
+			"Trophy": "CTrophyLink"
+		}
+	},
+	"CRewardEmoticon": {
+		"parent": "CReward",
+		"fields": {
+			"Emoticon": "CEmoticonLink"
+		}
+	},
+	"CRewardVoicePack": {
+		"parent": "CReward",
+		"fields": {
+			"VoicePack": "CVoicePackLink",
+			"ReplacementArray": {
+				"type": "SGameReplacement",
+				"array": true
+			}
+		}
+	},
+	"CRewardPortraitInGame": {
+		"parent": "CReward",
+		"fields": {
+			"Enabled": "bool"
+		}
+	},
+	"CRewardConsoleSkin": {
+		"parent": "CReward",
+		"fields": {
+			"ConsoleSkin": "CConsoleSkinLink"
+		}
+	},
+	"CRewardSpray": {
+		"parent": "CReward",
+		"fields": {
+			"Texture": "CTextureLink",
+			"Spray": "CSprayLink"
+		}
+	},
+	"CRewardSprayUseDecal": {
+		"parent": "CReward",
+		"fields": {
+			"Enabled": "bool"
+		}
+	},
+	"CRewardRaceBanner": {
+		"parent": "CReward",
+		"fields": {
+			"RaceBannerPack": "CRaceBannerPackLink",
+			"Image1v1": "CImagePath",
+			"Image2v2": "CImagePath",
+			"Image3v3": "CImagePath",
+			"Image4v4": "CImagePath"
+		}
+	},
+	"CRewardStim": {
+		"parent": "CReward",
+		"fields": {
+			"StimPack": "CStimPackLink",
+			"Texture": "CTextureLink"
+		}
+	},
+	"CScoreValueConstant": {
+		"parent": "CScoreValueCustom",
+		"fields": {
+			"Value": "CFixed"
+		}
+	},
+	"CShape": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"EditorCategories": "TEditorCategories"
+		},
+		"abstract": true
+	},
+	"CShapeArc": {
+		"parent": "CShape",
+		"fields": {
+			"Arc": "CFangleArc",
+			"Radius": "CFixed"
+		}
+	},
+	"CShapeQuad": {
+		"parent": "CShape",
+		"fields": {
+			"Quad": "CfQuad"
+		}
+	},
+	"CSkin": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"InfoText": "CStringLink",
+			"AttributeId": "CFourCC",
+			"ReplacementArray": {
+				"type": "SGameReplacement",
+				"array": true
+			},
+			"VariationIcon": "CImagePath",
+			"DisplayModel": {
+				"type": "CModelLink",
+				"array": true
+			},
+			"ModelGroups": {
+				"type": "SSkinModelGroup",
+				"array": true
+			},
+			"ModelMacroRun": {
+				"type": "SSkinModelMacroRun",
+				"array": true
+			},
+			"EffectArray": {
+				"type": "SUpgradeEffect",
+				"array": true
+			},
+			"Camera": "CString",
+			"Rotation": "int32",
+			"WarChestUILight": "CString",
+			"WarChestDisplayModel": "CModelLink",
+			"WarChestDisplayActor": "CActorLink",
+			"CollectionDisplayModel": "CModelLink",
+			"CollectionDisplayUnit": "CUnitLink",
+			"CollectionDisplayModelAlternate": "CModelLink",
+			"CollectionDisplayUnitAlternate": "CUnitLink",
+			"CollectionDisplayActor": "CActorLink",
+			"IsDefaultSkin": "bool"
+		}
+	},
+	"CSkinPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"EntryArray": {
+				"type": "SSkinPackEntry",
+				"array": true
+			},
+			"ReleaseDate": "SProductReleaseDate",
+			"StoreTypeName": "CStringLink",
+			"CollectionId": "CIdentifier"
+		}
+	},
+	"CSoundExclusivity": {
+		"parent": null,
+		"fields": {
+			"Group": "uint32",
+			"Priority": "real32",
+			"CollideWithLower": "EExclusivityAction",
+			"CollideWithEqual": "EExclusivityAction",
+			"CollideWithHigher": "EExclusivityAction",
+			"QCollideWithLower": "EExclusivityQueueAction",
+			"QCollideWithEqual": "EExclusivityQueueAction",
+			"QCollideWithHigher": "EExclusivityQueueAction",
+			"QTimeout": "uint32",
+			"QDelay": "uint32",
+			"InterruptFadeBlend": "ESoundBlend",
+			"InterruptFade": {
+				"type": "SVolumeFade",
+				"array": true
+			},
+			"InterruptDelay": "uint32",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "ESoundExclusivityFlag"
+			},
+			"SuppressGroups": {
+				"type": "uint32",
+				"array": true
+			},
+			"DupeWait": "uint32"
+		}
+	},
+	"CSoundMixSnapshot": {
+		"parent": null,
+		"fields": {
+			"Attack": "uint32",
+			"Hold": "uint32",
+			"Release": "uint32",
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "ESoundMixSnapshotFlag"
+			},
+			"MixGlobal": {
+				"type": "CVolume",
+				"array": true
+			},
+			"MixNonLocal": {
+				"type": "CVolume",
+				"array": true
+			}
+		}
+	},
+	"CSpray": {
+		"parent": null,
+		"fields": {
+			"Model": "CModelLink",
+			"Texture": "CTextureLink",
+			"Button": "CButtonLink"
+		}
+	},
+	"CSprayPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"Description": "CStringLink",
+			"Image": "STextureSheetEntry",
+			"ProductId": "TBattleProductId",
+			"ReleaseDate": "SProductReleaseDate",
+			"SprayArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CTalent": {
+		"parent": null,
+		"fields": {
+			"Face": "CButtonLink",
+			"Abil": "CAbilLink",
+			"RankArray": {
+				"type": "STalentRank",
+				"array": true
+			},
+			"AbilityModificationArray": {
+				"type": "STalentAbilityModification",
+				"array": true
+			},
+			"Active": "bool",
+			"Trait": "bool"
+		}
+	},
+	"CTalentProfile": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"Talents": {
+				"type": "CTalentLink",
+				"array": true
+			},
+			"Flags": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "ETalentProfileFlag"
+			}
+		}
+	},
+	"CTargetSortValidator": {
+		"parent": "CTargetSort",
+		"fields": {
+			"Validator": "CValidatorLink"
+		}
+	},
+	"CTextureSheet": {
+		"parent": null,
+		"fields": {
+			"Image": "CImagePath",
+			"Rows": "uint32",
+			"Columns": "uint32"
+		}
+	},
+	"CTrophy": {
+		"parent": null,
+		"fields": {
+			"DefinitionId": "uint32",
+			"TopCutsceneFilter": "CString",
+			"BottomCutsceneFilter": "CString",
+			"CutsceneFile": "CCutscenePath",
+			"GameModel": "CModelLink",
+			"Skin": "CSkinLink"
+		}
+	},
+	"CValidatorEffect": {
+		"parent": "CValidator",
+		"fields": {
+			"WhichEffect": "CEffectLink",
+			"ResultNoEffect": "CCmdResult"
+		},
+		"abstract": true
+	},
+	"CValidatorEffectCompare": {
+		"parent": "CValidatorEffect",
+		"fields": {
+			"OtherEffect": "CEffectLink",
+			"Compare": "EValueCompare"
+		},
+		"abstract": true
+	},
+	"CValidatorEffectCompareDodged": {
+		"parent": "CValidatorEffectCompare",
+		"fields": {
+			"Value": "uint32"
+		}
+	},
+	"CValidatorEffectCompareEvaded": {
+		"parent": "CValidatorEffectCompare",
+		"fields": {
+			"Value": "uint32"
+		}
+	},
+	"CValidatorEffectTreeUserData": {
+		"parent": "CValidator",
+		"fields": {
+			"CheckExistence": "bool",
+			"ResultNoKey": "CCmdResult",
+			"Compare": "EValueCompare",
+			"Key": "CIdentifier",
+			"Value": "SAccumulatedFixed",
+			"BehaviorScope": "SEffectWhichBehavior"
+		}
+	},
+	"CValidatorGameCompareTimeEvent": {
+		"parent": "CValidator",
+		"fields": {
+			"Compare": "EValueCompare",
+			"TimeEvent": "EGameTimeEvent"
+		}
+	},
+	"CValidatorGameCommanderActive": {
+		"parent": "CValidator",
+		"fields": {
+			"Commander": "CCommanderLink"
+		}
+	},
+	"CValidatorLocationInPlayableMapArea": {
+		"parent": "CValidatorLocation",
+		"fields": {
+			"Find": "bool"
+		}
+	},
+	"CValidatorLocationShrub": {
+		"parent": "CValidatorLocation",
+		"fields": {
+			"WhichPlayer": "SEffectWhichPlayer",
+			"Find": "bool"
+		}
+	},
+	"CValidatorPlayerTalent": {
+		"parent": "CValidatorPlayer",
+		"fields": {
+			"Find": "bool",
+			"Value": "CTalentLink"
+		}
+	},
+	"CValidatorPlayerFood": {
+		"parent": "CValidatorPlayer",
+		"fields": {
+			"AllowCheat": "bool",
+			"Value": "CFixed",
+			"TestUnitType": "CUnitLink",
+			"TypeFallbackUnit": "SEffectWhichUnit",
+			"Count": "uint32",
+			"ResultFoodMax": "CCmdResult"
+		}
+	},
+	"CValidatorUnitInWeaponRange": {
+		"parent": "CValidatorUnit",
+		"fields": {}
+	},
+	"CValidatorUnitAlliance": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Find": "bool",
+			"WithPlayer": "SEffectWhichPlayer",
+			"Value": "EAllianceId",
+			"AlliancePlayer": "EAlliancePlayer"
+		}
+	},
+	"CValidatorUnitBehaviorStackAlias": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Find": "bool",
+			"IgnoreDisabledBehavior": "bool",
+			"StackAlias": "CIdentifier"
+		}
+	},
+	"CValidatorUnitState": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Enabled": "bool",
+			"State": "EUnitTestState"
+		}
+	},
+	"CValidatorUnitArmor": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Find": "bool",
+			"ArmorType": "EArmorType"
+		}
+	},
+	"CValidatorUnitKinetic": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Value": "CKineticLink",
+			"Find": "bool"
+		}
+	},
+	"CValidatorUnitTestWeaponType": {
+		"parent": "CValidatorUnit",
+		"fields": {
+			"Find": "bool",
+			"WeaponType": "EWeaponType",
+			"RequireActivated": "bool",
+			"RequireEnabled": "bool"
+		}
+	},
+	"CValidatorUnitCompareAbilSkillPoint": {
+		"parent": "CValidatorUnitCompare",
+		"fields": {
+			"AbilLink": "CAbilLink",
+			"CountType": "ESkillPoint",
+			"Value": "int32"
+		}
+	},
+	"CValidatorUnitCompareAbilStage": {
+		"parent": "CValidatorUnitCompare",
+		"fields": {
+			"AbilityStage": "EAbilEffectStage",
+			"Ability": "CAbilLink"
+		}
+	},
+	"CValidatorUnitCompareDamageDealtTime": {
+		"parent": "CValidatorUnitCompare",
+		"fields": {
+			"Value": "CGameTime"
+		}
+	},
+	"CValidatorUnitCompareKillCount": {
+		"parent": "CValidatorUnitCompare",
+		"fields": {
+			"Value": "uint16"
+		}
+	},
+	"CValidatorUnitCompareHeight": {
+		"parent": "CValidatorUnitCompare",
+		"fields": {
+			"CasterAdd": "CFixed",
+			"TargetAdd": "CFixed",
+			"CasterHeight": "bool",
+			"CasterGroundHeight": "bool",
+			"CasterZ": "bool",
+			"TargetHeight": "bool",
+			"TargetGroundHeight": "bool",
+			"TargetZ": "bool"
+		}
+	},
+	"CValidatorCompareTrackedUnitsCount": {
+		"parent": "CValidator",
+		"fields": {
+			"Compare": "EValueCompare",
+			"Value": "uint32",
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"TrackedUnitValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"TrackedUnitFilters": "CTargetFilters"
+		}
+	},
+	"CValidatorIsUnitTracked": {
+		"parent": "CValidator",
+		"fields": {
+			"Find": "bool",
+			"BehaviorLink": "CBehaviorLink",
+			"TrackerUnit": "SEffectWhichUnit",
+			"TrackedUnit": "SEffectWhichUnit"
+		}
+	},
+	"CVoiceOver": {
+		"parent": null,
+		"fields": {
+			"Character": "CCharacterLink",
+			"Skins": {
+				"type": "SVoiceOverSkin",
+				"array": true
+			},
+			"Groups": {
+				"type": "SVoiceOverGroup",
+				"array": true
+			},
+			"Lines": {
+				"type": "SVoiceOverLine",
+				"array": true
+			}
+		}
+	},
+	"CVoicePack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"TypeName": "CStringLink",
+			"Description": "CStringLink",
+			"Icon": "CImagePath",
+			"ProductId": "TBattleProductId",
+			"UnlockedRewardArray": {
+				"type": "CRewardLink",
+				"array": true
+			},
+			"ExampleLineArray": {
+				"type": "SVoicePackExampleLine",
+				"array": true
+			},
+			"ReleaseDate": "SProductReleaseDate",
+			"ParentBundle": "CBundleLink",
+			"LocaleRestriction": "CFourCC",
+			"IsPurchaseHidden": "bool",
+			"ImageTexture": "CImagePath",
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CWarChest": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"HyperlinkId": "TProductHyperlinkId",
+			"ProductId": "TBattleProductId",
+			"ReleaseDate": "SProductReleaseDate",
+			"SeasonId": "CStringLink",
+			"IsBundle": "bool",
+			"CelebrationString": "CIdentifier",
+			"StoreTypeName": "CStringLink"
+		}
+	},
+	"CWarChestSeason": {
+		"parent": null,
+		"fields": {
+			"Name": "CStringLink",
+			"ESportsSeason": "CStringLink",
+			"ESportsName": "CStringLink",
+			"ESportsLocation": "CStringLink",
+			"ESportsDate": "CStringLink",
+			"ESportsShowPlayers": "bool",
+			"HowItWorks1": "CStringLink",
+			"HowItWorks2": "CStringLink",
+			"HowItWorks3": "CStringLink",
+			"HowItWorks4": "CStringLink",
+			"LearnMoreTitle1": "CStringLink",
+			"LearnMoreTitle2": "CStringLink",
+			"LearnMoreTitle3": "CStringLink",
+			"LearnMoreDescription1": "CStringLink",
+			"LearnMoreDescription2": "CStringLink",
+			"LearnMoreDescription3": "CStringLink",
+			"LearnMoreImage1": "CImagePath",
+			"LearnMoreImage2": "CImagePath",
+			"LearnMoreImage3": "CImagePath",
+			"PurchaseTitle": "CStringLink",
+			"PurchaseDescription": "CStringLink",
+			"PurchaseWarning": "CStringLink",
+			"PurchaseImage": "CImagePath"
+		}
+	},
+	"CStimPack": {
+		"parent": null,
+		"fields": {
+			"Default": "bool",
+			"Name": "CStringLink",
+			"ShortName": "CStringLink",
+			"StoreName": "CStringLink",
+			"ProductId": "TBattleProductId",
+			"StoreTypeName": "CStringLink",
+			"Duration": "uint32",
+			"ReleaseDate": "SProductReleaseDate"
+		}
+	},
+	"CPlayerResponse": {
+		"parent": null,
+		"fields": {
+			"EditorCategories": "TEditorCategories",
+			"Priority": "uint32",
+			"Location": "EDamageLocation"
+		},
+		"abstract": true
+	},
+	"CPlayerResponseUnit": {
+		"parent": "CPlayerResponse",
+		"fields": {
+			"Chance": "CFixed",
+			"Cost": "SCost",
+			"Handled": "CEffectLink",
+			"CasterFilters": "CTargetFilters",
+			"TargetFilters": "CTargetFilters",
+			"ValidatorArray": {
+				"type": "CValidatorLink",
+				"array": true
+			},
+			"ContinueMethod": "EResponseContinueMethod",
+			"ProvideCategories": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EDamageResponseCategory"
+			},
+			"PreventCategories": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EDamageResponseCategory"
+			}
+		},
+		"abstract": true
+	},
+	"CPlayerResponseUnitDamage": {
+		"parent": "CPlayerResponseUnit",
+		"fields": {
+			"DeathType": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EDeathType"
+			},
+			"ClampMaximum": "CFixed",
+			"ClampMinimum": "CFixed",
+			"Exhausted": "CEffectLink",
+			"Evade": "bool",
+			"Fatal": "bool",
+			"Ignore": {
+				"type": "CFixed",
+				"array": true
+			},
+			"Kind": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EDamageKind"
+			},
+			"Maximum": "CFixed",
+			"Minimum": "CFixed",
+			"ModifyAmount": "CFixed",
+			"ModifyFraction": "CFixed",
+			"ModifyLimit": "CFixed",
+			"ModifyLimitVitalMaxFractionArray": {
+				"type": "CFixed",
+				"array": true
+			},
+			"ModifyMinimumDamage": "bool",
+			"RequireEffectArray": {
+				"type": "CEffectLink",
+				"array": true
+			},
+			"ExcludeEffectArray": {
+				"type": "CEffectLink",
+				"array": true
+			},
+			"RequireEffectInChainArray": {
+				"type": "CEffectLink",
+				"array": true
+			},
+			"ExcludeEffectInChainArray": {
+				"type": "CEffectLink",
+				"array": true
+			},
+			"DamageValue": "EDamageResponseDamageValue",
+			"ModifyScoreArray": {
+				"type": "SScoreValueUpdate",
+				"array": true
+			}
+		}
+	},
+	"CPlayerResponseUnitDeath": {
+		"parent": "CPlayerResponseUnit",
+		"fields": {
+			"DeathType": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EDeathType"
+			}
+		}
+	},
+	"CPlayerResponseUnitBirth": {
+		"parent": "CPlayerResponseUnit",
+		"fields": {
+			"BirthType": {
+				"type": "bool",
+				"array": true,
+				"indexEnum": "EResponseUnitBirthType"
+			}
+		}
 	}
 }
