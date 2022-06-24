@@ -1799,19 +1799,23 @@
 			},
 			"VisibleTo": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EActorFilter"
 			},
 			"VisibleToAtCreation": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EActorVisibilityAtCreation"
 			},
 			"FilterPlayers": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EPlayerID"
 			},
 			"VisibleToPlayers": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EPlayerID"
 			},
 			"PlayerIdSource": "EActorPlayerIdSource",
 			"Preload": {
@@ -7779,7 +7783,8 @@
 			"PeriodicValidator": "CValidatorLink",
 			"SearchFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EEffectMissileSearch"
 			},
 			"AmmoOwner": "SEffectWhichPlayer",
 			"PlacementMinDistance": "CFixed",
@@ -13783,7 +13788,8 @@
 			},
 			"VitalMaxAdditiveMultiplierArray": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EUnitVital"
 			},
 			"VitalRegenMultiplier": {
 				"type": "CFixed",
@@ -15971,6 +15977,7 @@
 	},
 	"CAccumulatorLevel": {
 		"parent": "CAccumulator",
+		"abstract": true,
 		"fields": {
 			"Amount": {
 				"type": "CFixed",
@@ -15983,7 +15990,6 @@
 	},
 	"CAccumulatorAbilLevel": {
 		"parent": "CAccumulatorLevel",
-		"abstract": true,
 		"fields": {}
 	},
 	"CAccumulatorUnitLevel": {

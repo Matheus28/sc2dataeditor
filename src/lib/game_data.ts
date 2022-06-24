@@ -534,9 +534,12 @@ const numberRestrictions:{
 */
 
 
-let unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
+let galaxyEnums = JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8"));
+delete galaxyEnums["EDeathType"]; // Outdated
+
+export const unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
 	JSON.parse(readFileSync("./data/enums_editor.json", "utf8")),
-	JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8")),
+	galaxyEnums, // It has a couple that are better than the editor ones...
 	JSON.parse(readFileSync("./data/enums_manual.json", "utf8"))
 );
 

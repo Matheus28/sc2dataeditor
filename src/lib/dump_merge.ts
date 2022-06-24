@@ -217,7 +217,7 @@ const specificParents:Record<string, string|null> = {
 // When adding new structs, we need to specify here if it's abstract
 const specificAbstract:Record<string, true> = {
 	"CAccumulator": true,
-	"CAccumulatorAbilLevel": true,
+	"CAccumulatorLevel": true,
 	"CKinetic": true,
 	"CPlayerResponse": true,
 	"CPlayerResponseUnit": true,
