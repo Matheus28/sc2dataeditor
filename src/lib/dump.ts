@@ -222,6 +222,7 @@ type EnumType = Record<string, { index:number; name:string; }>;
 		"ETechCategory": "e_techCat",
 		"EParticipantType": "e_participant", // guess... verify
 		"EActorSiteOpOrientAttachPointToType": "e_actorSiteOpOrientAttachPointTo",
+		"ECmdFlags": "e_cmdFlag",
 	};
 	
 	function processStrings(v:string){

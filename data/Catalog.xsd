@@ -5837,12 +5837,33 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_ECmdFlags">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="cript" />
-			<xs:enumeration value="etAutoCast" />
-			<xs:enumeration value="etAutoCastOn" />
-			<xs:enumeration value="martClick" />
-			<xs:enumeration value="martRally" />
-			<xs:enumeration value="ubgroup" />
+			<xs:enumeration value="AI" />
+			<xs:enumeration value="AIHeroes" />
+			<xs:enumeration value="AIIgnoreOnFinish" />
+			<xs:enumeration value="Alternate" />
+			<xs:enumeration value="AttackOnce" />
+			<xs:enumeration value="AutoQueued" />
+			<xs:enumeration value="BuildOnSelf" />
+			<xs:enumeration value="Continuous" />
+			<xs:enumeration value="DataA" />
+			<xs:enumeration value="DataB" />
+			<xs:enumeration value="DispatchToOtherUnit" />
+			<xs:enumeration value="HomogenousInterruption" />
+			<xs:enumeration value="IsOrder" />
+			<xs:enumeration value="Minimap" />
+			<xs:enumeration value="Preempt" />
+			<xs:enumeration value="Queued" />
+			<xs:enumeration value="QuickCast" />
+			<xs:enumeration value="Repeat" />
+			<xs:enumeration value="Script" />
+			<xs:enumeration value="SetAutoCast" />
+			<xs:enumeration value="SetAutoCastOn" />
+			<xs:enumeration value="SmartClick" />
+			<xs:enumeration value="SmartRally" />
+			<xs:enumeration value="Subgroup" />
+			<xs:enumeration value="TargetSelf" />
+			<xs:enumeration value="ToSelection" />
+			<xs:enumeration value="User" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="EClassIdCUpgrade">

@@ -16370,29 +16370,113 @@
 		}
 	},
 	"ECmdFlags": {
-		"e_cmdFlagScript": {
+		"e_cmdFlagAI": {
 			"index": 0,
-			"name": "cript"
+			"name": "AI"
+		},
+		"e_cmdFlagAIHeroes": {
+			"index": 1,
+			"name": "AIHeroes"
+		},
+		"e_cmdFlagAIIgnoreOnFinish": {
+			"index": 2,
+			"name": "AIIgnoreOnFinish"
+		},
+		"e_cmdFlagAlternate": {
+			"index": 3,
+			"name": "Alternate"
+		},
+		"e_cmdFlagAttackOnce": {
+			"index": 4,
+			"name": "AttackOnce"
+		},
+		"e_cmdFlagAutoQueued": {
+			"index": 5,
+			"name": "AutoQueued"
+		},
+		"e_cmdFlagBuildOnSelf": {
+			"index": 6,
+			"name": "BuildOnSelf"
+		},
+		"e_cmdFlagContinuous": {
+			"index": 7,
+			"name": "Continuous"
+		},
+		"e_cmdFlagDataA": {
+			"index": 8,
+			"name": "DataA"
+		},
+		"e_cmdFlagDataB": {
+			"index": 9,
+			"name": "DataB"
+		},
+		"e_cmdFlagDispatchToOtherUnit": {
+			"index": 10,
+			"name": "DispatchToOtherUnit"
+		},
+		"e_cmdFlagHomogenousInterruption": {
+			"index": 11,
+			"name": "HomogenousInterruption"
+		},
+		"e_cmdFlagIsOrder": {
+			"index": 12,
+			"name": "IsOrder"
+		},
+		"e_cmdFlagMinimap": {
+			"index": 13,
+			"name": "Minimap"
+		},
+		"e_cmdFlagPreempt": {
+			"index": 14,
+			"name": "Preempt"
+		},
+		"e_cmdFlagQueued": {
+			"index": 15,
+			"name": "Queued"
+		},
+		"e_cmdFlagQuickCast": {
+			"index": 16,
+			"name": "QuickCast"
+		},
+		"e_cmdFlagRepeat": {
+			"index": 17,
+			"name": "Repeat"
+		},
+		"e_cmdFlagScript": {
+			"index": 18,
+			"name": "Script"
 		},
 		"e_cmdFlagSetAutoCast": {
-			"index": 1,
-			"name": "etAutoCast"
+			"index": 19,
+			"name": "SetAutoCast"
 		},
 		"e_cmdFlagSetAutoCastOn": {
-			"index": 2,
-			"name": "etAutoCastOn"
+			"index": 20,
+			"name": "SetAutoCastOn"
 		},
 		"e_cmdFlagSmartClick": {
-			"index": 3,
-			"name": "martClick"
+			"index": 21,
+			"name": "SmartClick"
 		},
 		"e_cmdFlagSmartRally": {
-			"index": 4,
-			"name": "martRally"
+			"index": 22,
+			"name": "SmartRally"
 		},
 		"e_cmdFlagSubgroup": {
-			"index": 5,
-			"name": "ubgroup"
+			"index": 23,
+			"name": "Subgroup"
+		},
+		"e_cmdFlagTargetSelf": {
+			"index": 24,
+			"name": "TargetSelf"
+		},
+		"e_cmdFlagToSelection": {
+			"index": 25,
+			"name": "ToSelection"
+		},
+		"e_cmdFlagUser": {
+			"index": 26,
+			"name": "User"
 		}
 	},
 	"ECmdResult": {
