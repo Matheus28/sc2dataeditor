@@ -164,11 +164,13 @@
 			},
 			"DamageCategories": {
 				"type": "SDamageTypeInfo",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageType"
 			},
 			"AttackArmorTable": {
 				"type": "SAttackTypeInfo",
-				"array": true
+				"array": true,
+				"indexEnum": "EDamageType"
 			},
 			"VeterancySearchMaxCount": "uint32",
 			"VeterancyKillerFilters": "CTargetFilters",
@@ -188,7 +190,8 @@
 			"VeterancyLevelKillXPBonusPerLevel": "uint32",
 			"TeleportResetRange": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "ETeleportReset"
 			},
 			"CalculateFullVision": "bool",
 			"JoinInProgress": "bool",
@@ -13810,11 +13813,13 @@
 			},
 			"AbilCategoriesEnable": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EAbilityCategory"
 			},
 			"AbilCategoriesDisable": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EAbilityCategory"
 			},
 			"AbilTechAliasEnableArray": {
 				"type": "TTechAlias",
@@ -17319,7 +17324,8 @@
 			"ReplacedEffect": "CEffectLink",
 			"UnitTrackerFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EBehaviorUnitTracker"
 			},
 			"WhichLocation": "SEffectWhichLocation",
 			"SnapRange": "CFixed",

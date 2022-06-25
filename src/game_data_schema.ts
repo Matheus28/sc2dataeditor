@@ -197,7 +197,7 @@ ${Object.entries(unparsedGameData.classes).map(([structName, struct]) => {
 	<xs:element name="Catalog" type="Catalog">
 		${Object.entries(catalogContents).map(([name, scopes]) => {
 				if(scopes.length == 0) return "";
-				return `<xs:key name="${name}ID"><xs:selector xpath="${scopes.join("|")}"/><xs:field xpath="@id"/></xs:key>`;
+				return `<xs:unique name="${name}ID"><xs:selector xpath="${scopes.join("|")}"/><xs:field xpath="@id"/></xs:unique>`;
 		}).join('\n')}
 	</xs:element>
 `;

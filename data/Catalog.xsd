@@ -14661,7 +14661,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="SDamageTypeInfo">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_EDamageType" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
@@ -14671,7 +14671,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="SAttackTypeInfo">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_EDamageType" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
@@ -14709,7 +14709,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="CFixed">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_ETeleportReset" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
@@ -67247,7 +67247,7 @@
 				<xs:complexType>
 					<xs:complexContent>
 						<xs:extension base="bool">
-							<xs:attribute name="index" type="xs:integer" />
+							<xs:attribute name="index" type="simple_EAbilityCategory" />
 							<xs:attribute name="removed" type="simple_bool" />
 						</xs:extension>
 					</xs:complexContent>
@@ -67257,7 +67257,7 @@
 				<xs:complexType>
 					<xs:complexContent>
 						<xs:extension base="bool">
-							<xs:attribute name="index" type="xs:integer" />
+							<xs:attribute name="index" type="simple_EAbilityCategory" />
 							<xs:attribute name="removed" type="simple_bool" />
 						</xs:extension>
 					</xs:complexContent>
@@ -78146,7 +78146,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="bool">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_EBehaviorUnitTracker" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
@@ -83367,433 +83367,433 @@
 		</xs:choice>
 	</xs:complexType>
 	<xs:element name="Catalog" type="Catalog">
-		<xs:key name="AbilID">
+		<xs:unique name="AbilID">
 			<xs:selector xpath="CAbil|CAbilArmMagazine|CAbilAttack|CAbilAttackModifier|CAbilAugment|CAbilBattery|CAbilBeacon|CAbilBehavior|CAbilBuild|CAbilBuildable|CAbilEffect|CAbilEffectInstant|CAbilEffectTarget|CAbilHarvest|CAbilInteract|CAbilInventory|CAbilLearn|CAbilMerge|CAbilMergeable|CAbilMorph|CAbilMorphPlacement|CAbilMove|CAbilPawn|CAbilProgress|CAbilQueue|CAbilQueueable|CAbilRally|CAbilRedirect|CAbilRedirectInstant|CAbilRedirectTarget|CAbilResearch|CAbilRevive|CAbilSpecialize|CAbilStop|CAbilTrain|CAbilTransport|CAbilWarpTrain|CAbilWarpable" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="AccumulatorID">
+		</xs:unique>
+		<xs:unique name="AccumulatorID">
 			<xs:selector xpath="CAccumulator|CAccumulatorAbilLevel|CAccumulatorArithmetic|CAccumulatorAttributePoints|CAccumulatorBehavior|CAccumulatorCargo|CAccumulatorConstant|CAccumulatorDistance|CAccumulatorEffectAmount|CAccumulatorSwitch|CAccumulatorTrackedUnitCount|CAccumulatorUnitCustomValue|CAccumulatorUserData|CAccumulatorVeterancyLevel|CAccumulatorVitals" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="BehaviorID">
+		</xs:unique>
+		<xs:unique name="BehaviorID">
 			<xs:selector xpath="CBehavior|CBehaviorAttackModifier|CBehaviorAttribute|CBehaviorBuff|CBehaviorClickResponse|CBehaviorConjoined|CBehaviorCreepSource|CBehaviorJump|CBehaviorPowerSource|CBehaviorPowerUser|CBehaviorResource|CBehaviorReveal|CBehaviorSpawn|CBehaviorUnitTracker|CBehaviorVeterancy|CBehaviorWander" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="DataCollectionID">
+		</xs:unique>
+		<xs:unique name="DataCollectionID">
 			<xs:selector xpath="CDataCollection|CDataCollectionAbil|CDataCollectionUnit|CDataCollectionUpgrade" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="DataCollectionPatternID">
+		</xs:unique>
+		<xs:unique name="DataCollectionPatternID">
 			<xs:selector xpath="CDataCollectionPattern" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="EffectID">
+		</xs:unique>
+		<xs:unique name="EffectID">
 			<xs:selector xpath="CEffect|CEffectAddTrackedUnit|CEffectAddTrackedUnits|CEffectApplyBehavior|CEffectApplyForce|CEffectApplyKinetic|CEffectCancelOrder|CEffectClearTrackedUnits|CEffectCreateHealer|CEffectCreatePersistent|CEffectCreateUnit|CEffectCreep|CEffectDamage|CEffectDestroyPersistent|CEffectEnumArea|CEffectEnumInventory|CEffectEnumMagazine|CEffectEnumTrackedUnits|CEffectEnumTransport|CEffectIssueOrder|CEffectLastTarget|CEffectLaunchMissile|CEffectLoadContainer|CEffectModifyPlayer|CEffectModifyUnit|CEffectMorph|CEffectRandomPointInCircle|CEffectRedirectMissile|CEffectReleaseMagazine|CEffectRemoveBehavior|CEffectRemoveKinetic|CEffectRemoveTrackedUnit|CEffectResponse|CEffectReturnMagazine|CEffectSet|CEffectSwitch|CEffectTeleport|CEffectTransferBehavior|CEffectUseCalldown|CEffectUseMagazine|CEffectUserData" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="FootprintID">
+		</xs:unique>
+		<xs:unique name="FootprintID">
 			<xs:selector xpath="CFootprint" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ItemID">
+		</xs:unique>
+		<xs:unique name="ItemID">
 			<xs:selector xpath="CItem|CItemAbil|CItemAbilPowerUp|CItemEffect|CItemEffectInstant|CItemEffectTarget" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="LootID">
+		</xs:unique>
+		<xs:unique name="LootID">
 			<xs:selector xpath="CLoot|CLootEffect|CLootItem|CLootSet|CLootSpawn|CLootUnit" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="MoverID">
+		</xs:unique>
+		<xs:unique name="MoverID">
 			<xs:selector xpath="CMover|CMoverAvoid|CMoverFlock|CMoverMissile" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PlayerResponseID">
+		</xs:unique>
+		<xs:unique name="PlayerResponseID">
 			<xs:selector xpath="CPlayerResponse|CPlayerResponseUnit|CPlayerResponseUnitBirth|CPlayerResponseUnitDamage|CPlayerResponseUnitDeath" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="RequirementID">
+		</xs:unique>
+		<xs:unique name="RequirementID">
 			<xs:selector xpath="CRequirement" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TurretID">
+		</xs:unique>
+		<xs:unique name="TurretID">
 			<xs:selector xpath="CTurret" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="UnitID">
+		</xs:unique>
+		<xs:unique name="UnitID">
 			<xs:selector xpath="CUnit|CUnitHero" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="UpgradeID">
+		</xs:unique>
+		<xs:unique name="UpgradeID">
 			<xs:selector xpath="CUpgrade" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ValidatorID">
+		</xs:unique>
+		<xs:unique name="ValidatorID">
 			<xs:selector xpath="CValidator|CValidatorCombine|CValidatorCompareTrackedUnitsCount|CValidatorCondition|CValidatorEffect|CValidatorEffectCompareDodged|CValidatorEffectCompareEvaded|CValidatorEffectTreeUserData|CValidatorFunction|CValidatorGameCommanderActive|CValidatorGameCompareTerrain|CValidatorGameCompareTimeEvent|CValidatorGameCompareTimeOfDay|CValidatorIsUnitTracked|CValidatorLocation|CValidatorLocationArc|CValidatorLocationCompareCliffLevel|CValidatorLocationComparePower|CValidatorLocationCompareRange|CValidatorLocationCreep|CValidatorLocationCrossChasm|CValidatorLocationCrossCliff|CValidatorLocationEnumArea|CValidatorLocationInPlayableMapArea|CValidatorLocationPathable|CValidatorLocationPlacement|CValidatorLocationShrub|CValidatorLocationType|CValidatorLocationVision|CValidatorPlayer|CValidatorPlayerAlliance|CValidatorPlayerCompareDifficulty|CValidatorPlayerCompareFoodAvailable|CValidatorPlayerCompareFoodUsed|CValidatorPlayerCompareFoodMade|CValidatorPlayerCompareRace|CValidatorPlayerCompareResource|CValidatorPlayerCompareResult|CValidatorPlayerCompareType|CValidatorPlayerFood|CValidatorPlayerRequirement|CValidatorUnit|CValidatorUnitAI|CValidatorUnitAbil|CValidatorUnitAlliance|CValidatorUnitArmor|CValidatorUnitBehaviorStackAlias|CValidatorUnitBehaviorState|CValidatorUnitCombatAI|CValidatorUnitCompareAIAreaEvalRatio|CValidatorUnitCompareAbilLevel|CValidatorUnitCompareAbilSkillPoint|CValidatorUnitCompareAbilStage|CValidatorUnitCompareAttackPriority|CValidatorUnitCompareBehaviorCount|CValidatorUnitCompareCargo|CValidatorUnitCompareChargeUsed|CValidatorUnitCompareCooldown|CValidatorUnitCompareDamageDealtTime|CValidatorUnitCompareDamageTakenTime|CValidatorUnitCompareDeath|CValidatorUnitCompareDetectRange|CValidatorUnitCompareField|CValidatorUnitCompareHeight|CValidatorUnitCompareKillCount|CValidatorUnitCompareMarkerCount|CValidatorUnitCompareMoverPhase|CValidatorUnitCompareOrderCount|CValidatorUnitCompareOrderTargetRange|CValidatorUnitComparePowerSourceLevel|CValidatorUnitComparePowerUserLevel|CValidatorUnitCompareRallyPointCount|CValidatorUnitCompareResourceContents|CValidatorUnitCompareResourceHarvesters|CValidatorUnitCompareSpeed|CValidatorUnitCompareVeterancyLevel|CValidatorUnitCompareVital|CValidatorUnitCompareVitality|CValidatorUnitDetected|CValidatorUnitFilters|CValidatorUnitFlying|CValidatorUnitInWeaponRange|CValidatorUnitInventory|CValidatorUnitInventoryContainsItem|CValidatorUnitInventoryIsFull|CValidatorUnitKinetic|CValidatorUnitLastDamagePlayer|CValidatorUnitMissileNullified|CValidatorUnitMover|CValidatorUnitOrder|CValidatorUnitOrderQueue|CValidatorUnitOrderTargetPathable|CValidatorUnitOrderTargetType|CValidatorUnitPathable|CValidatorUnitPathing|CValidatorUnitScanning|CValidatorUnitState|CValidatorUnitTestWeaponType|CValidatorUnitType|CValidatorUnitWeaponAnimating|CValidatorUnitWeaponFiring|CValidatorUnitWeaponPlane" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="WeaponID">
+		</xs:unique>
+		<xs:unique name="WeaponID">
 			<xs:selector xpath="CWeapon|CWeaponLegacy|CWeaponStrafe" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ArmyCategoryID">
+		</xs:unique>
+		<xs:unique name="ArmyCategoryID">
 			<xs:selector xpath="CArmyCategory" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ArmyUnitID">
+		</xs:unique>
+		<xs:unique name="ArmyUnitID">
 			<xs:selector xpath="CArmyUnit" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ArmyUpgradeID">
+		</xs:unique>
+		<xs:unique name="ArmyUpgradeID">
 			<xs:selector xpath="CArmyUpgrade" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="BankConditionID">
+		</xs:unique>
+		<xs:unique name="BankConditionID">
 			<xs:selector xpath="CBankConditionCombine|CBankConditionCompare|CBankConditionCompareValueCount|CBankConditionCompareValueInteger|CBankConditionCompareValueString|CBankConditionCompareValueSum|CBankConditionCurrentMap" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CampaignID">
+		</xs:unique>
+		<xs:unique name="CampaignID">
 			<xs:selector xpath="CCampaign" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CharacterID">
+		</xs:unique>
+		<xs:unique name="CharacterID">
 			<xs:selector xpath="CCharacter" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CommanderID">
+		</xs:unique>
+		<xs:unique name="CommanderID">
 			<xs:selector xpath="CCommander" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ConversationID">
+		</xs:unique>
+		<xs:unique name="ConversationID">
 			<xs:selector xpath="CConversation" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ConversationStateID">
+		</xs:unique>
+		<xs:unique name="ConversationStateID">
 			<xs:selector xpath="CConversationState" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="LocationID">
+		</xs:unique>
+		<xs:unique name="LocationID">
 			<xs:selector xpath="CLocation" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="MapID">
+		</xs:unique>
+		<xs:unique name="MapID">
 			<xs:selector xpath="CMap" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ObjectiveID">
+		</xs:unique>
+		<xs:unique name="ObjectiveID">
 			<xs:selector xpath="CObjective" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PreloadID">
+		</xs:unique>
+		<xs:unique name="PreloadID">
 			<xs:selector xpath="CPreload|CPreloadActor|CPreloadAsset|CPreloadConversation|CPreloadModel|CPreloadScene|CPreloadSound|CPreloadUnit" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ActorID">
+		</xs:unique>
+		<xs:unique name="ActorID">
 			<xs:selector xpath="CActor|CActorAction|CActorActionOverride|CActorArc|CActorBase|CActorBatch|CActorBeamSimple|CActorBeamStandard|CActorBearings|CActorBlob|CActorCamera|CActorCameraModel|CActorCreep|CActorCutscene|CActorDoodad|CActorDoodadPreserver|CActorEditorCamera|CActorEditorPoint|CActorEventMacro|CActorEventMacroRunnable|CActorFoliageFXSpawner|CActorForce|CActorForceBox|CActorForceConeRoundedEnd|CActorForceCylinder|CActorForceSphere|CActorGlobalConfig|CActorLightModel|CActorLightOmni|CActorLightOmniModel|CActorLightSpot|CActorLightSpotModel|CActorList|CActorLookAt|CActorMinimap|CActorMissile|CActorModel|CActorModelMaterial|CActorPortrait|CActorPower|CActorProgress|CActorPropertyCurveSet|CActorQuad|CActorQueryResponse|CActorRange|CActorRegion|CActorRegionArc|CActorRegionCircle|CActorRegionGame|CActorRegionQuad|CActorRegionWater|CActorScene|CActorSelection|CActorSetQueried|CActorShadow|CActorShield|CActorShieldImpact|CActorSimple|CActorSite|CActorSiteBillboard|CActorSiteMover|CActorSiteOp2DRotation|CActorSiteOpAction|CActorSiteOpAttach|CActorSiteOpAttachVolume|CActorSiteOpBanker|CActorSiteOpBankerUnit|CActorSiteOpBasic|CActorSiteOpCursor|CActorSiteOpDeathMotion|CActorSiteOpEffect|CActorSiteOpForward|CActorSiteOpGameCameraFollow|CActorSiteOpHeight|CActorSiteOpHigherOfTerrainAndWater|CActorSiteOpHostBearings|CActorSiteOpHostedOffset|CActorSiteOpIncoming|CActorSiteOpLocalOffset|CActorSiteOpOrbiter|CActorSiteOpPatch|CActorSiteOpPhysicsImpact|CActorSiteOpRandomPointInCircle|CActorSiteOpRandomPointInCrossbar|CActorSiteOpRandomPointInSphere|CActorSiteOpRotationExplicit|CActorSiteOpRotationRandom|CActorSiteOpRotationSmooth|CActorSiteOpRotationVariancer|CActorSiteOpRotator|CActorSiteOpSelectionOffset|CActorSiteOpSerpentHead|CActorSiteOpSerpentSegment|CActorSiteOpShadow|CActorSiteOpTether|CActorSiteOpTilter|CActorSiteOpTipability|CActorSiteOpUp|CActorSiteOpZ|CActorSiteOrbiter|CActorSiteRocker|CActorSnapshot|CActorSound|CActorSplat|CActorSquib|CActorStateMonitor|CActorTerrain|CActorTerrainDeformer|CActorText|CActorTurret|CActorUnit" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="AttachMethodID">
+		</xs:unique>
+		<xs:unique name="AttachMethodID">
 			<xs:selector xpath="CAttachMethod|CAttachMethodArcTest|CAttachMethodAttachType|CAttachMethodBestMatch|CAttachMethodFilter|CAttachMethodIncoming|CAttachMethodNodeOccupancy|CAttachMethodNodeOccupancy2|CAttachMethodNumericField|CAttachMethodPattern|CAttachMethodPortAllocator|CAttachMethodProximity|CAttachMethodRandom|CAttachMethodReduction|CAttachMethodVolumesRequery|CAttachMethodVolumesTargets|CAttachMethodVolumesWeightedPick" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="BeamID">
+		</xs:unique>
+		<xs:unique name="BeamID">
 			<xs:selector xpath="CBeamAsyncLinear" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ButtonID">
+		</xs:unique>
+		<xs:unique name="ButtonID">
 			<xs:selector xpath="CButton" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="DSPID">
+		</xs:unique>
+		<xs:unique name="DSPID">
 			<xs:selector xpath="CDSPChorus|CDSPCompressor|CDSPCustomCompressor|CDSPDistortion|CDSPEcho|CDSPFlange|CDSPHighPass|CDSPLimiter|CDSPLowPass|CDSPLowPassSimple|CDSPNormalize|CDSPParamEQ|CDSPPitchShift|CDSPReverb" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="LensFlareSetID">
+		</xs:unique>
+		<xs:unique name="LensFlareSetID">
 			<xs:selector xpath="CLensFlareSet" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="LightID">
+		</xs:unique>
+		<xs:unique name="LightID">
 			<xs:selector xpath="CLight" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ModelID">
+		</xs:unique>
+		<xs:unique name="ModelID">
 			<xs:selector xpath="CModel|CModelFoliage" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ReverbID">
+		</xs:unique>
+		<xs:unique name="ReverbID">
 			<xs:selector xpath="CReverb" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ShapeID">
+		</xs:unique>
+		<xs:unique name="ShapeID">
 			<xs:selector xpath="CShape|CShapeArc|CShapeQuad" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SoundID">
+		</xs:unique>
+		<xs:unique name="SoundID">
 			<xs:selector xpath="CSound" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SoundExclusivityID">
+		</xs:unique>
+		<xs:unique name="SoundExclusivityID">
 			<xs:selector xpath="CSoundExclusivity" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SoundMixSnapshotID">
+		</xs:unique>
+		<xs:unique name="SoundMixSnapshotID">
 			<xs:selector xpath="CSoundMixSnapshot" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SoundtrackID">
+		</xs:unique>
+		<xs:unique name="SoundtrackID">
 			<xs:selector xpath="CSoundtrack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TextureID">
+		</xs:unique>
+		<xs:unique name="TextureID">
 			<xs:selector xpath="CTexture" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CliffID">
+		</xs:unique>
+		<xs:unique name="CliffID">
 			<xs:selector xpath="CCliff" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CliffMeshID">
+		</xs:unique>
+		<xs:unique name="CliffMeshID">
 			<xs:selector xpath="CCliffMesh" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="FoWID">
+		</xs:unique>
+		<xs:unique name="FoWID">
 			<xs:selector xpath="CFoW" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PhysicsMaterialID">
+		</xs:unique>
+		<xs:unique name="PhysicsMaterialID">
 			<xs:selector xpath="CPhysicsMaterial" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TerrainID">
+		</xs:unique>
+		<xs:unique name="TerrainID">
 			<xs:selector xpath="CTerrain" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TerrainObjectID">
+		</xs:unique>
+		<xs:unique name="TerrainObjectID">
 			<xs:selector xpath="CTerrainObject|CCliffDoodad" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TerrainTexID">
+		</xs:unique>
+		<xs:unique name="TerrainTexID">
 			<xs:selector xpath="CTerrainTex" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TileID">
+		</xs:unique>
+		<xs:unique name="TileID">
 			<xs:selector xpath="CTile" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="WaterID">
+		</xs:unique>
+		<xs:unique name="WaterID">
 			<xs:selector xpath="CWater" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ArtifactID">
+		</xs:unique>
+		<xs:unique name="ArtifactID">
 			<xs:selector xpath="CArtifact" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ArtifactSlotID">
+		</xs:unique>
+		<xs:unique name="ArtifactSlotID">
 			<xs:selector xpath="CArtifactSlot" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ConfigID">
+		</xs:unique>
+		<xs:unique name="ConfigID">
 			<xs:selector xpath="CConfig" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="HeroID">
+		</xs:unique>
+		<xs:unique name="HeroID">
 			<xs:selector xpath="CHero" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="HeroAbilID">
+		</xs:unique>
+		<xs:unique name="HeroAbilID">
 			<xs:selector xpath="CHeroAbil" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="HeroStatID">
+		</xs:unique>
+		<xs:unique name="HeroStatID">
 			<xs:selector xpath="CHeroStat" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="MountID">
+		</xs:unique>
+		<xs:unique name="MountID">
 			<xs:selector xpath="CMount" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SkinID">
+		</xs:unique>
+		<xs:unique name="SkinID">
 			<xs:selector xpath="CSkin" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TalentID">
+		</xs:unique>
+		<xs:unique name="TalentID">
 			<xs:selector xpath="CTalent" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TalentProfileID">
+		</xs:unique>
+		<xs:unique name="TalentProfileID">
 			<xs:selector xpath="CTalentProfile" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="VoiceOverID">
+		</xs:unique>
+		<xs:unique name="VoiceOverID">
 			<xs:selector xpath="CVoiceOver" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="AlertID">
+		</xs:unique>
+		<xs:unique name="AlertID">
 			<xs:selector xpath="CAlert" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="RaceBannerPackID">
+		</xs:unique>
+		<xs:unique name="RaceBannerPackID">
 			<xs:selector xpath="CRaceBannerPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CameraID">
+		</xs:unique>
+		<xs:unique name="CameraID">
 			<xs:selector xpath="CCamera" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ConsoleSkinID">
+		</xs:unique>
+		<xs:unique name="ConsoleSkinID">
 			<xs:selector xpath="CConsoleSkin" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="CursorID">
+		</xs:unique>
+		<xs:unique name="CursorID">
 			<xs:selector xpath="CCursor" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="GameUIID">
+		</xs:unique>
+		<xs:unique name="GameUIID">
 			<xs:selector xpath="CGameUI" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="BundleID">
+		</xs:unique>
+		<xs:unique name="BundleID">
 			<xs:selector xpath="CBundle" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PingID">
+		</xs:unique>
+		<xs:unique name="PingID">
 			<xs:selector xpath="CPing" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ColorStyleID">
+		</xs:unique>
+		<xs:unique name="ColorStyleID">
 			<xs:selector xpath="CColorStyle" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="AchievementID">
+		</xs:unique>
+		<xs:unique name="AchievementID">
 			<xs:selector xpath="CAchievement" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="AchievementTermID">
+		</xs:unique>
+		<xs:unique name="AchievementTermID">
 			<xs:selector xpath="CAchievementTerm|CAchievementTermAbilInteract|CAchievementTermAbilLoad|CAchievementTermAbilUse|CAchievementTermAchievement|CAchievementTermBehaviorCount|CAchievementTermBehaviorElapsed|CAchievementTermBehaviorState|CAchievementTermCombine|CAchievementTermEffectAbsorbed|CAchievementTermEffectDamaged|CAchievementTermEffectDodged|CAchievementTermEffectHealed|CAchievementTermEffectKilled|CAchievementTermEffectUse|CAchievementTermGeneric|CAchievementTermReplay|CAchievementTermScoreValue|CAchievementTermTime|CAchievementTermUnitBirth|CAchievementTermUnitDeath|CAchievementTermUnitKills|CAchievementTermUnitRegen|CAchievementTermUnitSupplyLoss" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="BoostID">
+		</xs:unique>
+		<xs:unique name="BoostID">
 			<xs:selector xpath="CBoost" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="DecalPackID">
+		</xs:unique>
+		<xs:unique name="DecalPackID">
 			<xs:selector xpath="CDecalPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="EmoticonID">
+		</xs:unique>
+		<xs:unique name="EmoticonID">
 			<xs:selector xpath="CEmoticon" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="EmoticonPackID">
+		</xs:unique>
+		<xs:unique name="EmoticonPackID">
 			<xs:selector xpath="CEmoticonPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="GameID">
+		</xs:unique>
+		<xs:unique name="GameID">
 			<xs:selector xpath="CGame" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="HerdID">
+		</xs:unique>
+		<xs:unique name="HerdID">
 			<xs:selector xpath="CHerd" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="HerdNodeID">
+		</xs:unique>
+		<xs:unique name="HerdNodeID">
 			<xs:selector xpath="CHerdNode" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ItemClassID">
+		</xs:unique>
+		<xs:unique name="ItemClassID">
 			<xs:selector xpath="CItemClass" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ItemContainerID">
+		</xs:unique>
+		<xs:unique name="ItemContainerID">
 			<xs:selector xpath="CItemContainer" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="KineticID">
+		</xs:unique>
+		<xs:unique name="KineticID">
 			<xs:selector xpath="CKinetic|CKineticDistance|CKineticFollow|CKineticRotate|CKineticSequence|CKineticSet|CKineticTranslate" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PortraitPackID">
+		</xs:unique>
+		<xs:unique name="PortraitPackID">
 			<xs:selector xpath="CPortraitPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="PremiumMapID">
+		</xs:unique>
+		<xs:unique name="PremiumMapID">
 			<xs:selector xpath="CPremiumMap" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="RaceID">
+		</xs:unique>
+		<xs:unique name="RaceID">
 			<xs:selector xpath="CRace" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="RequirementNodeID">
+		</xs:unique>
+		<xs:unique name="RequirementNodeID">
 			<xs:selector xpath="CRequirementNode|CRequirementAllowAbil|CRequirementAllowBehavior|CRequirementAllowUnit|CRequirementAllowUpgrade|CRequirementAnd|CRequirementConst|CRequirementCountAbil|CRequirementCountBehavior|CRequirementCountUnit|CRequirementCountUpgrade|CRequirementDiv|CRequirementEq|CRequirementGT|CRequirementGTE|CRequirementLT|CRequirementLTE|CRequirementMod|CRequirementMul|CRequirementNE|CRequirementNot|CRequirementOdd|CRequirementOr|CRequirementSum|CRequirementXor" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="RewardID">
+		</xs:unique>
+		<xs:unique name="RewardID">
 			<xs:selector xpath="CReward|CRewardConsoleSkin|CRewardDecal|CRewardEmoticon|CRewardIcon|CRewardModel|CRewardPoints|CRewardPortrait|CRewardPortraitInGame|CRewardRaceBanner|CRewardSpray|CRewardSprayUseDecal|CRewardTrophy|CRewardVoicePack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ScoreResultID">
+		</xs:unique>
+		<xs:unique name="ScoreResultID">
 			<xs:selector xpath="CScoreResult|CScoreResultBuildOrder|CScoreResultExperience|CScoreResultGraph|CScoreResultPerformance|CScoreResultRoot|CScoreResultScore" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="ScoreValueID">
+		</xs:unique>
+		<xs:unique name="ScoreValueID">
 			<xs:selector xpath="CScoreValue|CScoreValueCombine|CScoreValueConstant|CScoreValueCustom|CScoreValueStandard" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SkinPackID">
+		</xs:unique>
+		<xs:unique name="SkinPackID">
 			<xs:selector xpath="CSkinPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SprayID">
+		</xs:unique>
+		<xs:unique name="SprayID">
 			<xs:selector xpath="CSpray" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="SprayPackID">
+		</xs:unique>
+		<xs:unique name="SprayPackID">
 			<xs:selector xpath="CSprayPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TacCooldownID">
+		</xs:unique>
+		<xs:unique name="TacCooldownID">
 			<xs:selector xpath="CTacCooldown" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TacticalID">
+		</xs:unique>
+		<xs:unique name="TacticalID">
 			<xs:selector xpath="CTactical|CTacticalOrder|CTacticalSet" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TargetFindID">
+		</xs:unique>
+		<xs:unique name="TargetFindID">
 			<xs:selector xpath="CTargetFind|CTargetFindBestPoint|CTargetFindEffect|CTargetFindEnumArea|CTargetFindLastAttacker|CTargetFindOffset|CTargetFindOrder|CTargetFindRallyPoint|CTargetFindSet|CTargetFindWorkerRallyPoint" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TargetSortID">
+		</xs:unique>
+		<xs:unique name="TargetSortID">
 			<xs:selector xpath="CTargetSort|CTargetSortAlliance|CTargetSortAngle|CTargetSortBehaviorCount|CTargetSortBehaviorDuration|CTargetSortChargeCount|CTargetSortChargeRegen|CTargetSortCooldown|CTargetSortDistance|CTargetSortField|CTargetSortInterruptible|CTargetSortMarker|CTargetSortPowerSourceLevel|CTargetSortPowerUserLevel|CTargetSortPriority|CTargetSortRandom|CTargetSortValidator|CTargetSortVital|CTargetSortVitalFraction" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TextureSheetID">
+		</xs:unique>
+		<xs:unique name="TextureSheetID">
 			<xs:selector xpath="CTextureSheet" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="TrophyID">
+		</xs:unique>
+		<xs:unique name="TrophyID">
 			<xs:selector xpath="CTrophy" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="UserID">
+		</xs:unique>
+		<xs:unique name="UserID">
 			<xs:selector xpath="CUser" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="VoicePackID">
+		</xs:unique>
+		<xs:unique name="VoicePackID">
 			<xs:selector xpath="CVoicePack" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="WarChestID">
+		</xs:unique>
+		<xs:unique name="WarChestID">
 			<xs:selector xpath="CWarChest" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="WarChestSeasonID">
+		</xs:unique>
+		<xs:unique name="WarChestSeasonID">
 			<xs:selector xpath="CWarChestSeason" />
 			<xs:field xpath="@id" />
-		</xs:key>
-		<xs:key name="StimPackID">
+		</xs:unique>
+		<xs:unique name="StimPackID">
 			<xs:selector xpath="CStimPack" />
 			<xs:field xpath="@id" />
-		</xs:key>
+		</xs:unique>
 	</xs:element>
 </xs:schema>
