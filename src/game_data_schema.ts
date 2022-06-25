@@ -102,7 +102,7 @@ ${Object.entries(DataFieldDefaults).map(([typeName, typeDefaultValue]) => {
 	}
 	
 	if((SimpleRealTypesArray as readonly string[]).indexOf(typeName) != -1){
-		return complexType + `<xs:simpleType name="simple_${"" + fixName(typeName)}"><xs:restriction base="xs:string"><xs:pattern value="-?[0-9]+(.[0-9]*)?"/></xs:restriction></xs:simpleType>`;
+		return complexType + `<xs:simpleType name="simple_${"" + fixName(typeName)}"><xs:restriction base="xs:string"><xs:pattern value="-?[0-9]+(\\.[0-9]*)?"/></xs:restriction></xs:simpleType>`;
 	}else{
 		if(typeName.startsWith("int")){
 			return complexType + `<xs:simpleType name="simple_${"" + fixName(typeName)}"><xs:restriction base="xs:int" /></xs:simpleType>`;

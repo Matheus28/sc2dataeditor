@@ -191,7 +191,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CFacing">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CFangle">
@@ -199,7 +199,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CFangle">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CFangleArc">
@@ -207,7 +207,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CFangleArc">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CFixed">
@@ -215,7 +215,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CFixed">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CGameAcceleration">
@@ -223,7 +223,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CGameAcceleration">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CGameRate">
@@ -231,7 +231,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CGameRate">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CGameSpeed">
@@ -239,7 +239,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CGameSpeed">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CGameTime">
@@ -247,7 +247,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CGameTime">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CMissileAcceleration">
@@ -255,7 +255,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CMissileAcceleration">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CMissileSpeed">
@@ -263,7 +263,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_CMissileSpeed">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="TUnitRadius">
@@ -271,7 +271,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_TUnitRadius">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="THostedPropPriority">
@@ -279,7 +279,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_THostedPropPriority">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="real32">
@@ -287,7 +287,7 @@
 	</xs:complexType>
 	<xs:simpleType name="simple_real32">
 		<xs:restriction base="xs:string">
-			<xs:pattern value="-?[0-9]+(.[0-9]*)?" />
+			<xs:pattern value="-?[0-9]+(\.[0-9]*)?" />
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="CAbilSetId">
