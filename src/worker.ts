@@ -1,6 +1,6 @@
 import assert from "assert";
 import { CatalogName, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex, forEachDataspace } from './lib/game_data_loader';
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex, forEachDataspace, newCatalogEntry } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import { resolveTokens, unresolveTokens } from "./wizards/components/utils";
@@ -54,9 +54,9 @@ function getDefaultTypeForCatalog(catalog:CatalogName):string {
 	return `C${catalog}`;
 }
 
-function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNode;
-function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined;
-function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNode|undefined {
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:true):XMLNodeEntry;
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNodeEntry|undefined;
+function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfNotExists:boolean):XMLNodeEntry|undefined {
 	let catalog = dataspace.catalogs[entry.catalog];
 	
 	if(entry.id in catalog.entryByID){
@@ -68,7 +68,7 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 			"id": entry.id,
 		};
 		
-		let node = newNode(getDefaultTypeForCatalog(entry.catalog), attrs);
+		let node = newCatalogEntry(getDefaultTypeForCatalog(entry.catalog), attrs);
 		addDataspaceEntry(dataspace, node);
 		modifiedDataspace(dataspace);
 		return node;
@@ -508,7 +508,7 @@ function getFieldValueStartingFromNode(field:CatalogField, node:XMLNodeEntry):{ 
 	return undefined;
 }
 
-function getDefaultEntryForType(tagname:string):{node: XMLNode, dataspace:Dataspace }|undefined {
+function getDefaultEntryForType(tagname:string):{node: XMLNodeEntry, dataspace:Dataspace }|undefined {
 	let catalogName = getCatalogNameByTagname(tagname);
 	return map.index.catalogDefaults[catalogName][tagname];
 }

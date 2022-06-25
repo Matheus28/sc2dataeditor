@@ -29,6 +29,7 @@ export interface XMLNode extends XMLNodeBase<XMLNode> {
 
 export interface XMLNodeCatalog extends XMLNodeBase<XMLNodeEntry> {};
 export interface XMLNodeEntry extends XMLNodeBase<XMLNode> {
+	__tag:"XMLNodeEntry"; // This is just so we can't cast a XMLNode to this implicitly, it doesn't actually exist
 	editorComment?:string;
 	declaredTokens?:Record<string, {
 		value?:string;
@@ -61,7 +62,7 @@ export type GameDataIndex = {
 	catalogDefaults:{
 		[Catalog in CatalogName]:{
 			[K in keyof CatalogTypes[Catalog]]?:{
-				node: XMLNode & { tagname: K };
+				node:XMLNodeEntry;
 				dataspace:Dataspace;
 			}
 		}
@@ -318,8 +319,8 @@ export interface Dataspace {
 	
 	catalogs:{
 		[Catalog in CatalogName]:{
-			entries:XMLNode[];
-			entryByID:Record<string, XMLNode & {tagname:keyof CatalogTypes[Catalog]}>;
+			entries:XMLNodeEntry[];
+			entryByID:Record<string, XMLNodeEntry>;
 		}
 	};
 };
@@ -372,7 +373,7 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		return null;
 	}
 	
-	let data:XMLNodeCatalog = (await parseXML(str))["Catalog"];
+	let data:XMLNodeCatalog = (await parseXML(str))["Catalog"] as XMLNodeCatalog;
 	let catalogs = createEmptyDataspaceCatalogs();
 	
 	let structDefaults:Dataspace["structDefaults"] = {};
@@ -508,7 +509,7 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 	};
 }
 
-export function addDataspaceEntry(dataspace:Dataspace, child:XMLNode){
+export function addDataspaceEntry(dataspace:Dataspace, child:XMLNodeEntry){
 	assert(dataspace.data_ != null);
 	assert("id" in child.attr);
 	
@@ -736,13 +737,13 @@ function notUndefined<T>(v:T|undefined): v is T {
 export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
 		assert(data.data_ != null);
-		let xml = shallowCopyNode(null, data.data_);
+		let xml:XMLNode = shallowCopyNode(null, data.data_);
 		
 		// We need to make some changes to pull editorComment out to an actual xml comment
 		xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"] || [];
 		
 		for(let i = 0; i < xml.children.length; ++i){
-			let v = xml.children[i];
+			let v = xml.children[i] as XMLNodeEntry;
 			
 			if(!v.editorComment) continue;
 			
@@ -967,7 +968,7 @@ export function accessStruct(node:XMLNode, name:string, createIfNotExists:boolea
 	return subnodes[0];
 }
 
-export function newNode<Tag extends string>(tag:Tag, attrs?:Record<string, string>):XMLNode & { tagname:Tag; } {
+export function newNode<Tag extends string>(tag:Tag, attrs?:Record<string, string>){
 	return {
 		tagname: tag,
 		children: [],
@@ -976,6 +977,9 @@ export function newNode<Tag extends string>(tag:Tag, attrs?:Record<string, strin
 	};
 }
 
+export function newCatalogEntry<Tag extends string>(tag:Tag, attrs?:Record<string, string>){
+	return (newNode(tag, attrs) as any) as XMLNodeEntry;
+}
 
 function isCommentNode<T>(x:XMLNodeBase<T>):x is XMLNodeComment<T> {
 	return x.tagname == "#comment";
