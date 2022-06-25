@@ -4,7 +4,6 @@ import { CatalogName, CatalogTypesInstance, FieldType } from '../lib/game_data';
 import { mapObjectToArray } from '../lib/utils';
 import { CatalogEntry, CatalogField } from '../worker';
 import { GenericCatalogField } from './components/GenericCatalogField';
-import SelectEntry, { SelectOption } from './components/SelectEntry';
 import SelectEntryType from './components/SelectEntryType';
 
 

@@ -103,6 +103,14 @@ export function setEntryParent(_entry:CatalogEntry, _value:string):Promise<void>
 	return sendMessage("setEntryParent", arguments);
 }
 
+export function getEntryXML(_entry:CatalogEntry):Promise<string|undefined>{
+	return sendMessage("getEntryXML", arguments);
+}
+
+export function setEntryXML(_entry:CatalogEntry, _value:string):Promise<boolean>{
+	return sendMessage("setEntryXML", arguments);
+}
+
 export function setFieldValue(_field:CatalogField, _value:string):Promise<{
 	source:ValueSource;
 	tokens:Record<string,string>;

@@ -1,6 +1,6 @@
-:not(input):not(textarea),
-:not(input):not(textarea)::after,
-:not(input):not(textarea)::before {
+:not(input):not(textarea):not(button):not(a):not(.ace_content):not(.ace_scroller),
+:not(input):not(textarea):not(button):not(a)::after,
+:not(input):not(textarea):not(button):not(a)::before {
 	-webkit-user-select: none;
 	user-select: none;
 	cursor: default;
@@ -106,4 +106,12 @@ a[href^="ftp://"] {
 	--falcon-input-bg: var(--falcon-table-danger-bg);
 	--falcon-input-color: var(--falcon-table-danger-color);
 	--falcon-input-border-color: var(--falcon-table-danger-border-color);
+}
+
+.ace_editor {
+	border-radius: 0.375rem
+}
+
+.ace_gutter {
+	z-index: auto;
 }

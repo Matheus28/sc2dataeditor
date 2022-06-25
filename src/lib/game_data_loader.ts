@@ -43,7 +43,7 @@ export interface XMLNodeEntry extends XMLNodeBase<XMLNode> {
 	};
 }
 
-type XMLParseResult = Record<string, XMLNode>;
+type XMLParseResult = XMLNode[];
 
 export function getGameDataFilenameBase(rootMapDir:string){
 	return rootMapDir + "/Base.SC2Data/GameData/";
@@ -94,7 +94,8 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		}catch{}
 		
 		if(str !== undefined){
-			includes = (await parseXML(str))["Includes"];
+			includes = (await parseXML(str))[0];
+			assert(includes && includes.tagname == "Includes");
 		}else{
 			includes = newNode("Includes");
 		}
@@ -107,7 +108,8 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		}catch{}
 		
 		if(str !== undefined){
-			let moreIncludes = (await parseXML(str))["Includes"];
+			let moreIncludes = (await parseXML(str))[0];
+			assert(moreIncludes && moreIncludes.tagname == "Includes");
 			for(let node of moreIncludes.children){
 				appendChildToEnd(includes, node);
 			}
@@ -173,7 +175,9 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 			];
 			
 			{
-				let docInfo = (await parseXML(docInfoStr))["DocInfo"];
+				let docInfo = (await parseXML(docInfoStr))[0];
+				assert(docInfo && docInfo.tagname == "DocInfo");
+				
 				let depsRoot = docInfo.childrenByTagname["Dependencies"];
 				if(depsRoot && depsRoot.length > 0){
 					assert(depsRoot.length == 1);
@@ -285,7 +289,7 @@ function getGameDataIndexFilename(rootMapDir:string):string {
 }
 
 export async function saveGameDataIndex(v:GameDataIndex):Promise<void> {
-	await fs.writeFile(getGameDataIndexFilename(v.rootMapDir), await encodeXML(v.includes), "utf8");
+	await fs.writeFile(getGameDataIndexFilename(v.rootMapDir), await encodeXML([v.includes]), "utf8");
 }
 
 async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
@@ -373,7 +377,8 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		return null;
 	}
 	
-	let data:XMLNodeCatalog = (await parseXML(str))["Catalog"] as XMLNodeCatalog;
+	let data:XMLNodeCatalog = (await parseXML(str))[0] as XMLNodeCatalog;
+	assert(data && data.tagname == "Catalog");
 	let catalogs = createEmptyDataspaceCatalogs();
 	
 	let structDefaults:Dataspace["structDefaults"] = {};
@@ -450,51 +455,7 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 			catalog.entryByID[id] = v as any;
 		}
 		
-		const isDefault = v.attr.default === "1";
-		
-		// Check for token declarations
-		// Random note: the editor allows them anywhere, but moves them to the top when saving
-		for(let i = 0; i < v.children.length; ++i){
-			let child = v.children[i];
-			if(child.tagname != "?token") continue;
-			
-			let id = child.attr["id"];
-			if(id === undefined){
-				console.warn(`Token with no id in ${filename}`);
-				continue;
-			}
-			
-			if(!isDefault){
-				console.warn(`Token ${id} declared in a non-default class in ${filename}, deleting it. The editor was gonna do that anyway.`);
-				// Deleting it keeps the record consistent with children. Makes things easier
-				removeChild(v, child);
-				--i;
-				continue;
-			}
-			
-			v.declaredTokens = v.declaredTokens || {};
-			
-			if(id in v.declaredTokens){
-				console.warn(`Duplicate token ${id} in ${filename}`);
-				continue;
-			}
-			
-			let obj:(typeof v.declaredTokens)[string] = {};
-			
-			let value:string|undefined = child.attr["value"];
-			if(value !== undefined) obj.value = value;
-			
-			let type:string|undefined = child.attr["type"];
-			if(type !== undefined){
-				if(isSimpleType(type)){
-					obj.type = type;
-				}else{
-					console.warn(`Token ${id} has invalid type ${type} in ${filename}`);
-				}
-			}
-			
-			v.declaredTokens[id] = obj;
-		}
+		parseEntryXMLNode(v, filename);
 		
 		catalog.entries.push(v);
 	}
@@ -507,6 +468,54 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		index,
 		structDefaults,
 	};
+}
+
+function parseEntryXMLNode(v:XMLNodeEntry, filename:string){
+	const isDefault = v.attr.default === "1";
+	
+	// Check for token declarations
+	// Random note: the editor allows them anywhere, but moves them to the top when saving
+	for(let i = 0; i < v.children.length; ++i){
+		let child = v.children[i];
+		if(child.tagname != "?token") continue;
+		
+		let id = child.attr["id"];
+		if(id === undefined){
+			console.warn(`Token with no id in ${filename}`);
+			continue;
+		}
+		
+		if(!isDefault){
+			console.warn(`Token ${id} declared in a non-default class in ${filename}, deleting it. The editor was gonna do that anyway.`);
+			// Deleting it keeps the record consistent with children. Makes things easier
+			removeChild(v, child);
+			--i;
+			continue;
+		}
+		
+		v.declaredTokens = v.declaredTokens || {};
+		
+		if(id in v.declaredTokens){
+			console.warn(`Duplicate token ${id} in ${filename}`);
+			continue;
+		}
+		
+		let obj:(typeof v.declaredTokens)[string] = {};
+		
+		let value:string|undefined = child.attr["value"];
+		if(value !== undefined) obj.value = value;
+		
+		let type:string|undefined = child.attr["type"];
+		if(type !== undefined){
+			if(isSimpleType(type)){
+				obj.type = type;
+			}else{
+				console.warn(`Token ${id} has invalid type ${type} in ${filename}`);
+			}
+		}
+		
+		v.declaredTokens[id] = obj;
+	}
 }
 
 export function addDataspaceEntry(dataspace:Dataspace, child:XMLNodeEntry){
@@ -674,18 +683,40 @@ export function parseXML(str:string):XMLParseResult {
 		isArray: (_name, _jpath, _isLeafNode, isAttribute) => !isAttribute,
 	});
 	
-	let res:RawNode[] = parser.parse(str);
-	let ret:XMLParseResult = {};
-	for(let v of res.map(normalizeNode)){
-		if(!v) continue;
-		ret[v.tagname] = v;
-	}
-	
-	return ret;
+	return parser.parse(str).map(normalizeNode);
 }
 
-function encodeXML(root:XMLNode){
-	let builder = new xmlparser.XMLBuilder({
+function encodeNode(node:XMLNode):RawNode|undefined {
+	if(node.doNotEncode) return undefined;
+	
+	if(isCommentNode(node)){
+		return { $comment: [{"#text": node.text}] };
+	}
+	
+	if(isTextNode(node)){
+		return { "#text": node.text };
+	}
+	
+	let r:RawNode = {};
+	
+	if(node.attr){
+		r[":@"] = node.attr;
+	}
+	
+	let tmp = r as Record<string, RawNode[]>;
+	tmp[node.tagname] = node.children.map(v => encodeNode(v)).filter(notUndefined);
+	
+	// Shitty library needs me to fill this in
+	if(node.tagname[0] == '?'){
+		assert(node.children.length == 0);
+		tmp[node.tagname] = [{"#text":""}];
+	}
+	
+	return r;
+}
+
+function encodeXML(elems:XMLNode[], addHeader:boolean = true, useTabs:boolean = false){
+	const xmlBuilderOptions = {
 		preserveOrder: true,
 		ignoreAttributes: false,
 		attributeNamePrefix: "",
@@ -694,40 +725,66 @@ function encodeXML(root:XMLNode){
 		processEntities: true,
 		
 		format: true,
-		indentBy: '    ',
+		indentBy: useTabs ? '\t' : '    ',
 		suppressEmptyNode: true,
-	});
+	};
 	
-	function encodeNode(node:XMLNode):RawNode|undefined {
-		if(node.doNotEncode) return undefined;
-		
-		if(isCommentNode(node)){
-			return { $comment: [{"#text": node.text}] };
-		}
-		
-		if(isTextNode(node)){
-			return { "#text": node.text };
-		}
-		
-		let r:RawNode = {};
-		
-		if(node.attr){
-			r[":@"] = node.attr;
-		}
-		
-		let tmp = r as Record<string, RawNode[]>;
-		tmp[node.tagname] = node.children.map(v => encodeNode(v)).filter(notUndefined);
-		
-		// Shitty library needs me to fill this in
-		if(node.tagname[0] == '?'){
-			assert(node.children.length == 0);
-			tmp[node.tagname] = [{"#text":""}];
-		}
-		
-		return r;
+	let builder = new xmlparser.XMLBuilder(xmlBuilderOptions);
+	let str = builder.build(elems.map(encodeNode)).replace(/\r?\n/g, '\r\n');
+	
+	if(addHeader) str = '<?xml version="1.0" encoding="utf-8"?>' + str;
+	else str = str.trim(); // Encoder adds a newline in the beginning...
+	
+	return str + "\r\n";
+}
+
+export function encodeEntryXML(entry:XMLNodeEntry){
+	return encodeXML(createCommentNodesForEntry(entry).concat(entry), false, true);
+}
+
+function hasAnyTextNodes(x:XMLNode){
+	if(x.childrenByTagname["#text"] && x.childrenByTagname["#text"].length > 0) return true;
+	
+	for(let v of x.children){
+		if(hasAnyTextNodes(v)) return true;
 	}
 	
-	return '<?xml version="1.0" encoding="utf-8"?>' + builder.build([encodeNode(root)]).replace(/\r?\n/g, '\r\n') + '\r\n';
+	return false;
+}
+
+export function setEntryXML(oldEntry:XMLNodeEntry, xml:string):boolean {
+	let parsed:XMLParseResult;
+	try {
+		// We wrap it so parseXML will preserve text nodes...
+		parsed = parseXML(`<BurritoWrap>${xml}</BurritoWrap>`);
+		if(parsed.length != 1) return false;
+		if(parsed[0].tagname != "BurritoWrap") return false;
+		parsed = parsed[0].children;
+	}catch(e){
+		return false;
+	}
+	
+	if(parsed.some(isTextNode)) return false;
+	
+	let entryXMLs = parsed.filter((v) => !isCommentNode(v));
+	if(entryXMLs.length != 1) return false;
+	let entry:XMLNodeEntry = entryXMLs[0] as XMLNodeEntry;
+	if(hasAnyTextNodes(entry)) return false;
+	
+	let catalogName = getCatalogNameByTagname(oldEntry.tagname);
+	if(!(entry.tagname in CatalogTypesInstance[catalogName])) return false;
+	
+	parseEntryXMLNode(entry, "stdin");
+	
+	if(entry.attr.id !== oldEntry.attr.id) return false;
+	if(entry.tagname !== oldEntry.tagname) return false; // We'd need to fixup the parent & catalog stuff...
+	
+	let comments = parsed.filter(isCommentNode).map(v => v.text);
+	if(comments.length > 0) entry.editorComment = comments.join("\n");
+	
+	Object.assign(oldEntry, entry);
+	
+	return true;
 }
 
 function notUndefined<T>(v:T|undefined): v is T {
@@ -747,9 +804,7 @@ export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 			
 			if(!v.editorComment) continue;
 			
-			let nodes = v.editorComment.split(/\r?\n/).map(function(line){
-				return newCommentNode(line);
-			});
+			let nodes = createCommentNodesForEntry(v);
 			
 			// Insert comment nodes
 			xml.children.splice(i, 0, ...nodes);
@@ -757,8 +812,16 @@ export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 			i += nodes.length;
 		}
 		
-		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(xml), "utf8");
+		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML([xml]), "utf8");
 	}));
+}
+
+function createCommentNodesForEntry(v:XMLNodeEntry):XMLNode[]{
+	if(!v.editorComment) return [];
+			
+	return v.editorComment.split(/\r?\n/).map(function(line){
+		return newCommentNode(line);
+	});
 }
 
 export interface CatalogEntry {

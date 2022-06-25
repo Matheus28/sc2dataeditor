@@ -235,7 +235,7 @@ function FieldComponentArray(props:FieldComponentSharedProps & {desc:FieldType})
 		{
 			indexes === undefined
 			?
-			<Spinner animation="border" />
+			<Spinner animation="border" style={{margin:20}}/>
 			:
 			(() => {
 				// Since arrays always have numeric indices... we can parse treat them to numbers

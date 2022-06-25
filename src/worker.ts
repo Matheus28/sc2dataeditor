@@ -1,6 +1,6 @@
 import assert from "assert";
 import { CatalogName, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./lib/game_data";
-import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex, forEachDataspace, newCatalogEntry } from './lib/game_data_loader';
+import { CatalogEntry, CatalogField, accessArray, accessStruct, addChild, addDataspaceEntry, addDataspaceToIndex, changeDataspaceEntryType, Dataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, loadGameDataIndex, newDataspace, newNode, saveDataspaces, saveGameDataIndex, XMLNode, parseXML, XMLNodeEntry, isValidTagname, forEachIndex, removeChild, CatalogFieldName, getFieldArrayLength, clearChildren, ArrayAccessReturnIndex, forEachDataspace, newCatalogEntry, encodeEntryXML, setEntryXML } from './lib/game_data_loader';
 import { exportHotkeysFile, importHotkeysFile } from "./lib/game_hotkeys_loader";
 import { exportStringsFile, getTxtFileName, importStringsFile } from "./lib/game_strings_loader";
 import { resolveTokens, unresolveTokens } from "./wizards/components/utils";
@@ -604,7 +604,7 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 }
 
 function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,boolean>, mapping?:Record<string, number>){
-	let vv = getArrayFieldIndexesInternal(parseXML(`<A>${xml}</A>`)["A"], 'B', mapping);
+	let vv = getArrayFieldIndexesInternal(parseXML(`<A>${xml}</A>`)[0], 'B', mapping);
 	assert.deepStrictEqual(
 		vv,
 		expected,
@@ -1204,6 +1204,22 @@ const messageHandlers:{
 	
 	async waitPendingChangesList(){
 		return notifyChangesPromise;
+	},
+	
+	async getEntryXML(entry:CatalogEntry){
+		let vv = accessEntry(entry, false);
+		if(!vv) return;
+		
+		return encodeEntryXML(vv.node);
+	},
+
+	async setEntryXML(entry:CatalogEntry, value:string){
+		let vv = accessEntry(entry, true);
+		let ret = setEntryXML(vv.node, value);
+		
+		if(ret) modifiedDataspace(vv.dataspace);
+		
+		return ret;
 	},
 };
 
