@@ -5,7 +5,7 @@ const stringsPromise = importStringsFile("deps/SC2GameData/mods/core.sc2mod/enus
 stringsPromise.then((v) => strings = v);
 
 function getKeyValueOrKey(key:string):string {
-	let v = strings.get(key);
+	let v = strings[key];
 	if(v !== undefined) return v;
 	return key;
 }

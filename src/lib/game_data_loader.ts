@@ -3,6 +3,8 @@ import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
 import { possiblyBigNumberToString } from "./utils";
 import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType, EnumType } from "./game_data";
+import { getTxtFileName, importStringsFile } from "./game_strings_loader";
+import { importHotkeysFile } from "./game_hotkeys_loader";
 
 
 interface XMLNodeBase<ChildType> {
@@ -53,6 +55,10 @@ export type GameDataIndex = {
 	name:string|null; // null for the main file
 	rootMapDir:string;
 	includes:XMLNode;
+	
+	strings:Record<string, string>;
+	hotkeys:Record<string, string>;
+	objectStrings:Record<string, string>;
 	
 	dependencies:GameDataIndex[];
 	
@@ -119,6 +125,9 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 	let index:GameDataIndex = {
 		name: null,
 		rootMapDir,
+		strings: {},
+		hotkeys: {},
+		objectStrings: {},
 		includes: includes,
 		implicitDataspaces: {} as any,
 		dependencies: [],
@@ -218,6 +227,32 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				return v;
 			}));
 		})(),
+		
+		(async function(){
+			try {
+				index.strings = await importStringsFile(getTxtFileName(rootMapDir, "enUS"));
+			}catch(e){
+				// Some don't have strings... so it's empty :D
+			}
+		})(),
+		
+		(async function(){
+			try {
+				index.hotkeys = await importHotkeysFile(rootMapDir);
+			}catch(e){
+				// Some don't have strings... so it's empty :D
+			}
+		})(),
+		
+		
+		(async function(){
+			try {
+				index.objectStrings = await importStringsFile(getTxtFileName(rootMapDir, "enUS", "ObjectStrings.txt"));
+			}catch(e){
+				// Some don't have strings... so it's empty :D
+			}
+		})(),
+		
 	]);
 	
 	{ // Find default field values

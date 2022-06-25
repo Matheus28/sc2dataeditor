@@ -41,13 +41,8 @@ let map:{
 	destinationDataspace:number;
 	
 	stringsModified:boolean;
-	strings:Map<string,string>;
-	
 	hotkeysModified:boolean;
-	hotkeys:Map<string,string>;
-	
 	objectStringsModified:boolean;
-	objectStrings:Map<string,string>;
 };
 
 function getDefaultTypeForCatalog(catalog:CatalogName):string {
@@ -916,13 +911,8 @@ const messageHandlers:{
 			hasIndexChanges: false,
 			
 			stringsModified: false,
-			strings: await importStringsFile(getTxtFileName(rootMapDir, "enUS")),
-			
 			hotkeysModified: false,
-			hotkeys: await importHotkeysFile(rootMapDir),
-			
 			objectStringsModified: false,
-			objectStrings: await importStringsFile(getTxtFileName(rootMapDir, "enUS", "ObjectStrings.txt")),
 		};
 	},
 	
@@ -947,17 +937,17 @@ const messageHandlers:{
 		
 		if(map.stringsModified){
 			map.stringsModified = false;
-			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS"), map.strings);
+			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS"), map.index.strings);
 		}
 		
 		if(map.hotkeysModified){
 			map.hotkeysModified = false;
-			await exportHotkeysFile(map.rootMapDir, map.hotkeys);
+			await exportHotkeysFile(map.rootMapDir, map.index.hotkeys);
 		}
 		
 		if(map.objectStringsModified){
 			map.objectStringsModified = false;
-			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS", "GameStrings.txt"), map.objectStrings);
+			await exportStringsFile(getTxtFileName(map.rootMapDir, "enUS", "ObjectStrings.txt"), map.index.objectStrings);
 		}
 		
 		notifyChanges();
@@ -1045,27 +1035,40 @@ const messageHandlers:{
 	},
 	
 	async getStringLink(link:string){
-		return map.strings.get(link);
+		let ret:string|undefined;
+		
+		forEachIndex(map.index, true, true, (index) => {
+			ret = index.strings[link];
+			return ret === undefined;
+		});
+		
+		return ret;
 	},
 	
 	async setStringLink(link:string, value:string){
-		if(map.strings.get(link) === value) return;
-		map.strings.set(link, value);
+		if(map.index.strings[link] === value) return;
+		map.index.strings[link] = value;
 		
 		if(!map.stringsModified){
 			map.stringsModified = true;
 			notifyChanges();
 		}
-		
 	},
 	
 	async getObjectStringLink(link:string){
-		return map.objectStrings.get(link);
+		let ret:string|undefined;
+		
+		forEachIndex(map.index, true, true, (index) => {
+			ret = index.objectStrings[link];
+			return ret === undefined;
+		});
+		
+		return ret;
 	},
 	
 	async setObjectStringLink(link:string, value:string){
-		if(map.objectStrings.get(link) === value) return;
-		map.objectStrings.set(link, value);
+		if(map.index.objectStrings[link] === value) return;
+		map.index.objectStrings[link] = value;
 		
 		if(!map.objectStringsModified){
 			map.objectStringsModified = true;
@@ -1258,6 +1261,12 @@ async function onMessage(msg:Message){
 		if(hasMemoryHandler(i)){
 			
 			const alwaysPrintTime = false;
+			const printAllRequests = true;
+			
+			let requestString:undefined|string;
+			if(printAllRequests){
+				requestString = JSON.stringify(msg.data[i]);
+			}
 			
 			let start = Date.now();
 			let r = (messageHandlers[i] as any).apply(messageHandlers, msg.data[i]);
@@ -1266,6 +1275,10 @@ async function onMessage(msg:Message){
 			
 			if(alwaysPrintTime || (end - start > 10)){
 				console.log(`[${msg.id}] ${i} took ${(end-start).toFixed(1)} ms`);
+			}
+			
+			if(printAllRequests){
+				console.log(`${i}(${requestString}) = ${JSON.stringify(await r)}`);
 			}
 			
 			
