@@ -23,7 +23,7 @@ export default function(props:Props){
 	const addFieldsAndParent = (entry:CatalogEntry, catalog:CatalogName, entryType:string|null):React.ReactNode[]|null => {
 		if(entryType == null) return null;
 		
-		assert(entryType in CatalogTypesInstance[catalog]);
+		assert(entryType in CatalogTypesInstance[catalog], `Invalid entry type ${entryType} in ${catalog} catalog`);
 		
 		return [
 			addFieldsAndParent(entry, catalog, CatalogTypesInstance[catalog][entryType].parent),
