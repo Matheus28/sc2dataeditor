@@ -5,6 +5,7 @@ import { mapObjectToArray } from '../lib/utils';
 import { CatalogEntry, CatalogField } from '../worker';
 import { GenericCatalogField } from './components/GenericCatalogField';
 import SelectEntryType from './components/SelectEntryType';
+import assert from "assert";
 
 
 interface Props {
@@ -21,6 +22,8 @@ export default function(props:Props){
 	
 	const addFieldsAndParent = (entry:CatalogEntry, catalog:CatalogName, entryType:string|null):React.ReactNode[]|null => {
 		if(entryType == null) return null;
+		
+		assert(entryType in CatalogTypesInstance[catalog]);
 		
 		return [
 			addFieldsAndParent(entry, catalog, CatalogTypesInstance[catalog][entryType].parent),

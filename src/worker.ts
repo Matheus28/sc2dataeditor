@@ -255,12 +255,12 @@ function getFieldValueLastSimple(container:XMLNode, lastName:CatalogFieldName[nu
 	}
 }
 // If not found on this node, will navigate to the parent to try to find it there
-function getFieldValueSpecific(entry:XMLNodeEntry, field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
-	assert(field.name.length >= 1);
+function getFieldValueSpecific(entry:XMLNodeEntry, fieldName:CatalogFieldName):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
+	assert(fieldName.length >= 1);
 	
-	let container = getFieldContainer(field.name, entry, false);
+	let container = getFieldContainer(fieldName, entry, false);
 	if(container){
-		let vv = getFieldValueLast(entry, container, field.name);
+		let vv = getFieldValueLast(entry, container, fieldName);
 		if(vv !== undefined){
 			return {...vv, tokens: getTokensForNewField(entry)};
 		}
@@ -269,7 +269,7 @@ function getFieldValueSpecific(entry:XMLNodeEntry, field:CatalogField):{ value:s
 	let tmp = getParentNodeFor(entry);
 	if(tmp !== undefined){
 		let {node: parent, isDefault} = tmp;
-		let ret = getFieldValueSpecific(parent, field);
+		let ret = getFieldValueSpecific(parent, fieldName);
 		if(ret){
 			// So this exists because if we have
 			// grand parent (default = 1) -> parent (default = 0) -> me (default = 0)
@@ -304,33 +304,6 @@ function getFieldValueSpecific(entry:XMLNodeEntry, field:CatalogField):{ value:s
 }
 
 function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node: XMLNodeEntry, dataspace:Dataspace, isDefault:boolean}|undefined{
-	let def = getDefaultEntryForType(node.tagname);
-	if(def === undefined) return undefined;
-	
-	if(def.node === node){
-		// We have reached the top of the chain, like CEffectCreep and we want its parent
-		// Now we check the meta parent for that (CEffect)
-		if(!useMetaChain) return undefined;
-		
-		let tagname = node.tagname;
-		
-		for(;;){
-			let meta = CatalogTypesInstance[getCatalogNameByTagname(tagname)][tagname];
-			if(meta.parent == null) return undefined;
-			
-			def = getDefaultEntryForType(meta.parent);
-			if(def === undefined){
-				// Skip to next one up in the meta chain
-				tagname = meta.parent;
-				continue;
-			}
-			
-			return { node: def.node, dataspace: def.dataspace, isDefault: true };
-		}
-	}
-	
-	let parent = def; // This will be our fallback parent
-	
 	if(node.attr.parent){
 		let vv = accessEntry({
 			id: node.attr.parent,
@@ -339,7 +312,7 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 		
 		if(vv){
 			if(vv.node.tagname == node.tagname){
-				parent = vv;
+				return {node: vv.node, dataspace: vv.dataspace, isDefault: vv.node.attr.id === undefined};
 			}else{
 				console.error(`Invalid parent for ${node["attr"]["id"]}. Type doesn't match`);
 			}
@@ -348,8 +321,32 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 		}
 	}
 	
-	if(parent === undefined) return undefined;
-	return {node: parent.node, dataspace: parent.dataspace, isDefault: parent === def};
+	if(!useMetaChain) return undefined;
+	
+	// Now we start going <CUnitHero id="aaa"/> -> <CUnitHero default="1"/> -> <CUnit default="1"/>
+	
+	let def = getDefaultEntryForType(node.tagname);
+	if(def !== undefined && def.node == node) def = undefined; // Not a valid one, we wanna go to our parent
+	if(def !== undefined) return { node: def.node, dataspace: def.dataspace, isDefault: true };
+	
+	// If we don't have a default for this one, try to look up to other parents
+	// For example if there's no <CUnitHero default="1"/>, look for a <CUnit default="1"/>
+	
+	let tagname = node.tagname;
+	
+	for(;;){
+		let meta = CatalogTypesInstance[getCatalogNameByTagname(tagname)][tagname];
+		if(meta.parent == null) return undefined;
+		
+		def = getDefaultEntryForType(meta.parent);
+		if(def === undefined){
+			// Skip to next one up in the meta chain
+			tagname = meta.parent;
+			continue;
+		}
+		
+		return { node: def.node, dataspace: def.dataspace, isDefault: true };
+	}
 }
 
 /*
@@ -497,7 +494,7 @@ function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; t
 }
 
 function getFieldValueStartingFromNode(field:CatalogField, node:XMLNodeEntry):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
-	let vv = getFieldValueSpecific(node, field);
+	let vv = getFieldValueSpecific(node, field.name);
 	if(vv !== undefined) return vv;
 	
 	let tmp = getStructDefaultValue(node.tagname, field.name);
