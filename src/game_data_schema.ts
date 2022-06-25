@@ -81,6 +81,15 @@ str += `
 	<xs:anyAttribute processContents="skip"/>
 </xs:complexType>
 
+<!-- Completely ignored though -->
+<xs:complexType name="constDecl">
+	<xs:attribute name="id" type="xs:string"/>
+	<xs:attribute name="type" type="xs:string"/>
+	<xs:attribute name="value" type="xs:string"/>
+	<xs:attribute name="path" type="xs:string"/>
+</xs:complexType>
+
+
 <!-- Simple Types -->
 ${Object.entries(DataFieldDefaults).map(([typeName, typeDefaultValue]) => {
 	let complexType = `<xs:complexType name="${fixName(typeName)}"><xs:attribute name="value" type="simple_${fixName(typeName)}"/></xs:complexType>`;
@@ -190,6 +199,7 @@ ${Object.entries(unparsedGameData.classes).map(([structName, struct]) => {
 <!-- Catalog root -->
 	<xs:complexType name="Catalog">
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="const" type="constDecl"/>
 			${Object.entries(catalogContents).map(([_, scopes]) => scopes.map(scope => `<xs:element name="${scope}" type="${scope}"/>`).join("\n")).join('\n')}
 		</xs:choice>
 	</xs:complexType>

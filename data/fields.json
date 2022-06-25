@@ -1948,7 +1948,8 @@
 			"HeightRange": "CRange",
 			"QuadFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EActorQuadFlag"
 			},
 			"Decoration": "SActorQuadDecoration",
 			"OriginHeightLookaheadDistance": "real32",
@@ -2588,7 +2589,8 @@
 			},
 			"SelectionFilter": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EActorSelectionFilter"
 			}
 		}
 	},
@@ -2957,7 +2959,8 @@
 			"HeightTestType": "EActorHeightTestType",
 			"ShadowFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EActorSiteOpShadowFlag"
 			}
 		}
 	},
@@ -16557,12 +16560,14 @@
 		"fields": {
 			"ResourceFactor": {
 				"type": "CFixed",
-				"array": true
+				"array": true,
+				"indexEnum": "EResourceType"
 			},
 			"TimeFactor": "CFixed",
 			"Resource": {
 				"type": "int32",
-				"array": true
+				"array": true,
+				"indexEnum": "EResourceType"
 			},
 			"Time": "CGameTime"
 		}
@@ -17280,15 +17285,18 @@
 			"UniqueSetId": "CIdentifier",
 			"AttackModifierFlags": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EAttackModifierFlag"
 			},
 			"WeaponIndexEnableArray": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EUnitWeapon"
 			},
 			"WeaponIndexDisableArray": {
 				"type": "bool",
-				"array": true
+				"array": true,
+				"indexEnum": "EUnitWeapon"
 			},
 			"MaxStackCount": "uint32",
 			"DamageDealtScaled": {

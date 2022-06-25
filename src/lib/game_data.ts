@@ -533,13 +533,17 @@ const numberRestrictions:{
 	CWeapon
 */
 
-
-let galaxyEnums = JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8"));
-delete galaxyEnums["EDeathType"]; // Outdated
+const enumsEditor:Record<string,unknown> = JSON.parse(readFileSync("./data/enums_editor.json", "utf8"));
+// These in the editor don't have the C prefix... so use the galaxy definitions
+for(let key in enumsEditor){
+	if(key.startsWith("EClassIdC")){
+		delete enumsEditor[key];
+	}
+}
 
 export const unparsedEnums:Record<string, Record<string, {index:number; name:string;}>> = Object.assign(
-	JSON.parse(readFileSync("./data/enums_editor.json", "utf8")),
-	galaxyEnums, // It has a couple that are better than the editor ones...
+	JSON.parse(readFileSync("./data/enums_galaxy.json", "utf8")), // It has a couple that are better than the editor ones...
+	enumsEditor,
 	JSON.parse(readFileSync("./data/enums_manual.json", "utf8"))
 );
 
