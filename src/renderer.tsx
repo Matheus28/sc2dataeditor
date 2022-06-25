@@ -6,7 +6,7 @@ import SelectDataspace from './components/SelectDataspace';
 import { loadMap } from './worker_client';
 import ChangedList from './components/ChangedList';
 import SelectCatalog from './components/SelectCatalog';
-import GenericEditor from './wizards/GenericEditor';
+import Editor from './wizards/Editor';
 import { CatalogName } from './lib/game_data';
 import SelectSource from './components/SelectSource';
 import * as editorStrings from "./lib/editor_strings";
@@ -105,7 +105,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 					{
 						dataspace !== undefined || catalog != null || source !== undefined || true
 						?
-						<GenericEditor catalog={catalog} source={source} dataspace={dataspace} />
+						<Editor catalog={catalog} source={source} dataspace={dataspace} />
 						:
 						<Alert variant="warning">Filter by either Catalog, Source or Dataspace</Alert>
 					}

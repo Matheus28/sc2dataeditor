@@ -9,19 +9,15 @@ import SelectEntryType from './components/SelectEntryType';
 
 
 interface Props {
-	catalog:CatalogName|null;
-	source:string|null|undefined;
-	dataspace?:string|undefined;
+	entry:CatalogEntry;
 }
 
 export default function(props:Props){
-	const [entry, setEntry] = React.useState<SelectOption|null>(null);
 	const [entryType, setEntryType] = React.useState<string|undefined>();
 	
-	const onEntryChange = (v:SelectOption|null) => {
-		setEntry(v);
+	React.useEffect(() => {
 		setEntryType(undefined);
-	};
+	}, [props.entry]);
 	
 	
 	const addFieldsAndParent = (entry:CatalogEntry, catalog:CatalogName, entryType:string|null):React.ReactNode[]|null => {
@@ -47,21 +43,13 @@ export default function(props:Props){
 		);
 	};
 	
-	return <Form>
-		<Row className="mb-3"><Col><Card>
-			<Card.Body>
-				<Form.Group>
-					<SelectEntry canCreate value={entry} catalog={props.catalog} source={props.source} dataspace={props.dataspace} onChange={onEntryChange}/>
-				</Form.Group>
-			</Card.Body>
-		</Card></Col></Row>
-	
-		{entry && <Row className="mb-3"><Col><Card>
+	return <>
+		{<Row className="mb-3"><Col><Card>
 			<Card.Body>
 				<Form.Group>
 					<Form.Label>Type</Form.Label>
 					<SelectEntryType
-						entry={entry.value}
+						entry={props.entry}
 						value={entryType}
 						onLoad={setEntryType}
 						onChange={setEntryType}
@@ -70,7 +58,7 @@ export default function(props:Props){
 			</Card.Body>
 		</Card></Col></Row>}
 		
-		{entry && entryType && <Row className="mb-3"><Col><Card>
+		{entryType && <Row className="mb-3"><Col><Card>
 			<Card.Body>
 				<Table className="entry-fields" striped bordered size="sm">
 					<thead>
@@ -79,9 +67,9 @@ export default function(props:Props){
 							<th>Value</th>
 						</tr>
 					</thead>
-					<tbody>{addFieldsAndParent(entry.value, entry.value.catalog, entryType)}</tbody>
+					<tbody>{addFieldsAndParent(props.entry, props.entry.catalog, entryType)}</tbody>
 				</Table>
 			</Card.Body>
 		</Card></Col></Row>}
-	</Form>;
+	</>;
 }
