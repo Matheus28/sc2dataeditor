@@ -79,9 +79,40 @@ function accessDataspaceEntry(dataspace:Dataspace, entry:CatalogEntry, createIfN
 
 type EntryNodeWithDataspace = { node:XMLNodeEntry, dataspace:Dataspace };
 
-function accessEntry(entry:CatalogEntry, createIfNotExists:true):EntryNodeWithDataspace;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined;
-function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWithDataspace|undefined {
+function createOrCopyEntryFromDependencies(entry:CatalogEntry):EntryNodeWithDataspace {
+	let ret:EntryNodeWithDataspace|undefined;
+	
+	let fn = (dataspace:Dataspace) => {
+		let cur = accessDataspaceEntry(dataspace, entry, false);
+		if(cur){
+			ret = {node: cur, dataspace};
+			return false;
+		}
+		
+		return true;
+	};
+	
+	// Does this entry exist in our index?
+	if(!forEachDataspace(map.index, true, false, fn)){
+		assert(ret);
+		return ret; // Yes
+	}
+	
+	let dataspace = getDestinationDataspace(entry.catalog);
+	let node = accessDataspaceEntry(dataspace, entry, true);
+	
+	// Does this entry exist in our deps?
+	if(!forEachDataspace(map.index, false, true, fn)){
+		assert(ret);
+		
+		// TODO: there are faster ways to do this than encoding and decoding...
+		assert(setEntryXML(node, encodeEntryXML(ret.node)));
+	}
+	
+	return {node, dataspace};
+}
+
+function accessEntry(entry:CatalogEntry):EntryNodeWithDataspace|undefined {
 	let ret:EntryNodeWithDataspace|undefined;
 	if(!forEachDataspace(map.index, true, true, (dataspace) => {
 		let cur = accessDataspaceEntry(dataspace, entry, false);
@@ -95,10 +126,7 @@ function accessEntry(entry:CatalogEntry, createIfNotExists:boolean):EntryNodeWit
 		return ret; // Never undefined here
 	}
 	
-	if(!createIfNotExists) return undefined;
-	
-	let dataspace = getDestinationDataspace(entry.catalog);
-	return {node:accessDataspaceEntry(dataspace, entry, true), dataspace};
+	return undefined;
 }
 
 interface SelfTokens {
@@ -308,7 +336,7 @@ function getParentNodeFor(node:XMLNodeEntry, useMetaChain:boolean = true):{node:
 		let vv = accessEntry({
 			id: node.attr.parent,
 			catalog: getCatalogNameByTagname(node.tagname),
-		}, false);
+		});
 		
 		if(vv){
 			if(vv.node.tagname == node.tagname){
@@ -487,7 +515,7 @@ function getMetafieldFor(tagname:string, fieldName:CatalogFieldName):FieldType|u
 }
 
 function getFieldValue(field:CatalogField):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
-	let v = accessEntry(field.entry, false);
+	let v = accessEntry(field.entry);
 	if(!v) return undefined;
 	
 	return getFieldValueStartingFromNode(field, v.node);
@@ -511,7 +539,7 @@ function getDefaultEntryForType(tagname:string):{node: XMLNodeEntry, dataspace:D
 }
 
 function getArrayFieldIndexes(field:CatalogField):Record<string,{removed:boolean;source:ValueSource}>|undefined {
-	let vv = accessEntry(field.entry, false);
+	let vv = accessEntry(field.entry);
 	if(!vv) return undefined;
 	
 	let arrName2 = field.name[field.name.length - 1];
@@ -629,7 +657,7 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 function setFieldValue(field:CatalogField, newValue:string):Awaited<ReturnType<WorkerClient["setFieldValue"]>>{
 	assert(field.name.length >= 1);
 	
-	let vv = accessEntry(field.entry, true);
+	let vv = createOrCopyEntryFromDependencies(field.entry);
 	
 	let thisEntryTokens = getTokensForNewField(vv.node);
 	let unresolvedValue:string = unresolveTokens(newValue, thisEntryTokens);
@@ -985,11 +1013,11 @@ const messageHandlers:{
 	},
 	
 	async entryExists(entry:CatalogEntry){
-		return accessEntry(entry, false) !== undefined;
+		return accessEntry(entry) !== undefined;
 	},
 	
 	async getEntry(entry:CatalogEntry){
-		let v = accessEntry(entry, false);
+		let v = accessEntry(entry);
 		if(v === undefined) return undefined;
 		
 		let r:Awaited<ReturnType<WorkerClient["getEntry"]>> = {
@@ -1009,7 +1037,7 @@ const messageHandlers:{
 	async setEntryType(entry:CatalogEntry, value:string){
 		assert(value in CatalogTypesInstance[entry.catalog]);
 		
-		let v = accessEntry(entry, true);
+		let v = createOrCopyEntryFromDependencies(entry);
 		if(v.node.tagname == value) return;
 		
 		v.node.tagname = value;
@@ -1046,14 +1074,14 @@ const messageHandlers:{
 	},
 	
 	async getEntryComment(entry:CatalogEntry) {
-		let v = accessEntry(entry, false);
+		let v = accessEntry(entry);
 		if(!v) return undefined;
 		
 		return v.node.editorComment;
 	},
 
 	async setEntryComment(entry:CatalogEntry, value:string) {
-		let v = accessEntry(entry, true);
+		let v = createOrCopyEntryFromDependencies(entry);
 		
 		if(v.node.editorComment === value) return;
 		v.node.editorComment = value;
@@ -1173,13 +1201,13 @@ const messageHandlers:{
 	},
 	
 	async getEntryParent(entry:CatalogEntry){
-		let v = accessEntry(entry, false);
+		let v = accessEntry(entry);
 		if(!v) return undefined;
 		return v.node.attr["parent"];
 	},
 	
 	async setEntryParent(entry:CatalogEntry, value:string){
-		let {node, dataspace} = accessEntry(entry, true);
+		let {node, dataspace} = createOrCopyEntryFromDependencies(entry);
 		
 		if(node.attr["parent"] === value) return;
 		node.attr["parent"] = value;
@@ -1188,6 +1216,7 @@ const messageHandlers:{
 	},
 	
 	async setFieldValue(field:CatalogField, value:string){
+		createOrCopyEntryFromDependencies(field.entry);
 		return setFieldValue(field, value);
 	},
 	
@@ -1204,14 +1233,14 @@ const messageHandlers:{
 	},
 	
 	async getEntryXML(entry:CatalogEntry){
-		let vv = accessEntry(entry, false);
+		let vv = accessEntry(entry);
 		if(!vv) return;
 		
 		return encodeEntryXML(vv.node);
 	},
 
 	async setEntryXML(entry:CatalogEntry, value:string){
-		let vv = accessEntry(entry, true);
+		let vv = createOrCopyEntryFromDependencies(entry);
 		let ret = setEntryXML(vv.node, value);
 		
 		if(ret) modifiedDataspace(vv.dataspace);
