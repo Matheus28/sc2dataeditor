@@ -131,7 +131,9 @@ export default function(props:Props){
 		
 		let abort = false;
 		
-		getEntries(props.catalog, props.source, props.dataspace, props.parent, inputValue, 6).then((res) => {
+		const searchTerm = menuIsOpen ? inputValue : defaultInputValue;
+		
+		getEntries(props.catalog, props.source, props.dataspace, props.parent, searchTerm, 6).then((res) => {
 			if(abort) return;
 			
 			let arr2 = res.items.map((value):SelectOption => {
