@@ -11136,7 +11136,8 @@
 			},
 			"EffectHistoryLimit": {
 				"type": "uint16",
-				"array": true
+				"array": true,
+				"indexEnum": "EEffectHistory"
 			},
 			"TargetingHitTestPriority": "uint8",
 			"DataCollection": "CDataCollectionLink"

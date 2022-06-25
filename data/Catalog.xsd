@@ -61986,7 +61986,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="uint16">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_EEffectHistory" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
@@ -71268,7 +71268,7 @@
 						<xs:complexType>
 							<xs:complexContent>
 								<xs:extension base="uint16">
-									<xs:attribute name="index" type="xs:integer" />
+									<xs:attribute name="index" type="simple_EEffectHistory" />
 									<xs:attribute name="removed" type="simple_bool" />
 								</xs:extension>
 							</xs:complexContent>
