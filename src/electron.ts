@@ -1,8 +1,11 @@
 import path from "path";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, webContents } from "electron";
 import { readFileSync, writeFileSync } from "fs";
+import * as remoteMain from '@electron/remote/main';
 
 let mainWindow:BrowserWindow;
+
+remoteMain.initialize();
 
 function createWindow() {
 	const windowFilename = path.join(app.getPath('userData'), "window.json");
@@ -36,6 +39,7 @@ function createWindow() {
 	
 	// Create the browser window.
 	mainWindow = new BrowserWindow(options);
+	remoteMain.enable(mainWindow.webContents);
 	
 	mainWindow.on("close", function(){
 		let bounds = mainWindow.getBounds();

@@ -86,7 +86,7 @@ const CatalogBrowser = function(props:{rootDir:string}){
 	
 	return <React.StrictMode>
 		<Container style={{marginTop: 20, marginBottom: 20}}>
-			<ChangedList />
+			<ChangedList mapDir={props.rootDir} />
 			
 			<Row className="mb-3">
 				<Col>

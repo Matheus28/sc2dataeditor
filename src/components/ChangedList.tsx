@@ -3,8 +3,53 @@ import * as ReactDOM from 'react-dom/client';
 import { Container, Row, Col, Form, Badge, Card, Button } from 'react-bootstrap';
 import assert from 'assert';
 import { getPendingChangesList, save, waitPendingChangesList } from '../worker_client';
+import { dialog } from '@electron/remote';
+import * as child_process from "child_process";
+import path from 'path';
 
-export default function(){
+let sc2SwitcherExecutable = localStorage["sc2switcher"] || undefined;
+
+function runMap(mapDir:string){
+	
+	if(sc2SwitcherExecutable){
+		mapDir = path.resolve(path.normalize(mapDir));
+		console.log(mapDir);
+		child_process.execFile(sc2SwitcherExecutable, [
+			"-run", mapDir,
+			"-displaymode", "0",
+			"-trigdebug",
+			"-breakOnError",
+			"-preload", "0",
+			"-NoUserCheats",
+			"-reloadcheck",
+			"-meleeMod", "Void",
+			"-difficulty", "2",
+			"-speed", "4",
+		], {
+			cwd: process.cwd()
+		}).on("error", function(e){
+			console.error(e);
+			localStorage["sc2switcher"] = sc2SwitcherExecutable = undefined;
+		});
+	}else{
+		dialog.showOpenDialog({
+			properties: ['openFile', 'dontAddToRecent'],
+			filters: [{name: 'SC2Switcher_x64.exe', extensions: ['exe']}]
+		}).then(function(response){
+			if(response.canceled) return;
+			
+			let files = response.filePaths;
+			if(files.length != 1) return;
+			let file = files[0];
+			if(!file.endsWith("SC2Switcher_x64.exe")) return;
+			
+			localStorage["sc2switcher"] = sc2SwitcherExecutable = file;
+			runMap(mapDir);
+		}).catch((_) => {});
+	}
+}
+
+export default function(props:{mapDir:string}){
 	let [changedData, setChangedData] = React.useState<undefined|Awaited<ReturnType<typeof getPendingChangesList>>>(undefined);
 	
 	React.useEffect(() => {
@@ -49,7 +94,9 @@ export default function(){
 							</>}
 						</div>
 						
-						<Button disabled={!hasChanges} variant={hasChanges ? "success" : "secondary"} onClick={() => {
+						<Button variant={"primary"} onClick={() => runMap(props.mapDir)}>Run</Button>
+						
+						<Button disabled={!hasChanges} variant={hasChanges ? "success" : "secondary"} className="ms-2"  onClick={() => {
 							save();
 						}}>Save</Button>
 					</Card.Body>
