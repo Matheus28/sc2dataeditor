@@ -94,7 +94,7 @@ export default function(props:{mapDir:string}){
 							</>}
 						</div>
 						
-						<Button variant={"primary"} onClick={() => runMap(props.mapDir)}>Run</Button>
+						<Button disabled={hasChanges} variant={"primary"} onClick={() => runMap(props.mapDir)}>Run</Button>
 						
 						<Button disabled={!hasChanges} variant={hasChanges ? "success" : "secondary"} className="ms-2"  onClick={() => {
 							save();
