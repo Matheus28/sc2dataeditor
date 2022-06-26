@@ -515,13 +515,7 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 		return null;
 	}
 	
-	let parsedXML:XMLParseResult;
-	
-	if(str.length >= 200000 && false){
-		parsedXML = await runInWorker("parseXML", str)
-	}else{
-		parsedXML = await parseXML(str);
-	}
+	let parsedXML:XMLParseResult = await parseXML(str);
 	
 	let data:XMLNodeCatalog = parsedXML[0] as XMLNodeCatalog;
 	

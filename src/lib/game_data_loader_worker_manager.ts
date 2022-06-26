@@ -3,9 +3,9 @@ import { cpus } from "os";
 import * as loader from "./game_data_loader";
 
 // Only valid for non-workers:
-let numWorkers = 0;
 let maxWorkers = Math.max(1, Math.min(16, cpus().length));
 let idleWorkers:WorkerWrapper[] = [];
+let allWorkers = new Set<WorkerWrapper>();
 
 // Exists in non-worker & worker:
 let amILoaderWorker = false;
@@ -87,14 +87,15 @@ async function grabWorkerAsWorker():Promise<WorkerWrapper> {
 
 function grabWorkerAsMainOrFail():WorkerWrapper|null {
 	assert(!amILoaderWorker);
-	if(numWorkers >= maxWorkers && idleWorkers.length == 0) return null
+	if(allWorkers.size >= maxWorkers && idleWorkers.length == 0) return null
 	
 	let ret = idleWorkers.pop();
-	return ret || null;
+	if(ret === undefined) return null;
+	
+	return newWorkerAsMain();
 }
 
-async function newWorkerAsMain():Promise<WorkerWrapper>{
-	++numWorkers;
+function newWorkerAsMain():WorkerWrapper {
 	let worker = new Worker(__dirname + "/game_data_loader_worker_wrapper.js");
 	let idleTimer:NodeJS.Timeout|null = null;
 	let busyAmount = 0;
@@ -126,7 +127,7 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 			idleWorkers.push(self);
 			assert(idleTimer == null);
 			idleTimer = setTimeout(() => {
-				--numWorkers;
+				allWorkers.delete(self);
 				idleWorkers = idleWorkers.filter(w => w != self);
 				worker.terminate();
 			}, 1000);
@@ -143,13 +144,16 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 				
 				let result:any;
 				
-				let subworker = await grabWorkerAsMainOrFail();
+				let subworker = grabWorkerAsMainOrFail();
 				if(subworker == null){
-					// Well, then you're doing the work, kind sir
-					result = await self.request(input.name, input.args);
-				}else{
-					result = await subworker.request(input.name, input.args);
+					// Well, then distribute to a random worker and hope they're available
+					let arr = Array.from(allWorkers);
+					subworker = arr[Math.floor(arr.length * Math.random())];
+					assert(subworker);
 				}
+				
+				result = await subworker.request(input.name, input.args);
+				
 				
 				let output:Message = {
 					type: "result",
@@ -196,6 +200,8 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 		},
 	}
 	
+	allWorkers.add(self);
+	
 	return self;
 }
 
@@ -212,8 +218,8 @@ function waitUntilWorkerBecomesAvailable():Promise<WorkerWrapper> {
 		}
 	}
 	
-	if(numWorkers < maxWorkers){
-		return newWorkerAsMain();
+	if(allWorkers.size < maxWorkers){
+		return Promise.resolve(newWorkerAsMain());
 	}
 	
 	let promise = new Promise<WorkerWrapper>((resolve) => {
