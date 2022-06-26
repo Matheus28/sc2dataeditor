@@ -85,8 +85,6 @@ async function grabWorkerAsWorker():Promise<WorkerWrapper> {
 	}
 }
 
-let nextWorkerDebugID = 0;
-
 function grabWorkerAsMainOrFail():WorkerWrapper|null {
 	assert(!amILoaderWorker);
 	if(numWorkers >= maxWorkers && idleWorkers.length == 0) return null
@@ -96,10 +94,6 @@ function grabWorkerAsMainOrFail():WorkerWrapper|null {
 }
 
 async function newWorkerAsMain():Promise<WorkerWrapper>{
-	let workerDebugID = nextWorkerDebugID++;
-	
-	console.log("New worker " + workerDebugID);
-	
 	++numWorkers;
 	let worker = new Worker(__dirname + "/game_data_loader_worker_wrapper.js");
 	let idleTimer:NodeJS.Timeout|null = null;
@@ -107,7 +101,6 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 	
 	function busy(){
 		if(busyAmount == 0){
-			console.log("Worker busy " + workerDebugID);
 			idleWorkers = idleWorkers.filter(w => w != self);
 		}
 		
@@ -130,13 +123,12 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 				return;
 			}
 			
-			console.log("Worker idle " + workerDebugID);
 			idleWorkers.push(self);
 			assert(idleTimer == null);
 			idleTimer = setTimeout(() => {
-				//--numWorkers;
-				//idleWorkers = idleWorkers.filter(w => w != self);
-				//worker.terminate();
+				--numWorkers;
+				idleWorkers = idleWorkers.filter(w => w != self);
+				worker.terminate();
 			}, 1000);
 		}
 	}
@@ -176,7 +168,6 @@ async function newWorkerAsMain():Promise<WorkerWrapper>{
 	
 	let self = {
 		request(name:string, args:any[]):Promise<any> {
-			console.log(`Worker ${workerDebugID} run ${name}`);
 			busy();
 			
 			let id = nextID++;
