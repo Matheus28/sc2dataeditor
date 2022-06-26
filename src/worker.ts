@@ -1261,7 +1261,7 @@ async function onMessage(msg:Message){
 		if(hasMemoryHandler(i)){
 			
 			const alwaysPrintTime = false;
-			const printAllRequests = true;
+			const printAllRequests = false;
 			
 			let requestString:undefined|string;
 			if(printAllRequests){
