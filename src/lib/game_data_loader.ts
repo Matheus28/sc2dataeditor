@@ -1,10 +1,10 @@
 import assert from "assert";
 import * as fs from "fs/promises";
 import * as xmlparser from "fast-xml-parser";
-import { possiblyBigNumberToString } from "./utils";
 import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType, EnumType } from "./game_data";
 import { getTxtFileName, importStringsFile } from "./game_strings_loader";
 import { importHotkeysFile } from "./game_hotkeys_loader";
+import { runInWorker } from "./game_data_loader_worker_manager";
 
 
 interface XMLNodeBase<ChildType> {
@@ -79,17 +79,6 @@ export async function loadDependency(rootMapDir:string):Promise<GameDataIndex>{
 	return await loadGameDataIndex(rootMapDir);
 }
 
-function loadDependencyInWorker(rootMapDir:string):Promise<GameDataIndex> {
-	return new Promise((resolve) => {
-		let worker = new Worker(__dirname + "/game_data_loader_worker_wrapper.js");
-		worker.postMessage([rootMapDir]);
-		worker.onmessage = function(e){
-			resolve(e.data);
-			worker.terminate();
-		}
-	});
-}
-
 export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex> {
 	let includes:XMLNode;
 	
@@ -148,27 +137,6 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 	const base = getGameDataFilenameBase(rootMapDir);
 	
 	await Promise.all([
-		(async function(){
-			let implicits = await Promise.all((Object.keys(CatalogTypesInstance) as CatalogName[]).map(async function(catalog){
-				const filename = base + catalog + "Data.xml";
-				let v = await loadDataspace(rootMapDir, filename, true, null);
-				if(!v){
-					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename), true);
-				}
-				
-				return { dataspace: v, catalog };
-			}));
-			
-			for(let {dataspace, catalog} of implicits){
-				dataspace.index = index;
-				index.implicitDataspaces[catalog] = dataspace;
-			}
-		})(),
-		
-		(async function(){
-			index.dataspaces = await loadIndexIncludes(index);
-		})(),
-		
 		// Dependencies
 		(async function(){
 			let docInfoStr:string;
@@ -333,11 +301,34 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				let {name, filename} = processDepLine(dep);
 				
 				console.time(filename);
-				let v = await loadDependencyInWorker(filename);
+				let v = await runInWorker("loadDependency", filename);
 				v.name = name;
 				console.timeEnd(filename);
 				return v;
 			}));
+		})(),
+		
+		// Our implicit includes
+		(async function(){
+			let implicits = await Promise.all((Object.keys(CatalogTypesInstance) as CatalogName[]).map(async function(catalog){
+				const filename = base + catalog + "Data.xml";
+				let v = await loadDataspace(rootMapDir, filename, true, index);
+				if(!v){
+					v = newDataspace(dataspaceFilenameToName(rootMapDir, filename), true);
+					v.index = index;
+				}
+				
+				return { dataspace: v, catalog };
+			}));
+			
+			for(let {dataspace, catalog} of implicits){
+				index.implicitDataspaces[catalog] = dataspace;
+			}
+		})(),
+		
+		// Our dataspaces
+		(async function(){
+			index.dataspaces = await loadIndexIncludes(index);
 		})(),
 		
 		(async function(){
@@ -515,7 +506,7 @@ function createEmptyDataspaceCatalogs():Dataspace["catalogs"]{
 }
 
 
-async function loadDataspace(rootMapDir:string, filename:string, isImplicit:boolean, index:GameDataIndex|null):Promise<Dataspace|null>{
+export async function loadDataspace(rootMapDir:string, filename:string, isImplicit:boolean, index:GameDataIndex):Promise<Dataspace|null>{
 	let str:string;
 	
 	try {
@@ -524,7 +515,16 @@ async function loadDataspace(rootMapDir:string, filename:string, isImplicit:bool
 		return null;
 	}
 	
-	let data:XMLNodeCatalog = (await parseXML(str))[0] as XMLNodeCatalog;
+	let parsedXML:XMLParseResult;
+	
+	if(str.length >= 200000 && false){
+		parsedXML = await runInWorker("parseXML", str)
+	}else{
+		parsedXML = await parseXML(str);
+	}
+	
+	let data:XMLNodeCatalog = parsedXML[0] as XMLNodeCatalog;
+	
 	assert(data && data.tagname == "Catalog");
 	let catalogs = createEmptyDataspaceCatalogs();
 	

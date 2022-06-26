@@ -1326,6 +1326,7 @@ function resetNotifyChanges(){
 
 resetNotifyChanges();
 
+assert(!onmessage);
 onmessage = function(e){
 	const msg:Message = e.data;
 	onMessage(msg).then(function(value:any){
