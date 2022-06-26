@@ -206,20 +206,132 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				}
 			}
 			
+			function processDepLine(dep:string):{ name:string; filename:string; } {
+				let m = dep.match(/,file:([a-z0-9_\.]+(?:\/[a-z0-9_\.]+)*)$/i);
+				if(m == null) throw new Error("Invalid dep line: " + dep);
+				
+				let m2 = m[1].match(/\/([a-z0-9_\.]+)$/i);
+				if(!m2) throw new Error("Invalid dep line: " + dep);
+				let name = m2[1]; // Core.SC2Mod, note: this value is used in a LOT of places... think carefully about changing the format
+				let filename = "deps/SC2GameData/" + m[1].toLowerCase();
+				
+				return {name, filename};
+			}
+			
+			// Some dependencies imply other dependencies... but this isn't written anywhere...
+			// Note: we declare the with just the last part of the name, and we'll unsimplify them very soon
+			const transitiveDependencies:Record<string, string[]> = {
+				"LibertyMulti.SC2Mod": ["Liberty.SC2Mod"],
+				"Liberty.SC2Campaign": ["Liberty.SC2Mod"],
+				"LibertyStory.SC2Campaign": ["Liberty.SC2Campaign"],
+				
+				"Swarm.SC2Mod": ["Liberty.SC2Mod"],
+				"SwarmMulti.SC2Mod": ["Swarm.SC2Mod"],
+				"Swarm.SC2Campaign": ["Liberty.SC2Campaign", "Swarm.SC2Mod"],
+				"SwarmStory.SC2Campaign": ["Liberty.SC2Campaign", "Swarm.SC2Campaign"],
+				
+				"Void.SC2Mod": ["Swarm.SC2Mod"],
+				"VoidMulti.SC2Mod": ["Void.SC2Mod"],
+				"Void.SC2Campaign": ["Swarm.SC2Campaign", "Void.SC2Mod"],
+				"VoidStory.SC2Campaign": ["Swarm.SC2Campaign", "Void.SC2Campaign"],
+				
+				"NovaStoryAssets.SC2Mod": ["Void.SC2Campaign"],
+				
+				"StarCoop.SC2Mod": ["Void.SC2Campaign"],
+				
+				"BalanceMulti.SC2Mod": ["Void.SC2Mod"],
+				
+				"WarClassic.SC2Mod": ["Liberty.SC2Mod", "War3.SC2Mod"],
+				"WarClassicSystem.SC2Mod": ["WarClassic.SC2Mod"],
+				"WarCoopData.SC2Mod": ["WarClassicSystem.SC2Mod"],
+			};
+			
+			
+			{ // Process lines from above to unsimplify them into full dep lines
+				const fullnames:string[] = [
+					"bnet:Glue/0.0/999,file:Mods/Glue.SC2Mod",
+					
+					"bnet:Liberty (Mod)/0.0/999,file:Mods/Liberty.SC2Mod",
+					"bnet:Liberty Multi (Mod)/0.0/999,file:Mods/LibertyMulti.SC2Mod",
+					"bnet:Liberty (Campaign)/0.0/999,file:Campaigns/Liberty.SC2Campaign",
+					"bnet:Liberty Story (Campaign)/0.0/999,file:Campaigns/LibertyStory.SC2Campaign",
+					
+					"bnet:Swarm (Mod)/0.0/999,file:Mods/Swarm.SC2Mod",
+					"bnet:Swarm Multi (Mod)/0.0/999,file:Mods/SwarmMulti.SC2Mod",
+					"bnet:Swarm (Campaign)/0.0/999,file:Campaigns/Swarm.SC2Campaign",
+					"bnet:Swarm Story (Campaign)/0.0/999,file:Campaigns/SwarmStory.SC2Campaign",
+					
+					"bnet:Void (Mod)/0.0/999,file:Mods/Void.SC2Mod",
+					"bnet:Void Multi (Mod)/0.0/999,file:Mods/VoidMulti.SC2Mod",
+					"bnet:Void (Campaign)/0.0/999,file:Campaigns/Void.SC2Campaign",
+					"bnet:Void Story (Campaign)/0.0/999,file:Campaigns/VoidStory.SC2Campaign",
+					
+					"bnet:Balance Multi (Mod)/0.0/999,file:Mods/BalanceMulti.SC2Mod",
+					
+					"bnet:Nova Covert Ops (Art Mod)/0.0/999,file:Mods/NovaStoryAssets.SC2Mod",
+					
+					"bnet:Co-op Mission/0.0/999,file:Mods/StarCoop/StarCoop.SC2Mod",
+					
+					"bnet:Warcraft III (Art Mod)/0.0/999,file:Mods/War3.SC2Mod",
+					"bnet:Warcraft Coop (Art Mod)/0.0/999,file:Mods/WarCoop.SC2Mod",
+					"bnet:Warcraft Classic/0.0/999,file:Mods/WarCoop/WarClassic.SC2Mod",
+					"bnet:Warcraft Classic System/0.0/999,file:Mods/WarCoop/WarClassicSystem.SC2Mod",
+					"bnet:Warcraft Coop (Data Mod)/0.0/999,file:Mods/WarCoop/WarCoopData.SC2Mod",
+				];
+				
+				for(let dep of fullnames){
+					let {name} = processDepLine(dep);
+					
+					for(let i in transitiveDependencies){
+						let arr = transitiveDependencies[i];
+						
+						if(i === name){
+							// We need to change the key
+							transitiveDependencies[dep] = arr;
+							delete transitiveDependencies[i];
+						}
+						
+						for(let j = 0; j < arr.length; ++j){
+							if(arr[j] == name) arr[j] = dep;
+						}
+					}
+				}
+				
+				for(let i in transitiveDependencies){
+					assert(i.indexOf("file:") !== -1, `Simplified dep line did not get resolved: ${i}`);
+					for(let line of transitiveDependencies[i]){
+						assert(line.indexOf("file:") !== -1, `Simplified dep line did not get resolved: ${line}`);
+					}
+				}
+			}
+			
+			
+			let depsSet = new Set(deps);
+			
+			for(let i = 0; i < deps.length; ++i){
+				let line = deps[i];
+				if(line in transitiveDependencies){
+					let depsAdded = 0;
+					for(let newDep of transitiveDependencies[line]){
+						if(depsSet.has(newDep)) continue;
+						depsSet.add(newDep);
+						
+						deps.splice(i, 0, newDep);
+						depsAdded += 1;
+					}
+					
+					// Loop again through these deps to find more transitive dependencies
+					if(depsAdded > 0) i -= depsAdded - 1;
+				}
+			}
+			
 			for(let dep of deps){
 				if(!dep.startsWith("bnet:")) throw new Error("No idea how to handle this");
 			}
 			
 			index.dependencies = await Promise.all(deps.map(async (dep:string) => {
-				let r = /,file:([a-z0-9_\.]+(?:\/[a-z0-9_\.]+)*)$/i;
-				let m = dep.match(r);
-				if(m == null) throw new Error("Invalid dep line: " + dep);
+				let {name, filename} = processDepLine(dep);
 				
-				let m2 = m[1].match(/\/([a-z0-9_\.]+)$/i);
-				if(!m2) throw new Error("Invalid dep line: " + dep);
-				let name = m2[1]; // Core.SC2Mod
-				
-				let filename = "deps/SC2GameData/" + m[1].toLowerCase();
 				console.time(filename);
 				let v = await loadDependencyInWorker(filename);
 				v.name = name;
