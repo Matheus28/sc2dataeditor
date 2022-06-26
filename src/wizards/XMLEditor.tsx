@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Card, Col, Form, Row, Spinner, Table } from 'react-bootstrap';
 import { CatalogName, CatalogTypesInstance, FieldType } from '../lib/game_data';
 import { mapObjectToArray } from '../lib/utils';
-import { CatalogEntry, CatalogField } from '../worker';
+import { CatalogEntry, CatalogField } from '../lib/game_data_access';
 import { getEntryXML, setEntryXML } from '../worker_client';
 import { GenericCatalogField } from './components/GenericCatalogField';
 

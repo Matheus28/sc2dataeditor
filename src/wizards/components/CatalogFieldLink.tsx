@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getEntries, getEntry, getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
 import SelectEntry, { makeSelectOption, SelectOption } from './SelectEntry';
-import { resolveTokens, unresolveTokens, valueSourceToClassName } from './utils';
+import { valueSourceToClassName } from './utils';
+import { CatalogField, ValueSource } from '../../lib/game_data_access';
+import { resolveTokens, unresolveTokens } from '../../lib/utils';
 
 interface Props {
 	field:CatalogField;

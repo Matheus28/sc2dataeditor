@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { ValueSource } from '../../worker';
+import { ValueSource } from '../../lib/game_data_access';
 import { getObjectStringLink, setObjectStringLink } from '../../worker_client';
 import { valueSourceToClassName } from './utils';
 

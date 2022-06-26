@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Card, Col, Form, Nav, Row } from 'react-bootstrap';
 import { CatalogName } from '../lib/game_data';
+import { CatalogEntry } from '../lib/game_data_access';
 import { mapObjectToArray } from '../lib/utils';
-import { CatalogEntry } from '../worker';
 import SelectEntry, { SelectOption } from './components/SelectEntry';
 import GenericEditor from './GenericEditor';
 import XMLEditor from './XMLEditor';

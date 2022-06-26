@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { CatalogField } from '../../worker';
+import { CatalogField } from '../../lib/game_data_access';
 import CatalogFieldSimple from './CatalogFieldSimple';
 
 interface Props {

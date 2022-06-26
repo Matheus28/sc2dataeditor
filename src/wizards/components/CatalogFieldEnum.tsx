@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { EnumType } from '../../lib/game_data';
+import { CatalogField } from '../../lib/game_data_access';
 import { mapObjectToArray } from '../../lib/utils';
-import { CatalogField } from '../../worker';
 import CatalogFieldSimple from './CatalogFieldSimple';
 
 interface Props {

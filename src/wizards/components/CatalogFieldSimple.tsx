@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { Form, Stack } from 'react-bootstrap';
-import { CatalogEntry, CatalogField, ValueSource } from '../../worker';
 import { getFieldValue, setFieldValue } from '../../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { resolveTokens, unresolveTokens, valueSourceToClassName } from './utils';
+import { valueSourceToClassName } from './utils';
 import assert from 'assert';
+import { CatalogField, ValueSource } from '../../lib/game_data_access';
+import { resolveTokens, unresolveTokens } from '../../lib/utils';
 
 type SubElements = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 

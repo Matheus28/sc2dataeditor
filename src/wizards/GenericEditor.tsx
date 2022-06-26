@@ -2,10 +2,10 @@ import * as React from 'react';
 import { Card, Col, Form, Row, Table } from 'react-bootstrap';
 import { CatalogName, CatalogTypesInstance, FieldType } from '../lib/game_data';
 import { mapObjectToArray } from '../lib/utils';
-import { CatalogEntry, CatalogField } from '../worker';
 import { GenericCatalogField } from './components/GenericCatalogField';
 import SelectEntryType from './components/SelectEntryType';
 import assert from "assert";
+import { CatalogEntry, CatalogField } from '../lib/game_data_access';
 
 
 interface Props {

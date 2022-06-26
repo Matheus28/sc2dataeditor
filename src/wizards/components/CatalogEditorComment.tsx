@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { CatalogEntry, ValueSource } from '../../worker';
+import { CatalogEntry, ValueSource } from '../../lib/game_data_access';
 import { getEntryComment, setEntryComment } from '../../worker_client';
 import { valueSourceToClassName } from './utils';
 
