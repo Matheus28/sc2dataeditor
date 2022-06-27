@@ -1,7 +1,7 @@
 import assert from 'assert';
 import * as React from 'react';
 import Select from "react-select";
-import { CatalogName, CatalogNameArray } from '../lib/game_data';
+import { CatalogName, CatalogNameArray } from '../../lib/game_data';
 
 type SelectOption = { value:CatalogName; label:string; };
 

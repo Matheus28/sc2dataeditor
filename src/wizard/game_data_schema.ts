@@ -1,8 +1,8 @@
 // Generates a xsd schema
 
 import assert from "assert";
-import { unparsedGameData, catalogContents } from "./lib/game_data_unparsed";
-import { DataFieldDefaults, SimpleRealTypesArray, unparsedEnums } from "./lib/game_data";
+import { unparsedGameData, catalogContents } from "../lib/game_data_unparsed";
+import { DataFieldDefaults, SimpleRealTypesArray, unparsedEnums } from "../lib/game_data";
 import { writeFileSync } from "fs";
 
 

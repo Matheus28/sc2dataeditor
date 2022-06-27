@@ -6,7 +6,7 @@
   "scripts": {
     "tsc": "tsc",
     "tscw": "tsc -w",
-    "electron": "electron ./out/electron.js",
+    "electron": "electron ./out/wizard/electron.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

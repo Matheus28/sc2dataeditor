@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Alert, Badge, Form } from 'react-bootstrap';
 import { createFilter } from 'react-select';
 import Select from "react-select";
-import { getEntry, setEntryType } from '../../worker_client';
+import { getEntry, setEntryType } from '../worker_client';
 import { CatalogTypesInstance } from '../../lib/game_data';
 import { CatalogEntry } from '../../lib/game_data_access';
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert } from 'react-bootstrap';
-import { getEntryParent, setEntryParent } from '../../worker_client';
+import { getEntryParent, setEntryParent } from '../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogEntry } from '../../lib/game_data_access';
 

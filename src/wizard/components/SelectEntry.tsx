@@ -5,7 +5,7 @@ import { createFilter } from 'react-select';
 import Select from "react-select/creatable";
 import ActualSelect from "react-select";
 import { CatalogName } from '../../lib/game_data';
-import { getEntries } from '../../worker_client';
+import { getEntries } from '../worker_client';
 import useDeepCompareEffect, { useDeepCompareEffectNoCheck } from 'use-deep-compare-effect';
 
 export type Value = {

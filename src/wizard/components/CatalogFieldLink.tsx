@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
-import { getEntries, getEntry, getFieldValue, setFieldValue } from '../../worker_client';
+import { getEntries, getEntry, getFieldValue, setFieldValue } from '../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { CatalogName } from '../../lib/game_data';
 import SelectEntry, { makeSelectOption, SelectOption } from './SelectEntry';

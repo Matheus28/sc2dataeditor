@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Form, Stack } from 'react-bootstrap';
-import { getFieldValue, setFieldValue } from '../../worker_client';
+import { getFieldValue, setFieldValue } from '../worker_client';
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { valueSourceToClassName } from './utils';
 import assert from 'assert';

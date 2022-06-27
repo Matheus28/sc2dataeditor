@@ -1,9 +1,9 @@
 import assert from "assert";
-import { CatalogName, CatalogTypesInstance } from "./lib/game_data";
-import { accessEntry, accessEntryForModification, CatalogEntry, CatalogField, getArrayFieldIndexes, getFieldValue, setFieldValue } from "./lib/game_data_access";
-import { addDataspaceToIndex, Dataspace, encodeEntryXML, forEachIndex, GameDataIndex, loadGameDataIndex, newDataspace, saveDataspaces, saveGameDataIndex, setEntryXML, XMLNodeEntry } from './lib/game_data_loader';
-import { exportHotkeysFile } from "./lib/game_hotkeys_loader";
-import { exportStringsFile, getTxtFileName } from "./lib/game_strings_loader";
+import { CatalogName, CatalogTypesInstance } from "../lib/game_data";
+import { accessEntry, accessEntryForModification, CatalogEntry, CatalogField, getArrayFieldIndexes, getFieldValue, setFieldValue } from "../lib/game_data_access";
+import { addDataspaceToIndex, Dataspace, encodeEntryXML, forEachIndex, GameDataIndex, loadGameDataIndex, newDataspace, saveDataspaces, saveGameDataIndex, setEntryXML, XMLNodeEntry } from '../lib/game_data_loader';
+import { exportHotkeysFile } from "../lib/game_hotkeys_loader";
+import { exportStringsFile, getTxtFileName } from "../lib/game_strings_loader";
 import * as worker_client from "./worker_client";
 
 type WorkerClient = typeof worker_client;

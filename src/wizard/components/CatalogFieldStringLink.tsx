@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Form } from 'react-bootstrap';
 import { ValueSource } from '../../lib/game_data_access';
-import { getStringLink, setStringLink } from '../../worker_client';
+import { getStringLink, setStringLink } from '../worker_client';
 import { valueSourceToClassName } from './utils';
 
 type Props = {

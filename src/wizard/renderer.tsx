@@ -6,10 +6,10 @@ import SelectDataspace from './components/SelectDataspace';
 import { loadMap } from './worker_client';
 import ChangedList from './components/ChangedList';
 import SelectCatalog from './components/SelectCatalog';
-import Editor from './wizards/Editor';
-import { CatalogName } from './lib/game_data';
+import Editor from './Editor';
+import { CatalogName } from '../lib/game_data';
 import SelectSource from './components/SelectSource';
-import * as editorStrings from "./lib/editor_strings";
+import * as editorStrings from "../lib/editor_strings";
 
 const mainElement = document.getElementById("main");
 assert(mainElement);

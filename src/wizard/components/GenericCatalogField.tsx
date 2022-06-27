@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Alert, Button, Spinner, Table } from 'react-bootstrap';
 import useDeepCompareEffect from 'use-deep-compare-effect';
 import { mapObjectToArray } from '../../lib/utils';
-import { getArrayFieldIndexes } from '../../worker_client';
+import { getArrayFieldIndexes } from '../worker_client';
 import { CatalogLinks, CatalogNameArray, DataFieldDefaults, DataFieldSimpleTypes, FieldType, FieldTypeNamedArray, FieldTypeStruct, FieldTypeWithSimpleValue, FieldValue, SimpleIntegerTypes, SimpleRealTypes, SimpleRealTypesArray, SimpleStringTypes } from '../../lib/game_data';
 import CatalogEditorComment from './CatalogEditorComment';
 import CatalogFieldBool from './CatalogFieldBool';
