@@ -130,7 +130,7 @@ function newWorkerAsMain():WorkerWrapper {
 				allWorkers.delete(self);
 				idleWorkers = idleWorkers.filter(w => w != self);
 				worker.terminate();
-			}, 1000);
+			}, 2000);
 		}
 	}
 	
