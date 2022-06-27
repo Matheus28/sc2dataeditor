@@ -3,7 +3,7 @@ import { CatalogName } from "../lib/game_data";
 import { CatalogField, CatalogEntry, ValueSource } from "../lib/game_data_access";
 import { Message, MessageResponse } from "./worker";
 
-const worker = new Worker("./out/worker_wrapper.js");
+const worker = new Worker("./out/wizard/worker_wrapper.js");
 
 let nextMessageID:number = 0;
 const pendingRequests = new Map<number, [(v:any)=>void, (v:any)=>void]>();
