@@ -4,7 +4,13 @@ let strings:Awaited<typeof stringsPromise>;
 const stringsPromise = importStringsFile("deps/SC2GameData/mods/core.sc2mod/enus.sc2data/LocalizedData/Editor/EditorCatalogStrings.txt");
 stringsPromise.then((v) => strings = v);
 
-function getKeyValueOrKey(key:string):string {
+export function getKeyValueOrEmpty(key:string):string {
+	let v = strings[key];
+	if(v !== undefined) return v;
+	return "";
+}
+
+export function getKeyValueOrKey(key:string):string {
 	let v = strings[key];
 	if(v !== undefined) return v;
 	return key;

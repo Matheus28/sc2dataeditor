@@ -218,11 +218,25 @@ export class Document {
 			return { value: decodeEntities(str.slice(startIndex, endIndex)), range: { start, end } };
 		};
 		
-		const charData = ():TextNode|null => {
+		const charData = ():TextNode|CDataNode|null => {
 			if(eol()) return null;
-			if(str[i] == "<") return null;
+			
+			if(str[i] == "<" && str[i+1] != "!") return null;
 			
 			let start = curPos();
+			
+			if(acceptRegex(/<!\[CDATA\[/y)){
+				let cDataStart = i;
+				
+				expectRegex(/[\s\S]*?\]\]>/y);
+				let cDataEnd = i - "]]>".length;
+				
+				let end = curPos();
+				return new CDataNode({start, end}, str.slice(cDataStart, cDataEnd));
+			}
+			
+			if(str[i] == "<") return null;
+			
 			let startIndex = i;
 			
 			while(!eol() && str[i] != "<"){
@@ -357,6 +371,14 @@ export class Document {
 				}
 				
 				{
+					let e = charData();
+					if(e != null){
+						ret.push(e);
+						continue;
+					}
+				}
+				
+				{
 					let e = element();
 					if(e != null){
 						ret.push(e);
@@ -366,14 +388,6 @@ export class Document {
 				
 				{
 					let e = instruction();
-					if(e != null){
-						ret.push(e);
-						continue;
-					}
-				}
-				
-				{
-					let e = charData();
 					if(e != null){
 						ret.push(e);
 						continue;
@@ -444,7 +458,7 @@ export class Document {
 	}
 }
 
-type NodeJSON = CommentNodeJSON|TextNodeJSON|ElementNodeJSON|InstructionNodeJSON;
+type NodeJSON = CommentNodeJSON|TextNodeJSON|CDataNodeJSON|ElementNodeJSON|InstructionNodeJSON;
 abstract class Node {
 	private _parent:ElementNode|null = null;
 	
@@ -480,6 +494,7 @@ abstract class Node {
 		if("comment" in arg) return CommentNode.fromJSON(arg);
 		if("tagname" in arg) return ElementNode.fromJSON(arg);
 		if("instruction" in arg) return InstructionNode.fromJSON(arg);
+		if("cdata" in arg) return CDataNode.fromJSON(arg);
 		
 		unreachable(arg);
 	}
@@ -532,6 +547,31 @@ class TextNode extends Node {
 	
 	encode(options:EncodeOptions, ctx:EncodeContext):string {
 		return this._encodeLine(options, ctx, this._text);
+	}
+}
+
+type CDataNodeJSON = {cdata:string};
+class CDataNode extends Node {
+	/** @internal */
+	constructor(
+		_range:Range,
+		private _text:string,
+	){
+		super(_range);
+	}
+	
+	get text(){ return this._text; }
+	
+	toJSON():CDataNodeJSON {
+		return {cdata:this._text};
+	}
+	
+	static override fromJSON(arg:CDataNodeJSON):CDataNode {
+		return new CDataNode(undefined, arg.cdata);
+	}
+	
+	encode(options:EncodeOptions, ctx:EncodeContext):string {
+		return this._encodeLine(options, ctx, `<![CDATA[${this._text}]]>`);
 	}
 }
 
@@ -731,18 +771,22 @@ class ElementNode extends AttributesNode {
 	}
 }
 
-function encodeEntities(x:string):string {
+export function encodeEntities(x:string):string {
 	return x.replaceAll(/[&<>'"'\xA0]/gm, function(all){
 		if(all in entityMapInverse) return entityMapInverse[all];
 		return all;
 	})
 }
 
-function decodeEntities(x:string):string {
+export function decodeEntities(x:string):string {
 	return x.replaceAll(/&[^;]+;/gm, function(all){
 		if(all in entityMap) return entityMap[all];
 		return all;
 	})
+}
+
+export function cdata(x:string):string {
+	return `<![CDATA[${x}]]>`;
 }
 
 type Range = undefined | {
