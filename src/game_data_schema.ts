@@ -1,9 +1,10 @@
 // Generates a xsd schema
 
 import assert from "assert";
-import { unparsedGameData, catalogContents } from "../lib/game_data_unparsed";
-import { DataFieldDefaults, SimpleRealTypesArray, unparsedEnums } from "../lib/game_data";
+import { unparsedGameData, catalogContents } from "./lib/game_data_unparsed";
+import { DataFieldDefaults, SimpleRealTypesArray, unparsedEnums } from "./lib/game_data";
 import { writeFileSync } from "fs";
+import fxml from "./lib/fxml";
 
 
 function fixName(s:string):string {
@@ -215,7 +216,7 @@ ${Object.entries(unparsedGameData.classes).map(([structName, struct]) => {
 
 str += `</xs:schema>\n`;
 
-str = str.replace(/\n[ \t]*\n/g, '\n');
-str = str.replace(/\n[ \t]*\n/g, '\n');
+// Reformat
+str = fxml.Document.fromString(str).encode({ pretty: true, eol: '\n' });
 
 writeFileSync(`${__dirname}/../data/Catalog.xsd`, str, "utf8");
