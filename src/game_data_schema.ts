@@ -100,7 +100,7 @@ function documentation(str:string):string {
 
 	<!-- Simple Types -->
 	${Object.entries(DataFieldDefaults).map(([typeName, typeDefaultValue]) => {
-		let complexType = `<xs:complexType name="${fixName(typeName)}"><xs:attribute name="value" use="required" type="simple_${fixName(typeName)}"/></xs:complexType>`;
+		let complexType = `<xs:complexType name="${fixName(typeName)}"><xs:attribute name="value" type="simple_${fixName(typeName)}"/></xs:complexType>`;
 		if(typeof typeDefaultValue == "string"){
 			return complexType + `<xs:simpleType name="simple_${"" + fixName(typeName)}"><xs:restriction base="xs:string" /></xs:simpleType>`;
 		}
@@ -126,7 +126,7 @@ function documentation(str:string):string {
 
 	<!-- Enums -->
 	${Object.entries(unparsedEnums).map(([enumName, enumContents]) => {
-		let tmp = `<xs:complexType name="${fixName(enumName)}"><xs:attribute name="value" use="required" type="simple_${fixName(enumName)}"/></xs:complexType>`;
+		let tmp = `<xs:complexType name="${fixName(enumName)}"><xs:attribute name="value" type="simple_${fixName(enumName)}"/></xs:complexType>`;
 		tmp += `<xs:simpleType name="simple_${fixName(enumName)}"><xs:restriction base="xs:string">`;
 		
 		tmp += Object.entries(enumContents).map(([k,v]) => {
