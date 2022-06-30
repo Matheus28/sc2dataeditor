@@ -26,12 +26,12 @@ type EncodeContext = {
 	depth:number;
 };
 
-interface Prolog {
+export interface Prolog {
 	version:string;
 	encoding:string|null;
 }
 
-type DocumentJSON = {
+export type DocumentJSON = {
 	prolog?:Prolog;
 	root:ElementNodeJSON;
 };
@@ -56,7 +56,7 @@ export class Document {
 	
 	private _fromXML(str:string):ElementNode {
 		let i:number = 0;
-		let curLine = 1;
+		let curLine = 0;
 		let lineStartedAt:number = 0;
 		
 		const curPos = (offset:number = 0):Position => {
@@ -108,7 +108,7 @@ export class Document {
 		// This needs to be declared like this so typescript will take :never into account for narrowing
 		function error(str:string):never {
 			let p = curPos();
-			throw new Error(`${str} @ line ${p.line} column ${1+p.character}\n${curLineContents()}`);
+			throw new Error(`${str} @ line ${1+p.line} column ${1+p.character}\n${curLineContents()}`);
 		};
 		
 		const acceptRegex = (r:RegExp):RegExpExecArray|null => {
@@ -273,7 +273,7 @@ export class Document {
 		};
 		
 		const parseAttributes = () => {
-			let attrs:Record<string, {value: string, range:Range, nameRange:Range, valueRange:Range }> = {};
+			let attrs:Attributes = {};
 			for(;;){
 				skipWhitespace();
 				
@@ -326,7 +326,7 @@ export class Document {
 				
 				let closingName = expectName();
 				if(closingName.value != tagname.value){
-					error(`Closing tag ${closingName.value} doesn't match opening tag ${tagname.value} (from line ${tagname.range?.start.line})`);
+					error(`Closing tag ${closingName.value} doesn't match opening tag ${tagname.value} (from line ${1+(tagname.range?.start.line||-1)})`);
 				}
 				
 				closeRange = closingName.range;
@@ -424,6 +424,21 @@ export class Document {
 		return new Document(arg);
 	}
 	
+	static fromScratch(rootName:string):Document {
+		const t:DocumentJSON = {
+			prolog: {
+				version: "1.0",
+				encoding: "utf-8",
+			},
+			
+			root: {
+				tagname: rootName,
+			}
+		};
+		
+		return this.fromJSON(t);
+	}
+	
 	toJSON(){
 		let ret:DocumentJSON = {
 			root: this._root.toJSON(),
@@ -437,37 +452,31 @@ export class Document {
 	encode(options:Partial<EncodeOptions>):string {
 		let str = "";
 		
-		let fullOptions:EncodeOptions = {
-			pretty: false,
-			indent: '\t',
-			eol: EOL,
-			...options
-		};
 		
 		if(this._prolog){
 			str += `<?xml version="${this._prolog.version}"`;
 			if(this._prolog.encoding != null) str += ` encoding="${this._prolog.encoding}"`;
-			str += "?>" + fullOptions.eol;
+			str += "?>" + ('eol' in options ? options.eol : EOL);
 		}
 		
-		str += this._root.encode(fullOptions, {
-			depth: 0
-		});
+		str += this._root.encode(options);
 		
 		return str;
 	}
 }
 
 type NodeJSON = CommentNodeJSON|TextNodeJSON|CDataNodeJSON|ElementNodeJSON|InstructionNodeJSON;
-abstract class Node {
-	private _parent:ElementNode|null = null;
+export abstract class Node {
+	protected _parent:ElementNode|null = null;
 	
 	/** @internal */
 	constructor(
-		private _range:Range,
+		private _range:Range|undefined,
 	){
 		
 	}
+	
+	get range(){ return this._range; }
 	
 	/** @internal */
 	_setParent(v:ElementNode|null):void {
@@ -479,7 +488,20 @@ abstract class Node {
 	}
 	
 	abstract toJSON():NodeJSON;
-	abstract encode(options:EncodeOptions, ctx:EncodeContext):string;
+	encode(options?:Partial<EncodeOptions>, ctx?:Partial<EncodeContext>):string {
+		return this._encode({
+			pretty: false,
+			indent: '\t',
+			eol: EOL,
+			...options
+		}, {
+			depth: 0,
+			...ctx
+		});
+	}
+	
+	/** @internal */
+	abstract _encode(options:EncodeOptions, ctx:EncodeContext):string;
 	
 	protected _encodeLine(options:EncodeOptions, ctx:EncodeContext, line:string):string {
 		if(!options.pretty) return line;
@@ -501,10 +523,10 @@ abstract class Node {
 }
 
 type CommentNodeJSON = { comment: string };
-class CommentNode extends Node {
+export class CommentNode extends Node {
 	/** @internal */
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		private _text:string,
 	){
 		super(_range);
@@ -520,16 +542,16 @@ class CommentNode extends Node {
 		return new CommentNode(undefined, v.comment);
 	}
 	
-	encode(options:EncodeOptions, ctx:EncodeContext):string {
+	_encode(options:EncodeOptions, ctx:EncodeContext):string {
 		return this._encodeLine(options, ctx, `<!--${this._text}-->`);
 	}
 }
 
 type TextNodeJSON = string;
-class TextNode extends Node {
+export class TextNode extends Node {
 	/** @internal */
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		private _text:string,
 	){
 		super(_range);
@@ -545,16 +567,16 @@ class TextNode extends Node {
 		return new TextNode(undefined, arg);
 	}
 	
-	encode(options:EncodeOptions, ctx:EncodeContext):string {
+	_encode(options:EncodeOptions, ctx:EncodeContext):string {
 		return this._encodeLine(options, ctx, this._text);
 	}
 }
 
 type CDataNodeJSON = {cdata:string};
-class CDataNode extends Node {
+export class CDataNode extends Node {
 	/** @internal */
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		private _text:string,
 	){
 		super(_range);
@@ -570,15 +592,15 @@ class CDataNode extends Node {
 		return new CDataNode(undefined, arg.cdata);
 	}
 	
-	encode(options:EncodeOptions, ctx:EncodeContext):string {
+	_encode(options:EncodeOptions, ctx:EncodeContext):string {
 		return this._encodeLine(options, ctx, `<![CDATA[${this._text}]]>`);
 	}
 }
 
-type Attributes = Record<string, {value: string, range?:Range, nameRange?:Range, valueRange?:Range }>;
+type Attributes = Record<string, {value: string, range?:Range|undefined, nameRange?:Range|undefined, valueRange?:Range|undefined }>;
 abstract class AttributesNode extends Node {
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		private _attrs:Attributes,
 	){
 		super(_range);
@@ -596,6 +618,43 @@ abstract class AttributesNode extends Node {
 		}
 		
 		return this._attrs[name].value;
+	}
+	
+	getAttributeValueRange(name:string):Range|undefined {
+		if(!(name in this._attrs)) return undefined;
+		return this._attrs[name].valueRange;
+	}
+	
+	getAttributesByValue(value:string):string[] {
+		let ret:string[] = [];
+		
+		for(let i in this._attrs){
+			if(this._attrs[i].value === value) ret.push(i);
+		}
+		
+		return ret;
+	}
+	
+	getAttributes():Record<string, string> {
+		let attr:Record<string,string> = {};
+		for(let i in this._attrs){
+			attr[i] = this._attrs[i].value;
+		}
+		return attr;
+	}
+	
+	setAttribute(name:string, value:string):void {
+		this._attrs[name] = {
+			value,
+		};
+	}
+	
+	deleteAttribute(name:string):void {
+		delete this._attrs[name];
+	}
+	
+	clearAttributes():void {
+		this._attrs = {};
 	}
 	
 	static attributesFromJSON(attrs:Record<string,string>|undefined):Attributes {
@@ -635,15 +694,17 @@ interface InstructionNodeJSON {
 	attrs?:Record<string,string>;
 }
 
-class InstructionNode extends AttributesNode {
+export class InstructionNode extends AttributesNode {
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		_attrs:Attributes,
 		private _tagname:string,
-		private _tagnameRange:Range,
+		private _tagnameRange:Range|undefined,
 	){
 		super(_range, _attrs);
 	}
+	
+	get tagname(){ return this._tagname; }
 	
 	toJSON() {
 		let ret:InstructionNodeJSON = {
@@ -656,7 +717,7 @@ class InstructionNode extends AttributesNode {
 		return ret;
 	}
 	
-	encode(options:EncodeOptions, ctx:EncodeContext):string {
+	_encode(options:EncodeOptions, ctx:EncodeContext):string {
 		return this._encodeLine(options, ctx, `<?${this._tagname}${this.attrsToXML()}?>`);
 	}
 }
@@ -667,15 +728,15 @@ interface ElementNodeJSON {
 	children?:NodeJSON[];
 }
 
-class ElementNode extends AttributesNode {
+export class ElementNode extends AttributesNode {
 	private _childrenByTagName:Record<string, ElementNode[]> = {};
 	
 	/** @internal */
 	constructor(
-		_range:Range,
+		_range:Range|undefined,
 		private _tagname:string,
-		private _tagnameRange:Range,
-		private _tagnameCloseRange:Range,
+		private _tagnameRange:Range|undefined,
+		private _tagnameCloseRange:Range|undefined,
 		_attrs:Attributes,
 		private _children:Node[],
 	){
@@ -698,10 +759,38 @@ class ElementNode extends AttributesNode {
 	get tagname(){ return this._tagname; }
 	get tagnameRange(){ return this._tagnameRange; }
 	get tagnameCloseRange(){ return this._tagnameCloseRange; }
+	get children():readonly Node[] { return this._children; }
 	
-	removeChild(child:Node):boolean {
-		let i = this._children.indexOf(child);
-		if(i == -1) return false;
+	set tagname(v:string){
+		if(v == this._tagname) return;
+		
+		let p = this._parent;
+		if(p){
+			let arr = p._childrenByTagName[this._tagname];
+			let i = arr.indexOf(this);
+			assert(i !== -1);
+			arr.splice(i, 1);
+			if(arr.length == 0) delete p._childrenByTagName[this._tagname];
+			
+			p._childrenByTagName[v] = p._childrenByTagName[v] || [];
+			arr = p._childrenByTagName[v];
+			arr.push(this);
+		}
+		
+		this._tagname = v;
+		this._tagnameRange = undefined;
+		this._tagnameCloseRange = undefined;
+	}
+	
+	removeChild(child:Node, hintIndex?:number):boolean {
+		let i:number;
+		
+		if(typeof hintIndex !== "undefined" && this._children[hintIndex] === child){
+			i = hintIndex;
+		}else{
+			i = this._children.indexOf(child);
+			if(i == -1) return false;
+		}
 		
 		this._children.splice(i, 1);
 		
@@ -723,6 +812,12 @@ class ElementNode extends AttributesNode {
 		return true;
 	}
 	
+	removeChildren():void {
+		for(let v of this._children) v._setParent(null);
+		this._children = [];
+		this._childrenByTagName = {};
+	}
+	
 	appendChild(child:Node):void {
 		child.orphanate();
 		child._setParent(this);
@@ -731,6 +826,21 @@ class ElementNode extends AttributesNode {
 		if(child instanceof ElementNode){
 			this._childrenByTagName[child._tagname] = this._childrenByTagName[child._tagname] || [];
 			this._childrenByTagName[child._tagname].push(child);
+		}
+	}
+	
+	appendChildrenFrom(otherParent:ElementNode):void {
+		let oldChildren = otherParent._children.concat();
+		for(let v of oldChildren){
+			this.appendChild(v);
+		}
+	}
+	
+	getChildrenByTagName(tagname:string):readonly ElementNode[] {
+		if(tagname in this._childrenByTagName){
+			return this._childrenByTagName[tagname];
+		}else{
+			return [];
 		}
 	}
 	
@@ -747,7 +857,7 @@ class ElementNode extends AttributesNode {
 		return ret;
 	}
 	
-	encode(options:EncodeOptions, ctx:EncodeContext):string {
+	_encode(options:EncodeOptions, ctx:EncodeContext):string {
 		let canSelfClose = this._children.length == 0;
 		
 		let line = `<${this._tagname}${this.attrsToXML()}`;
@@ -761,7 +871,7 @@ class ElementNode extends AttributesNode {
 			let str = this._encodeLine(options, ctx, line);
 			
 			++ctx.depth;
-			for(let c of this._children) str += c.encode(options, ctx);
+			for(let c of this._children) str += c._encode(options, ctx);
 			--ctx.depth;
 			str += this._encodeLine(options, ctx, `</${this._tagname}>`);
 			
@@ -789,10 +899,27 @@ export function cdata(x:string):string {
 	return `<![CDATA[${x}]]>`;
 }
 
-type Range = undefined | {
+export type Range = {
 	readonly start:Position;
 	readonly end:Position;
 };
+
+export function rangeIntersects(a:Range, b:Range){
+	return positionLTE(a.start, b.end) && positionLTE(b.start, a.end);
+}
+
+export function positionLTE(a:Position, b:Position){
+	if(a.line > b.line) return false;
+	if(a.line < b.line) return true;
+	return a.character <= b.character;
+}
+
+export function positionLT(a:Position, b:Position){
+	if(a.line > b.line) return false;
+	if(a.line < b.line) return true;
+	return a.character < b.character;
+}
+
 
 type Position = {
 	readonly line:number;

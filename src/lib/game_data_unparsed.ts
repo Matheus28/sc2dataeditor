@@ -239,6 +239,7 @@ export const catalogContents:Record<CatalogName, string[]> = {
 		"CValidatorUnitBehaviorStackAlias",
 		"CValidatorUnitBehaviorState",
 		"CValidatorUnitCombatAI",
+		"CValidatorUnitCompare",
 		"CValidatorUnitCompareAIAreaEvalRatio",
 		"CValidatorUnitCompareAbilLevel",
 		"CValidatorUnitCompareAbilSkillPoint",

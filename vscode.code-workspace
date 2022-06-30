@@ -9,8 +9,9 @@
 			"**/package-lock.json": true,
 			"deps": true,
 			"fonts": true,
-			"node_modules": true,
-			"out": true
+			"**/node_modules": true,
+			"out": true,
+			"wizard": true,
 		}
 	}
 }

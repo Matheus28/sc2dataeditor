@@ -1,50 +1,20 @@
 import assert from "assert";
 import * as fs from "fs/promises";
-import * as xmlparser from "fast-xml-parser";
 import { CatalogTypes, CatalogName, CatalogNameArray, CatalogTypesInstance, structNames, DataFieldSimpleTypes, isSimpleType, EnumType } from "./game_data";
 import { getTxtFileName, importStringsFile } from "./game_strings_loader";
 import { importHotkeysFile } from "./game_hotkeys_loader";
 import { runInWorker } from "./game_data_loader_worker_manager";
+import fxml from "./fxml";
 
-interface XMLNodeBase<ChildType> {
-	tagname:string;
-	children:ChildType[];
-	attr:Record<string, string>;
-	childrenByTagname:Record<string,ChildType[]>;
-	doNotEncode?:boolean;
-}
+type XMLParseResult = fxml.Document;
 
-interface XMLNodeComment<ChildType> extends XMLNodeBase<ChildType> {
-	tagname:"#comment";
-	text:string;
-}
-
-interface XMLNodeText<ChildType> extends XMLNodeBase<ChildType> {
-	tagname:"#text";
-	text:string;
-}
-
-export interface XMLNode extends XMLNodeBase<XMLNode> {
-	
-}
-
-export interface XMLNodeCatalog extends XMLNodeBase<XMLNodeEntry> {};
-export interface XMLNodeEntry extends XMLNodeBase<XMLNode> {
-	__tag:"XMLNodeEntry"; // This is just so we can't cast a XMLNode to this implicitly, it doesn't actually exist
+export interface XMLNodeEntry extends fxml.ElementNode {
 	editorComment?:string;
 	declaredTokens?:Record<string, {
 		value?:string;
 		type?:DataFieldSimpleTypes;
 	}>;
-	attr:{
-		id?:string;
-		parent?:string;
-		default?:string;
-		[x:string]:string;
-	};
-}
-
-type XMLParseResult = XMLNode[];
+};
 
 export function getGameDataFilenameBase(rootMapDir:string){
 	return rootMapDir + "/Base.SC2Data/GameData/";
@@ -53,7 +23,7 @@ export function getGameDataFilenameBase(rootMapDir:string){
 export type GameDataIndex = {
 	name:string|null; // null for the main file
 	rootMapDir:string;
-	includes:XMLNode;
+	includes:XMLParseResult;
 	
 	strings:Record<string, string>;
 	hotkeys:Record<string, string>;
@@ -79,7 +49,9 @@ export async function loadDependency(rootMapDir:string):Promise<GameDataIndex>{
 }
 
 export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex> {
-	let includes:XMLNode;
+	let includes:XMLParseResult;
+	
+	console.log(getGameDataIndexFilename(rootMapDir));
 	
 	{
 		let str:string|undefined;
@@ -88,10 +60,10 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		}catch{}
 		
 		if(str !== undefined){
-			includes = (await parseXML(str))[0];
-			assert(includes && includes.tagname == "Includes");
+			includes = fxml.Document.fromString(str);
+			assert(includes && includes.root.tagname == "Includes");
 		}else{
-			includes = newNode("Includes");
+			includes = fxml.Document.fromScratch("Includes");
 		}
 	}
 	
@@ -102,11 +74,10 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 		}catch{}
 		
 		if(str !== undefined){
-			let moreIncludes = (await parseXML(str))[0];
-			assert(moreIncludes && moreIncludes.tagname == "Includes");
-			for(let node of moreIncludes.children){
-				appendChildToEnd(includes, node);
-			}
+			let moreIncludes = fxml.Document.fromString(str);
+			assert(moreIncludes && moreIncludes.root.tagname == "Includes");
+			
+			includes.root.appendChildrenFrom(moreIncludes.root);
 		}
 	}
 	
@@ -138,6 +109,9 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 	await Promise.all([
 		// Dependencies
 		(async function(){
+			//FIXME: disabled
+			
+			/*
 			let docInfoStr:string;
 			
 			try {
@@ -151,22 +125,21 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 			];
 			
 			{
-				let docInfo = (await parseXML(docInfoStr))[0];
-				assert(docInfo && docInfo.tagname == "DocInfo");
+				let docInfo = fxml.Document.fromString(docInfoStr);
+				assert(docInfo && docInfo.root.tagname == "DocInfo");
 				
-				let depsRoot = docInfo.childrenByTagname["Dependencies"];
+				let depsRoot = docInfo.root.getChildrenByTagName("Dependencies");
 				if(depsRoot && depsRoot.length > 0){
 					assert(depsRoot.length == 1);
 					
-					let depsArr = depsRoot[0].childrenByTagname["Value"];
+					let depsArr = depsRoot[0].getChildrenByTagName("Value");
 					if(depsArr){
 						for(let node of depsArr){
 							if(node.children.length == 0) continue; // Empty <Value />... skip
 							assert(node.children.length == 1);
 							
 							let textNode = node.children[0];
-							assert(isTextNode(textNode));
-							
+							assert(textNode instanceof fxml.TextNode);
 							deps.push(textNode.text);
 						}
 					}
@@ -305,6 +278,7 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 				console.timeEnd(filename);
 				return v;
 			}));
+			*/
 		})(),
 		
 		// Our implicit includes
@@ -362,10 +336,10 @@ export async function loadGameDataIndex(rootMapDir:string):Promise<GameDataIndex
 			for(let catalogName in dataspace.catalogs){
 				let catalog = dataspace.catalogs[catalogName as CatalogName];
 				for(let entry of catalog.entries){
-					if('id' in entry.attr) continue;
+					if(entry.hasAttribute("id")) continue;
 					if(entry.tagname in index.catalogDefaults[catalogName as CatalogName]) continue;
 					
-					if(entry.attr["default"] !== "1"){
+					if(entry.getAttribute("default") !== "1"){
 						console.warn(`Default entry for ${entry.tagname} in ${dataspace.name} is lacking default="1"`);
 					}
 					
@@ -426,21 +400,21 @@ function getGameDataIndexFilename(rootMapDir:string):string {
 }
 
 export async function saveGameDataIndex(v:GameDataIndex):Promise<void> {
-	await fs.writeFile(getGameDataIndexFilename(v.rootMapDir), await encodeXML([v.includes]), "utf8");
+	await fs.writeFile(getGameDataIndexFilename(v.rootMapDir), await encodeXML(v.includes), "utf8");
 }
 
 async function loadIndexIncludes(index:GameDataIndex):Promise<Dataspace[]>{
 	const prefixToRemove = "GameData/";
 	
 	const base = getGameDataFilenameBase(index.rootMapDir);
-	const arr = getChildrenByTagName(index.includes, "Catalog");
+	const arr = index.includes.root.getChildrenByTagName("Catalog");
 	if(!arr || arr.length == 0) return [];
 	
 	let filenames:string[] = arr.map(v => {
-		assert(v.attr);
-		assert(v.attr["path"]);
-		assert(v.attr["path"].startsWith(prefixToRemove));
-		return base + v.attr["path"].slice(prefixToRemove.length)
+		let path = v.getAttribute("path");
+		assert(path);
+		assert(path.startsWith(prefixToRemove));
+		return base + path.slice(prefixToRemove.length)
 	});
 	
 	return await Promise.all(filenames.map(async filename => {
@@ -455,7 +429,7 @@ export interface Dataspace {
 	isImplicit:boolean; // Or from a dependency
 	index:GameDataIndex|null;
 	
-	data_:XMLNodeCatalog|null;
+	data_:fxml.Document;
 	structDefaults:StructDefaults;
 	
 	catalogs:{
@@ -466,15 +440,15 @@ export interface Dataspace {
 	};
 };
 
-type StructDefaults = Record<string,XMLNode>;
+type StructDefaults = Record<string, fxml.ElementNode>;
 
 const tagnameToCatalog:Record<string, CatalogName> = {};
-for(let catalog of Object.keys(CatalogTypesInstance) as CatalogName[]){
-	for(let type of Object.keys(CatalogTypesInstance[catalog])){
+for(let catalogName of CatalogNameArray){
+	for(let type of Object.keys(CatalogTypesInstance[catalogName])){
 		if(type in tagnameToCatalog){
-			throw new Error(`Duplicate entry for ${type} found. In ${catalog} and ${tagnameToCatalog[type]}`);
+			throw new Error(`Duplicate entry for ${type} found. In ${catalogName} and ${tagnameToCatalog[type]}`);
 		}
-		tagnameToCatalog[type] = catalog;
+		tagnameToCatalog[type] = catalogName;
 	}
 }
 
@@ -487,7 +461,7 @@ export function isValidTagname(tagname:string):boolean {
 }
 
 export function getCatalogNameByTagname(tagname:string):CatalogName {
-	assert(tagname in tagnameToCatalog);
+	assert(tagname in tagnameToCatalog, `Tagname ${tagname} not in catalog`);
 	return tagnameToCatalog[tagname];
 }
 
@@ -514,11 +488,13 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 		return null;
 	}
 	
-	let parsedXML:XMLParseResult = await parseXML(str);
+	return loadDataspaceFromString(rootMapDir, filename, str, isImplicit, index);
+}
+
+export function loadDataspaceFromString(rootMapDir:string, filename:string, str:string, isImplicit:boolean, index:GameDataIndex):Dataspace {
+	let data = fxml.Document.fromString(str);
 	
-	let data:XMLNodeCatalog = parsedXML[0] as XMLNodeCatalog;
-	
-	assert(data && data.tagname == "Catalog");
+	assert(data && data.root.tagname == "Catalog");
 	let catalogs = createEmptyDataspaceCatalogs();
 	
 	let structDefaults:Dataspace["structDefaults"] = {};
@@ -527,18 +503,23 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 		// Special handling for editor comments (any xml comment node before a catalog entry)
 		// the way they're handled is attaching them to the node for that entry
 		const comments:string[] = [];
-		for(let i = 0; i < data.children.length; ++i){
-			let v = data.children[i];
+		for(let i = 0; i < data.root.children.length; ++i){
+			let v = data.root.children[i];
 			
-			if(isTextNode(v)){
+			if(v instanceof fxml.TextNode){
 				console.error("Text node found in xml, this isn't okay: " + v.text + "\nEditor will delete it when it open this, I'm ignoring it");
 				continue;
 			}
 			
-			if(isCommentNode(v)){
+			if(v instanceof fxml.CommentNode){
 				comments.push(v.text);
-				data.children.splice(i, 1);
+				data.root.removeChild(v, i);
 				--i;
+				continue;
+			}
+			
+			if(!(v instanceof fxml.ElementNode)){
+				console.error("Unknown node found in xml: " + v.encode());
 				continue;
 			}
 			
@@ -547,27 +528,26 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 				continue;
 			}
 			
+			let vv:XMLNodeEntry = v;
+			
 			// All comments before this get attached to the node
 			if(comments.length == 0) continue;
-			v.editorComment = comments.join("\n");
+			vv.editorComment = comments.join("\n");
 			comments.length = 0;
 		}
-		
-		delete data.childrenByTagname["#comment"];
 		
 		if(comments.length > 0){
 			console.error("Comment node found at the end of catalog, this isn't okay: \"" + comments.join("\n") + "\"\nEditor will delete it when it open this, I'm ignoring it");
 			
 			for(let line of comments){
-				appendChildToEnd(data, newCommentNode(line));
+				data.root.appendChild(new fxml.CommentNode(undefined, line));
 			}
 		}
 	}
 	
-	for(let v of data.children){
+	for(let v of data.root.children){
 		// Ideally these should be attached to the closest child, so we can stop using data_
-		if(v.tagname == "#text") continue;
-		if(v.tagname == "#comment") continue;
+		if(!(v instanceof fxml.ElementNode)) continue;
 		
 		if(v.tagname == "const"){
 			//FIXME: handle this
@@ -586,7 +566,7 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 		let catalogName = getCatalogNameByTagname(v.tagname);
 		let catalog = catalogs[catalogName];
 		
-		let id = v.attr["id"];
+		let id = v.getAttribute("id")
 		if(id !== undefined){
 			if(id in catalog.entryByID){
 				throw new Error(`Duplicate ID found: ${id} in ${catalogName} catalog in ${filename}`);
@@ -611,15 +591,16 @@ export async function loadDataspace(rootMapDir:string, filename:string, isImplic
 }
 
 function parseEntryXMLNode(v:XMLNodeEntry, filename:string){
-	const isDefault = v.attr.default === "1";
+	const isDefault = v.getAttribute("default") === "1";
 	
 	// Check for token declarations
 	// Random note: the editor allows them anywhere, but moves them to the top when saving
 	for(let i = 0; i < v.children.length; ++i){
 		let child = v.children[i];
-		if(child.tagname != "?token") continue;
+		if(!(child instanceof fxml.InstructionNode)) continue;
+		if(child.tagname != "token") continue;
 		
-		let id = child.attr["id"];
+		let id = child.getAttribute("id");
 		if(id === undefined){
 			console.warn(`Token with no id in ${filename}`);
 			continue;
@@ -628,7 +609,7 @@ function parseEntryXMLNode(v:XMLNodeEntry, filename:string){
 		if(!isDefault){
 			console.warn(`Token ${id} declared in a non-default class in ${filename}, deleting it. The editor was gonna do that anyway.`);
 			// Deleting it keeps the record consistent with children. Makes things easier
-			removeChild(v, child);
+			v.removeChild(child, i);
 			--i;
 			continue;
 		}
@@ -642,10 +623,10 @@ function parseEntryXMLNode(v:XMLNodeEntry, filename:string){
 		
 		let obj:(typeof v.declaredTokens)[string] = {};
 		
-		let value:string|undefined = child.attr["value"];
+		let value = child.getAttribute("value");
 		if(value !== undefined) obj.value = value;
 		
-		let type:string|undefined = child.attr["type"];
+		let type = child.getAttribute("type");
 		if(type !== undefined){
 			if(isSimpleType(type)){
 				obj.type = type;
@@ -660,13 +641,13 @@ function parseEntryXMLNode(v:XMLNodeEntry, filename:string){
 
 export function addDataspaceEntry(dataspace:Dataspace, child:XMLNodeEntry){
 	assert(dataspace.data_ != null);
-	assert("id" in child.attr);
+	assert(child.hasAttribute("id"));
 	
 	let catalogName = getCatalogNameByTagname(child.tagname);
 	let catalog = dataspace.catalogs[catalogName];
 	catalog.entries.push(child);
 	
-	let id = child.attr["id"];
+	let id = child.getAttribute("id");
 	if(id !== undefined){
 		if(id in catalog.entryByID){
 			throw new Error("Duplicate ID found: " + id + " in " + catalogName + " catalog");
@@ -675,12 +656,11 @@ export function addDataspaceEntry(dataspace:Dataspace, child:XMLNodeEntry){
 		catalog.entryByID[id] = child as any;
 	}
 	
-	addChild(dataspace.data_, child);
+	//FIXME: append in the right place... it depends on what catalog the child is in
+	dataspace.data_.root.appendChild(child);
 }
 
-export function changeDataspaceEntryType(_dataspace:Dataspace, child:XMLNode, newType:string){
-	assert("id" in child.attr);
-	
+export function changeDataspaceEntryType(_dataspace:Dataspace, child:XMLNodeEntry, newType:string){
 	let catalogName = getCatalogNameByTagname(child.tagname);
 	
 	// Make sure we're not changing the catalog with the type
@@ -689,41 +669,13 @@ export function changeDataspaceEntryType(_dataspace:Dataspace, child:XMLNode, ne
 	child.tagname = newType;
 }
 
-// DO NOT USE THIS ON DATASPACE datas_
-export function addChild(parent:XMLNode, child:XMLNode){
-	assert(child);
-	
-	parent.childrenByTagname[child.tagname] = parent.childrenByTagname[child.tagname] || [];
-	parent.childrenByTagname[child.tagname].push(child);
-	
-	// Prefer putting child right after something of its own type...
-	for(let i = parent.children.length-1; i >= 0; --i){
-		if(parent.children[i]["tagname"] != child["tagname"]) continue;
-		
-		// Found one, add right after i
-		parent.children.splice(i+1, 0, child);
-		return;
-	}
-	
-	// Couldn't find one, so just add it at the bottom
-	parent.children.push(child);
-}
-
-function appendChildToEnd(parent:XMLNode, child:XMLNode){
-	assert(child);
-	
-	parent.childrenByTagname[child.tagname] = parent.childrenByTagname[child.tagname] || [];
-	parent.childrenByTagname[child.tagname].push(child);
-	parent.children.push(child);
-}
-
-function dataspaceFilenameToName(rootMapDir:string, filename:string):string {
+export function dataspaceFilenameToName(rootMapDir:string, filename:string):string {
 	const base = getGameDataFilenameBase(rootMapDir);
 	assert(filename.startsWith(base));
 	return filename.slice(base.length, -4).replace(/\\/g, '/');
 }
 
-function dataspaceNameToFilename(rootMapDir:string, name:string):string {
+export function dataspaceNameToFilename(rootMapDir:string, name:string):string {
 	const base = getGameDataFilenameBase(rootMapDir);
 	
 	return base + name + ".xml";
@@ -733,7 +685,7 @@ export function newDataspace(name:string, isImplicit:boolean):Dataspace {
 	return {
 		name,
 		catalogs: createEmptyDataspaceCatalogs(),
-		data_: newNode("Catalog"),
+		data_: fxml.Document.fromScratch("Catalog"),
 		isImplicit,
 		index: null,
 		structDefaults: {},
@@ -747,167 +699,63 @@ export function addDataspaceToIndex(index:GameDataIndex, dataspace:Dataspace){
 	dataspace.index = index;
 	index.dataspaces.push(dataspace);
 	const includesFilename = "GameData/" + filename.slice(base.length);
-	addChild(index.includes, newNode("Catalog", { path: includesFilename }));
+	index.includes.root.appendChild(new fxml.ElementNode(undefined, "Catalog", undefined, undefined, {
+		"path": {
+			value: includesFilename,
+		}
+	}, []));
 }
 
-type RawNode = {
-	// tagname => ParsedNode[] 
-	":@"?:Record<string,string>;
-} | {"#text":string|number} | {"$comment":[{"#text":string|number}]};
-
-export function parseXML(str:string):XMLParseResult {
-	function normalizeNode(node:RawNode):XMLNode|undefined {
-		if("$comment" in node){
-			return newCommentNode(node.$comment[0]["#text"].toString());
+function encodeXML(doc:fxml.Document|fxml.Node|fxml.Node[]){
+	if(Array.isArray(doc)){
+		let str = `<?xml version="1.0" encoding="utf-8"?>\r\n`;
+		
+		for(let v of doc){
+			str += v.encode({
+				pretty: true,
+				indent: "    ",
+				eol: "\r\n",
+			});
 		}
 		
-		if("#text" in node){
-			node["#text"] = node["#text"].toString();
-			if(node["#text"].trim().length == 0){
-				return undefined;
-			}
-			
-			return newTextNode(node["#text"]);
-		}
-		
-		let tagname:string|undefined;
-		let unparsedChildren:RawNode[]|undefined;
-		
-		// Stupid library...
-		const tmp = node as Record<string,RawNode[]>;
-		for(let i in tmp){
-			if(i == "#text") continue;
-			if(i == "$comment") continue;
-			if(i == ":@") continue;
-			tagname = i;
-			unparsedChildren = tmp[i];
-			break;
-		}
-		
-		if(typeof tagname == 'undefined') throw new Error("Failed to parse xml wtf");
-		if(!unparsedChildren) throw new Error("Failed to parse xml wtf");
-		
-		let children:XMLNode[] = [];
-		let childrenByTagname:Record<string, XMLNode[]> = {};
-		for(let v of unparsedChildren){
-			let vv = normalizeNode(v);
-			if(!vv) continue;
-			
-			children.push(vv)
-			childrenByTagname[vv.tagname] = childrenByTagname[vv.tagname] || [];
-			childrenByTagname[vv.tagname].push(vv);
-		}
-		
-		let res:XMLNode = {
-			tagname,
-			children,
-			childrenByTagname,
-			attr: node[":@"] || {},
-		};
-		
-		return res;
+		return str;
+	}else{
+		return doc.encode({
+			pretty: true,
+			indent: "    ",
+			eol: "\r\n",
+		});
 	}
-	
-	let parser = new xmlparser.XMLParser({
-		preserveOrder: true,
-		ignoreAttributes: false,
-		attributeNamePrefix: "",
-		commentPropName: "$comment",
-		textNodeName: "#text",
-		processEntities: true,
-		trimValues: false, // we unfortunately need this since it can't differentiate trimming text values and attribute values...
-		
-		htmlEntities: true,
-		ignorePiTags: false,
-		ignoreDeclaration: true,
-		isArray: (_name, _jpath, _isLeafNode, isAttribute) => !isAttribute,
-	});
-	
-	return parser.parse(str).map(normalizeNode);
-}
-
-function encodeNode(node:XMLNode):RawNode|undefined {
-	if(node.doNotEncode) return undefined;
-	
-	if(isCommentNode(node)){
-		return { $comment: [{"#text": node.text}] };
-	}
-	
-	if(isTextNode(node)){
-		return { "#text": node.text };
-	}
-	
-	let r:RawNode = {};
-	
-	if(node.attr){
-		r[":@"] = node.attr;
-	}
-	
-	let tmp = r as Record<string, RawNode[]>;
-	tmp[node.tagname] = node.children.map(v => encodeNode(v)).filter(notUndefined);
-	
-	// Shitty library needs me to fill this in
-	if(node.tagname[0] == '?'){
-		assert(node.children.length == 0);
-		tmp[node.tagname] = [{"#text":""}];
-	}
-	
-	return r;
-}
-
-function encodeXML(elems:XMLNode[], addHeader:boolean = true, useTabs:boolean = false){
-	const xmlBuilderOptions = {
-		preserveOrder: true,
-		ignoreAttributes: false,
-		attributeNamePrefix: "",
-		commentPropName: "$comment",
-		textNodeName: "#text",
-		processEntities: true,
-		
-		format: true,
-		indentBy: useTabs ? '\t' : '    ',
-		suppressEmptyNode: true,
-	};
-	
-	let builder = new xmlparser.XMLBuilder(xmlBuilderOptions);
-	let str = builder.build(elems.map(encodeNode)).replace(/\r?\n/g, '\r\n');
-	
-	if(addHeader) str = '<?xml version="1.0" encoding="utf-8"?>' + str;
-	else str = str.trim(); // Encoder adds a newline in the beginning...
-	
-	return str + "\r\n";
 }
 
 export function encodeEntryXML(entry:XMLNodeEntry){
-	return encodeXML(createCommentNodesForEntry(entry).concat(entry), false, true);
+	return encodeXML((createCommentNodesForEntry(entry) as fxml.Node[]).concat(entry));
 }
 
-function hasAnyTextNodes(x:XMLNode){
-	if(x.childrenByTagname["#text"] && x.childrenByTagname["#text"].length > 0) return true;
-	
+function hasAnyTextNodes(x:fxml.ElementNode){
 	for(let v of x.children){
-		if(hasAnyTextNodes(v)) return true;
+		if(v instanceof fxml.TextNode) return true;
+		if(v instanceof fxml.ElementNode && hasAnyTextNodes(v)) return true;
 	}
 	
 	return false;
 }
 
 export function setEntryXML(oldEntry:XMLNodeEntry, xml:string):boolean {
-	let parsed:XMLParseResult;
+	let parsed:readonly fxml.Node[];
 	try {
-		// We wrap it so parseXML will preserve text nodes...
-		parsed = parseXML(`<BurritoWrap>${xml}</BurritoWrap>`);
-		if(parsed.length != 1) return false;
-		if(parsed[0].tagname != "BurritoWrap") return false;
-		parsed = parsed[0].children;
+		// We wrap it so parseXML will preserve text & comment nodes...
+		let root = fxml.Document.fromString(`<BurritoWrap>${xml}</BurritoWrap>`).root;
+		parsed = root.children;
 	}catch(e){
 		return false;
 	}
 	
-	if(parsed.some(isTextNode)) return false;
+	if(parsed.some(v => v instanceof fxml.TextNode)) return false;
 	
-	let entryXMLs = parsed.filter((v) => !isCommentNode(v));
+	let entryXMLs = parsed.filter((v) => !(v instanceof fxml.CommentNode));
 	if(entryXMLs.length != 1) return false;
+	if(!(entryXMLs[0] instanceof fxml.ElementNode)) return false;
 	let entry:XMLNodeEntry = entryXMLs[0] as XMLNodeEntry;
 	if(hasAnyTextNodes(entry)) return false;
 	
@@ -916,10 +764,10 @@ export function setEntryXML(oldEntry:XMLNodeEntry, xml:string):boolean {
 	
 	parseEntryXMLNode(entry, "stdin");
 	
-	if(entry.attr.id !== oldEntry.attr.id) return false;
+	if(entry.getAttribute("id") !== oldEntry.getAttribute("id")) return false;
 	if(entry.tagname !== oldEntry.tagname) return false; // We'd need to fixup the parent & catalog stuff...
 	
-	let comments = parsed.filter(isCommentNode).map(v => v.text);
+	let comments = parsed.filter(v => v instanceof fxml.CommentNode).map(v => (v as fxml.CommentNode).text);
 	if(comments.length > 0) entry.editorComment = comments.join("\n");
 	
 	Object.assign(oldEntry, entry);
@@ -927,152 +775,38 @@ export function setEntryXML(oldEntry:XMLNodeEntry, xml:string):boolean {
 	return true;
 }
 
-function notUndefined<T>(v:T|undefined): v is T {
-	return v !== undefined;
+export function reloadDataspaceFromString(dataspace:Dataspace, str:string){
+	assert(dataspace.index);
+	let rootMapDir = dataspace.index.rootMapDir;
+	
+	Object.assign(dataspace, loadDataspaceFromString(rootMapDir, dataspaceNameToFilename(rootMapDir, dataspace.name), str, !dataspace.index.dataspaces.includes(dataspace), dataspace.index));
 }
 
 export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
 	await Promise.all(datas.map(async function(data){
 		assert(data.data_ != null);
-		let xml:XMLNode = shallowCopyNode(null, data.data_);
+		let nodes:fxml.Node[] = data.data_.root.children.concat();
 		
 		// We need to make some changes to pull editorComment out to an actual xml comment
-		xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"] || [];
-		
-		for(let i = 0; i < xml.children.length; ++i){
-			let v = xml.children[i] as XMLNodeEntry;
-			
+		for(let i = 0; i < nodes.length; ++i){
+			let v = nodes[i] as unknown as XMLNodeEntry;
 			if(!v.editorComment) continue;
 			
-			let nodes = createCommentNodesForEntry(v);
+			let comments = createCommentNodesForEntry(v);
 			
 			// Insert comment nodes
-			xml.children.splice(i, 0, ...nodes);
-			xml.childrenByTagname["#comment"] = xml.childrenByTagname["#comment"].concat(nodes);
-			i += nodes.length;
+			nodes.splice(i, 0, ...comments);
+			i += comments.length;
 		}
 		
-		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML([xml]), "utf8");
+		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(nodes), "utf8");
 	}));
 }
 
-function createCommentNodesForEntry(v:XMLNodeEntry):XMLNode[]{
+function createCommentNodesForEntry(v:XMLNodeEntry):fxml.CommentNode[] {
 	if(!v.editorComment) return [];
 			
 	return v.editorComment.split(/\r?\n/).map(function(line){
-		return newCommentNode(line);
+		return new fxml.CommentNode(undefined, line);
 	});
-}
-
-export function newNode<Tag extends string>(tag:Tag, attrs?:Record<string, string>){
-	return {
-		tagname: tag,
-		children: [],
-		childrenByTagname: {},
-		attr: attrs || {},
-	};
-}
-
-export function newCatalogEntry<Tag extends string>(tag:Tag, attrs?:Record<string, string>){
-	return (newNode(tag, attrs) as any) as XMLNodeEntry;
-}
-
-function isCommentNode<T>(x:XMLNodeBase<T>):x is XMLNodeComment<T> {
-	return x.tagname == "#comment";
-}
-
-function isTextNode<T>(x:XMLNodeBase<T>):x is XMLNodeComment<T> {
-	return x.tagname == "#text";
-}
-
-// If parent is not null, also change the parent to point to this new node
-function shallowCopyNode<T extends XMLNodeBase<U>, U extends XMLNodeBase<V>, V>(parent:XMLNodeBase<T>|null, node:T, childIndexHint?:number, childIndexInTagnamesHint?:number):T {
-	let copy:T = {
-		...node,
-		tagname: node.tagname,
-		children: node.children.concat(),
-		childrenByTagname: {}, // done below
-		attr: Object.assign({}, node.attr),
-	};
-	
-	// clone childrenByTagname
-	for(let child of copy.children){
-		copy.childrenByTagname[child.tagname] = copy.childrenByTagname[child.tagname] || [];
-		copy.childrenByTagname[child.tagname].push(child);
-	}
-	
-	if(parent != null){
-		let arr:T[];
-		
-		arr = parent.children;
-		if(childIndexHint !== undefined && parent.children[childIndexHint] === node){
-			arr[childIndexHint] = copy;
-		}else{
-			let i = parent.children.indexOf(node);
-			assert(i != -1);
-			arr[i] = copy;
-		}
-		
-		assert(node.tagname in parent.childrenByTagname);
-		arr = parent.childrenByTagname[node.tagname];
-		
-		if(childIndexInTagnamesHint !== undefined && arr[childIndexInTagnamesHint] === node){
-			arr[childIndexInTagnamesHint] = copy;
-		}else{
-			let i = arr.indexOf(node);
-			assert(i != -1);
-			arr[i] = copy;
-		}
-	}
-	
-	return copy;
-}
-
-function newCommentNode(value:string):XMLNodeComment<XMLNode> {
-	return {
-		tagname: "#comment",
-		children: [],
-		childrenByTagname: {},
-		attr: {},
-		text: value,
-	};
-}
-
-function newTextNode(value:string):XMLNodeText<XMLNode> {
-	return {
-		tagname: "#text",
-		children: [],
-		childrenByTagname: {},
-		attr: {},
-		text: value,
-	};
-}
-
-export function getChildrenByTagName(x:XMLNode, tag:string):XMLNode[]|undefined{
-	return x.childrenByTagname ? x.childrenByTagname[tag] : undefined;
-}
-
-export function removeChild(parent:XMLNode, child:XMLNode){
-	let i = parent.children.indexOf(child);
-	if(i === -1) return;
-	
-	parent.children.splice(i, 1);
-	
-	let arr = parent.childrenByTagname[child.tagname];
-	assert(arr); // if it had this child, it must've had this array
-	i = arr.indexOf(child);
-	assert(i !== -1); // if it had this child, it must be here
-	arr.splice(i, 1);
-	
-	if(arr.length == 0) delete parent.childrenByTagname[child.tagname];
-}
-
-export function removeChildrenByTagName(x:XMLNode, tag:string){
-	x.children = x.children.filter(v => v["tagname"] != tag);
-	delete x.childrenByTagname[tag];
-}
-
-export function clearChildren(x:XMLNode){
-	x.children.length = 0;
-	x.childrenByTagname = {};
 }

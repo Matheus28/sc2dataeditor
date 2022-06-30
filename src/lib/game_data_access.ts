@@ -1,6 +1,7 @@
 import assert from "assert";
-import { CatalogName, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./game_data";
-import { addChild, addDataspaceEntry, clearChildren, Dataspace, encodeEntryXML, forEachDataspace, GameDataIndex, getCatalogNameByTagname, getChildrenByTagName, isValidCatalogName, isValidTagname, newCatalogEntry, newNode, parseXML, removeChild, setEntryXML, XMLNode, XMLNodeEntry } from './game_data_loader';
+import fxml from "./fxml";
+import { CatalogName, CatalogNameArray, CatalogSubtype, CatalogTypesInstance, EnumType, FieldType } from "./game_data";
+import { addDataspaceEntry, Dataspace, encodeEntryXML, forEachDataspace, GameDataIndex, getCatalogNameByTagname, isValidCatalogName, isValidTagname, setEntryXML, XMLNodeEntry } from './game_data_loader';
 import { resolveTokens, unresolveTokens } from "./utils";
 
 export const enum ValueSource {
@@ -71,11 +72,12 @@ export function accessEntry(index:GameDataIndex, entry:CatalogEntry):EntryNodeWi
 }
 
 function createEntry(entry:CatalogEntry, dataspace:Dataspace):XMLNodeEntry {
-	let attrs:Record<string,string> = {
-		"id": entry.id,
-	};
+	let node = new fxml.ElementNode(undefined, getDefaultTypeForCatalog(entry.catalog), undefined, undefined, {
+		"id": {
+			value: entry.id,
+		}
+	}, [])
 	
-	let node = newCatalogEntry(getDefaultTypeForCatalog(entry.catalog), attrs);
 	addDataspaceEntry(dataspace, node);
 	return node;
 }
@@ -128,16 +130,16 @@ interface SelfTokens {
 }
 
 function getSelfTokens(index:GameDataIndex, cur:XMLNodeEntry):Readonly<SelfTokens> {
-	let attr = cur.attr;
-	let isDefault = cur.attr.default === "1";
+	let attr = cur.getAttributes();
+	let isDefault = cur.getAttribute("default") === "1";
 	if(isDefault){
 		// Default classes aren't allowed to set tokens
-		let id = attr.id || cur.tagname;
+		let id = attr["id"] || cur.tagname;
 		
 		let parent = getParentNodeFor(index, cur, false);
 		if(parent === undefined) return { id, parent: id };
 		
-		let parentID = parent.node.attr.id || parent.node.tagname;
+		let parentID = parent.node.getAttribute("id", parent.node.tagname);
 		let ret:Record<string,string> = { id, parent: parentID };
 		
 		// Any token declarations set their value here
@@ -159,12 +161,12 @@ function getSelfTokens(index:GameDataIndex, cur:XMLNodeEntry):Readonly<SelfToken
 			}
 		}
 		
-		let id = attr.id || cur.tagname;
+		let id = attr["id"] || cur.tagname;
 		
 		let parent = getParentNodeFor(index, cur, false);
 		if(parent === undefined) return { ...attr, id, parent: id };
 		
-		let parentID = parent.node.attr.id || parent.node.tagname;
+		let parentID = parent.node.getAttribute("id", parent.node.tagname);
 		return {...attr, id, parent: parentID };
 	}
 }
@@ -195,7 +197,7 @@ function getTokensForDefaultField(index:GameDataIndex, cur:XMLNodeEntry):Record<
 		// grand parent (default = 1) -> parent (default = 0) -> me (default = 0)
 		// the id token that gets used is the parent one
 		// so on the first entry missing `default=1`, we override the id there
-		if(parent.attr.default === "1"){
+		if(parent.getAttribute("default") === "1"){
 			// grand parent, parent
 			ret = Object.assign(inherited, ret); // Prefer our tokens
 		}else{
@@ -207,10 +209,10 @@ function getTokensForDefaultField(index:GameDataIndex, cur:XMLNodeEntry):Record<
 	return ret;
 }
 
-function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:true):XMLNode;
-function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined;
-function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):XMLNode|undefined {
-	let container:XMLNode = entry;
+function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:true):fxml.ElementNode;
+function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):fxml.ElementNode|undefined;
+function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry, createIfNotExists:boolean):fxml.ElementNode|undefined {
+	let container:fxml.ElementNode = entry;
 	
 	for(let i = 0; i < fieldName.length-1; ++i){
 		let name = fieldName[i];
@@ -230,7 +232,7 @@ function getFieldContainer(index:GameDataIndex, fieldName:CatalogFieldName, entr
 	return container;
 }
 
-function getFieldValueLast(index:GameDataIndex, entry:XMLNodeEntry, container:XMLNode, fieldName:CatalogFieldName):{ value:string; source:ValueSource; }|undefined {
+function getFieldValueLast(index:GameDataIndex, entry:XMLNodeEntry, container:fxml.ElementNode, fieldName:CatalogFieldName):{ value:string; source:ValueSource; range:fxml.Range|undefined; }|undefined {
 	let lastName = fieldName[fieldName.length - 1];
 	if(typeof lastName == 'string'){
 		// Defer to the other definition to reduce duplication
@@ -241,28 +243,41 @@ function getFieldValueLast(index:GameDataIndex, entry:XMLNodeEntry, container:XM
 		let v = wrapAccessArray(index, entry, fieldName, container, false);
 		if(!v) return undefined;
 		
-		return { value: v.node.attr["value"], source: ValueSource.Self };
+		let value = v.node.getAttribute("value");
+		if(!value) return undefined;
+		
+		let range = v.node.getAttributeValueRange("value");
+		
+		return { value, source: ValueSource.Self, range };
 	}
 }
 
-function getFieldValueLast_Internal(container:XMLNode, lastName:string){
+function getFieldValueLast_Internal(container:fxml.ElementNode, lastName:string){
 	// There are two ways this could be defined, say we're accessing "Row"
 	// 1. <DefaultButtonLayout Row="1"/>
 	// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
 	
 	// Check the first form
-	if(lastName in container.attr){
-		return { value: container.attr[lastName], source: ValueSource.Self };
+	let tmp = container.getAttribute(lastName);
+	if(tmp !== undefined){
+		let range = container.getAttributeValueRange(lastName);
+		return { value: tmp, source: ValueSource.Self, range };
 	}
 	
 	// Then check the second form
-	let subnodes = getChildrenByTagName(container, lastName);
+	let subnodes = container.getChildrenByTagName(lastName);
 	if(!subnodes || subnodes.length == 0) return undefined;
-	return { value: subnodes[0].attr["value"], source: ValueSource.Self };
+	
+	
+	let value = subnodes[0].getAttribute("value");
+	if(!value) return undefined;
+	
+	let range = subnodes[0].getAttributeValueRange("value");
+	return { value, source: ValueSource.Self, range };
 }
 
 // Does not look into parents to access arrays correctly!!
-function getFieldValueLastSimple(container:XMLNode, lastName:CatalogFieldName[number], metaf:FieldType):{ value:string; source:ValueSource; }|undefined {
+function getFieldValueLastSimple(container:fxml.ElementNode, lastName:CatalogFieldName[number], metaf:FieldType):{ value:string; source:ValueSource; range:fxml.Range|undefined; }|undefined {
 	if(typeof lastName == 'string'){
 		return getFieldValueLast_Internal(container, lastName);
 	}else{
@@ -271,11 +286,14 @@ function getFieldValueLastSimple(container:XMLNode, lastName:CatalogFieldName[nu
 		let v = wrapAccessArraySimple(metaf, lastName, container);
 		if(!v) return undefined;
 		
-		return { value: v.node.attr["value"], source: ValueSource.Self };
+		let value = v.node.getAttribute("value");
+		if(!value) return undefined;
+		
+		return { value, source: ValueSource.Self, range: v.node.getAttributeValueRange("value") };
 	}
 }
 // If not found on this node, will navigate to the parent to try to find it there
-function getFieldValueSpecific(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
+function getFieldValueSpecific(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName):{ value:string; source:ValueSource; tokens:Record<string,string>; range:fxml.Range|undefined; }|undefined {
 	assert(fieldName.length >= 1);
 	
 	let container = getFieldContainer(index, fieldName, entry, false);
@@ -295,7 +313,7 @@ function getFieldValueSpecific(index:GameDataIndex, entry:XMLNodeEntry, fieldNam
 			// grand parent (default = 1) -> parent (default = 0) -> me (default = 0)
 			// the id token that gets used is the parent one
 			// so on the first entry missing `default=1`, we override the id there
-			if(parent.attr.default === "1"){
+			if(parent.getAttribute("default") === "1"){
 				// grand parent, parent
 				ret.tokens = Object.assign(ret.tokens, getSelfTokens(index, entry)); // Prefer our tokens
 			}else{
@@ -323,21 +341,22 @@ function getFieldValueSpecific(index:GameDataIndex, entry:XMLNodeEntry, fieldNam
 	return undefined;
 }
 
-function getParentNodeFor(index:GameDataIndex, node:XMLNodeEntry, useMetaChain:boolean = true):{node: XMLNodeEntry, dataspace:Dataspace, isDefault:boolean}|undefined{
-	if(node.attr.parent){
+function getParentNodeFor(index:GameDataIndex, node:XMLNodeEntry, useMetaChain:boolean = true):{node: XMLNodeEntry, dataspace:Dataspace, isDefault:boolean}|undefined {
+	let parentAttr = node.getAttribute("parent");
+	if(parentAttr !== undefined){
 		let vv = accessEntry(index, {
-			id: node.attr.parent,
+			id: parentAttr,
 			catalog: getCatalogNameByTagname(node.tagname),
 		});
 		
 		if(vv){
 			if(vv.node.tagname == node.tagname){
-				return {node: vv.node, dataspace: vv.dataspace, isDefault: vv.node.attr.id === undefined};
+				return {node: vv.node, dataspace: vv.dataspace, isDefault: !vv.node.hasAttribute("id")};
 			}else{
-				console.error(`Invalid parent for ${node["attr"]["id"]}. Type doesn't match`);
+				console.error(`Invalid parent for ${node.getAttribute("id", node.tagname)}. Type doesn't match`);
 			}
 		}else{
-			console.error(`Invalid parent for ${node["attr"]["id"]}. It doesn't exist: ${node.attr.parent}`);
+			console.error(`Invalid parent for ${node.getAttribute("id", node.tagname)}. It doesn't exist: ${parentAttr}`);
 		}
 	}
 	
@@ -475,7 +494,7 @@ function getMetafieldContainerFor(index:GameDataIndex, tagname:string, fieldName
 	return undefined;
 }
 
-function getStructDefaultValue(index:GameDataIndex, tagname:string, fieldName:CatalogFieldName):string|undefined {
+function getStructDefaultValue(index:GameDataIndex, tagname:string, fieldName:CatalogFieldName){
 	if(fieldName.length < 2) return undefined;
 	
 	let tmp = getMetafieldContainerFor(index, tagname, fieldName);
@@ -490,7 +509,7 @@ function getStructDefaultValue(index:GameDataIndex, tagname:string, fieldName:Ca
 		let defs = dataspace.structDefaults[metaf.structTypename];
 		if(defs !== undefined){
 			let vv = getFieldValueLastSimple(defs, fieldName[fieldName.length - 1], metaf);
-			if(vv !== undefined) return vv.value;
+			if(vv !== undefined) return vv;
 		}
 	}
 	
@@ -510,16 +529,16 @@ export function getFieldValue(index:GameDataIndex, field:CatalogField):{ value:s
 	let v = accessEntry(index, field.entry);
 	if(!v) return undefined;
 	
-	return getFieldValueStartingFromNode(index, field, v.node);
+	return getFieldValueStartingFromEntry(index, field.name, v.node);
 }
 
-function getFieldValueStartingFromNode(index:GameDataIndex, field:CatalogField, node:XMLNodeEntry):{ value:string; source:ValueSource; tokens:Record<string,string>; }|undefined {
-	let vv = getFieldValueSpecific(index, node, field.name);
+function getFieldValueStartingFromEntry(index:GameDataIndex, fieldName:CatalogFieldName, entry:XMLNodeEntry):{ value:string; source:ValueSource; tokens:Record<string,string>; range:fxml.Range|undefined; }|undefined {
+	let vv = getFieldValueSpecific(index, entry, fieldName);
 	if(vv !== undefined) return vv;
 	
-	let tmp = getStructDefaultValue(index, node.tagname, field.name);
+	let tmp = getStructDefaultValue(index, entry.tagname, fieldName);
 	if(tmp !== undefined){
-		return { value: tmp, source: ValueSource.Default, tokens: getTokensForDefaultField(index, node) };
+		return { ...tmp, source: ValueSource.Default, tokens: getTokensForDefaultField(index, entry) };
 	}
 	
 	return undefined;
@@ -530,6 +549,7 @@ function getDefaultEntryForType(index:GameDataIndex, tagname:string):{node: XMLN
 	return index.catalogDefaults[catalogName][tagname];
 }
 
+//FIXME: this is wrong
 export function getArrayFieldIndexes(index:GameDataIndex, field:CatalogField):Record<string,{removed:boolean;source:ValueSource}>|undefined {
 	let vv = accessEntry(index, field.entry);
 	if(!vv) return undefined;
@@ -577,8 +597,8 @@ export function getArrayFieldIndexes(index:GameDataIndex, field:CatalogField):Re
 	return ret;
 }
 
-function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Record<string, number>):Record<string,boolean>|undefined {
-	let subnodes = getChildrenByTagName(cur, arrName);
+function getArrayFieldIndexesInternal(cur:fxml.ElementNode, arrName:string, mapping?:Record<string, number>):Record<string,boolean>|undefined {
+	let subnodes = cur.getChildrenByTagName(arrName);
 	if(!subnodes || subnodes.length == 0){
 		return {};
 	}
@@ -587,30 +607,29 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 	
 	let lastIndex:number = -1;
 	for(let sub of subnodes){
-		if(typeof sub.attr["index"] != 'undefined'){
-			let vv = sub.attr["index"];
-			
-			if(sub.attr["removed"] === "1"){
-				ret[vv] = false;
+		let attrIndex = sub.getAttribute("index");
+		if(attrIndex !== undefined){
+			if(sub.getAttribute("removed") === "1"){
+				ret[attrIndex] = false;
 			}else{
-				ret[vv] = true;
+				ret[attrIndex] = true;
 			}
 			
 			let num:number;
-			if(/^[0-9]+$/.test(vv)){
-				num = parseInt(vv, 10);
+			if(/^[0-9]+$/.test(attrIndex)){
+				num = parseInt(attrIndex, 10);
 			}else{
 				if(mapping === undefined) throw new Error("Invalid index type, expected only numbers");
 				
-				if(!(vv in mapping)) throw new Error("Invalid index: " + vv);
-				num = mapping[vv];
+				if(!(attrIndex in mapping)) throw new Error("Invalid index: " + attrIndex);
+				num = mapping[attrIndex];
 			}
 			
 			lastIndex = Math.max(lastIndex, num);
 			continue;
 		}else{
 			// Can't remove without an index
-			assert(sub.attr["removed"] !== "1");
+			assert(sub.getAttribute("removed") !== "1");
 			
 			ret[(lastIndex+1).toString()] = true;
 			++lastIndex;
@@ -621,7 +640,7 @@ function getArrayFieldIndexesInternal(cur:XMLNode, arrName:string, mapping?:Reco
 }
 
 function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,boolean>, mapping?:Record<string, number>){
-	let vv = getArrayFieldIndexesInternal(parseXML(`<A>${xml}</A>`)[0], 'B', mapping);
+	let vv = getArrayFieldIndexesInternal(fxml.Document.fromString(`<A>${xml}</A>`).root, 'B', mapping);
 	assert.deepStrictEqual(
 		vv,
 		expected,
@@ -661,7 +680,7 @@ export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:
 	let unresolvedValue:string = unresolveTokens(newValue, thisEntryTokens);
 	let resolvedValue:string = resolveTokens(newValue, thisEntryTokens);
 	
-	const isDefaultEntry = vv.node.attr["default"] === "1";
+	const isDefaultEntry = vv.node.getAttribute("default") === "1";
 	
 	// For non-default entries, the editor just writes down the resolved tokens that it can
 	// It can read tokens and resolve them still, but when it writes to the xml it always does it like this
@@ -677,7 +696,7 @@ export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:
 	
 	let parent = getParentNodeFor(index, vv.node);
 	if(parent !== undefined){
-		let cur = getFieldValueStartingFromNode(index, field, parent.node);
+		let cur = getFieldValueStartingFromEntry(index, field.name, parent.node);
 		if(cur !== undefined){
 			if(cur.source == ValueSource.Self) ValueSource.Parent;
 			
@@ -718,20 +737,20 @@ export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:
 		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
 		
 		// Check if the first form exists
-		if(name in container.attr){
-			container.attr[name] = newValue;
+		if(container.hasAttribute(name)){
+			container.setAttribute(name, newValue)
 			return ret;
 		}
 		
 		// Check the second form exists
-		let subnodes = getChildrenByTagName(container, name);
+		let subnodes = container.getChildrenByTagName(name);
 		if(subnodes && subnodes.length > 0){
 			assert(subnodes.length == 1); // Otherwise this should've been an array...
 			
 			// So just set the "value" attribute in that child
 			
 			let sub = subnodes[0];
-			sub.attr["value"] = newValue;
+			sub.setAttribute("value", newValue);
 			return ret;
 		}
 		
@@ -741,9 +760,11 @@ export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:
 			// We can't put root ones in the attributes, or it'd be a token
 			
 			// Create a <name value="newValue"/> inside it
-			addChild(container, newNode(name, {value:newValue}));
+			let newNode = new fxml.ElementNode(undefined, name, undefined, undefined, {}, []);
+			newNode.setAttribute(name, newValue);
+			container.appendChild(newNode);
 		}else{
-			container.attr[name] = newValue;
+			container.setAttribute(name, newValue);
 		}
 		
 		return ret;
@@ -752,7 +773,7 @@ export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:
 		// <Resource index="Minerals" value="100"/>
 		
 		let v = wrapAccessArray(index, vv.node, field.name, container, true);
-		v.node.attr["value"] = newValue;
+		v.node.setAttribute("value", newValue);
 		
 		return ret;
 	}
@@ -794,10 +815,10 @@ function getNextIndexForArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName
 	return getNextIndexForArray_Internal(index, parent.node, fieldName, metaf);
 }
 
-function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:true):{node:XMLNode, index?:ArrayAccessReturnIndex};
-function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:false):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined;
-function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined;
-function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:XMLNode, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined {
+function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:fxml.ElementNode, createIfNotExists:true):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex};
+function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:fxml.ElementNode, createIfNotExists:false):{node:fxml.ElementNode, index:ArrayAccessReturnIndex}|undefined;
+function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:fxml.ElementNode, createIfNotExists:boolean):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex}|undefined;
+function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:CatalogFieldName, container:fxml.ElementNode, createIfNotExists:boolean):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex}|undefined {
 	assert(fieldName.length > 0);
 	assert(isValidTagname(entry.tagname));
 	
@@ -831,7 +852,7 @@ function wrapAccessArray(index:GameDataIndex, entry:XMLNodeEntry, fieldName:Cata
 	}
 }
 
-function wrapAccessArraySimple(metaf:FieldType, lastName:Exclude<CatalogFieldName[number], string>, container:XMLNode):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined {
+function wrapAccessArraySimple(metaf:FieldType, lastName:Exclude<CatalogFieldName[number], string>, container:fxml.ElementNode):{node:fxml.ElementNode, index:ArrayAccessReturnIndex}|undefined {
 	assert(typeof lastName !== "string"); // We're accessing an array, right?
 	
 	let [arrayName, arrayIndex] = lastName;
@@ -848,7 +869,7 @@ function wrapAccessArraySimple(metaf:FieldType, lastName:Exclude<CatalogFieldNam
 	}
 }
 
-function deleteFieldValueInternal(index:GameDataIndex, entry:XMLNodeEntry, field:CatalogField, container:XMLNode){
+function deleteFieldValueInternal(index:GameDataIndex, entry:XMLNodeEntry, field:CatalogField, container:fxml.ElementNode){
 	let name = field.name[field.name.length - 1];
 	if(typeof name == 'string'){
 		// There are two ways this could be defined, say we're accessing "Row"
@@ -856,16 +877,14 @@ function deleteFieldValueInternal(index:GameDataIndex, entry:XMLNodeEntry, field
 		// 2. <DefaultButtonLayout><Row value="1"/></DefaultButtonLayout>
 		
 		// Check if the first form exists
-		if(name in container.attr){
-			delete container.attr[name];
-		}
+		container.deleteAttribute(name);
 		
 		// Check the second form exists
-		let subnodes = getChildrenByTagName(container, name);
+		let subnodes = container.getChildrenByTagName(name);
 		if(subnodes && subnodes.length > 0){
 			assert(subnodes.length == 1); // Otherwise this should've been an array...
 			
-			removeChild(container, subnodes[0]);
+			container.removeChild(subnodes[0])
 		}
 	}else{
 		// This is an array of simple values, such as
@@ -875,8 +894,10 @@ function deleteFieldValueInternal(index:GameDataIndex, entry:XMLNodeEntry, field
 			// We'll be lazy here and just mark the field with removed=1
 			// Otherwise we'd have to check if we have anyone inheriting this entry to remove this safely
 			
-			v.node.attr = {"index": v.index.str, "removed":"1"};
-			clearChildren(v.node);
+			v.node.clearAttributes();
+			v.node.setAttribute("index", v.index.str);
+			v.node.setAttribute("removed", "1");
+			v.node.removeChildren();
 		}
 	}
 }
@@ -922,11 +943,11 @@ function refToCatalogField(v:string):CatalogField|undefined {
 }
 
 // Does not look into parents!
-function getFieldArrayLength(container:XMLNode, name:string, nextIndex:number, enumType:null|EnumType):number {
-	let subnodes = getChildrenByTagName(container, name);
+function getFieldArrayLength(container:fxml.ElementNode, name:string, nextIndex:number, enumType:null|EnumType):number {
+	let subnodes = container.getChildrenByTagName(name);
 	if(subnodes){
 		for(let sub of subnodes){
-			let nodeIndex:string|number|undefined = sub.attr["index"];
+			let nodeIndex:string|number|undefined = sub.getAttribute("index");
 			if(nodeIndex === undefined){
 				nodeIndex = nextIndex;
 			}else if(/^[0-9]+$/.test(nodeIndex)){
@@ -954,14 +975,15 @@ function getFieldArrayLength(container:XMLNode, name:string, nextIndex:number, e
 // Editor will prefer constants for the ones that have it (such as Research<N>), but we can write integers and it'll convert it
 // next time it saves that data space
 type ArrayAccessReturnIndex = { num:number; str:string; };
-function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:true):{node:XMLNode, index?:ArrayAccessReturnIndex};
-function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:false):{node:XMLNode, index:ArrayAccessReturnIndex}|undefined;
-function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined;
-function accessArray(container:XMLNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean = false):{node:XMLNode, index?:ArrayAccessReturnIndex}|undefined {
+function accessArray(container:fxml.ElementNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:true):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex};
+function accessArray(container:fxml.ElementNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:false):{node:fxml.ElementNode, index:ArrayAccessReturnIndex}|undefined;
+function accessArray(container:fxml.ElementNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex}|undefined;
+function accessArray(container:fxml.ElementNode, name:string, index:string|number|null, nextIndex:number, enumType:null|EnumType, createIfNotExists:boolean = false):{node:fxml.ElementNode, index?:ArrayAccessReturnIndex}|undefined {
 	if(index == null){
 		if(createIfNotExists){
-			let c = newNode(name); // No index means next available one
-			addChild(container, c);
+			let c = new fxml.ElementNode(undefined, name, undefined, undefined, {}, []);
+			// No index means next available one
+			container.appendChild(c);
 			return {node: c};
 		}else{
 			throw new Error("null index means we want to create");
@@ -978,10 +1000,10 @@ function accessArray(container:XMLNode, name:string, index:string|number|null, n
 		}
 	}
 	
-	let subnodes = getChildrenByTagName(container, name);
+	let subnodes = container.getChildrenByTagName(name);
 	if(subnodes){
 		for(let sub of subnodes){
-			let nodeIndex:string|number|undefined = sub.attr["index"];
+			let nodeIndex:string|number|undefined = sub.getAttribute("index");
 			if(nodeIndex === undefined){
 				nodeIndex = nextIndex;
 			}else if(/^[0-9]+$/.test(nodeIndex)){
@@ -1001,9 +1023,9 @@ function accessArray(container:XMLNode, name:string, index:string|number|null, n
 			nextIndex = Math.max(nodeIndex + 1, nextIndex);
 			
 			if(nodeIndex === index){
-				if(sub.attr["removed"]){
+				if(sub.getAttribute("removed") === "1"){
 					if(createIfNotExists){
-						delete sub.attr["removed"];
+						sub.deleteAttribute("removed");
 						return {node: sub, index: arrayIndexToObject(nodeIndex, enumType) };
 					}else{
 						return undefined;
@@ -1016,8 +1038,9 @@ function accessArray(container:XMLNode, name:string, index:string|number|null, n
 	}
 	
 	if(createIfNotExists){
-		let c = newNode(name, { index: arrayIndexToString(index, enumType) });
-		addChild(container, c);
+		let c = new fxml.ElementNode(undefined, name, undefined, undefined, {}, []);
+		c.setAttribute("index", arrayIndexToString(index, enumType));
+		container.appendChild(c);
 		return {node: c};
 	}else{
 		return undefined;
@@ -1041,14 +1064,14 @@ function arrayIndexToString(index:number, enumType:EnumType|null):string {
 	}
 }
 
-function accessStruct(node:XMLNode, name:string, createIfNotExists:true):XMLNode;
-function accessStruct(node:XMLNode, name:string, createIfNotExists:boolean):XMLNode|undefined;
-function accessStruct(node:XMLNode, name:string, createIfNotExists:boolean = false):XMLNode|undefined {
-	let subnodes = getChildrenByTagName(node, name);
+function accessStruct(node:fxml.ElementNode, name:string, createIfNotExists:true):fxml.ElementNode;
+function accessStruct(node:fxml.ElementNode, name:string, createIfNotExists:boolean):fxml.ElementNode|undefined;
+function accessStruct(node:fxml.ElementNode, name:string, createIfNotExists:boolean = false):fxml.ElementNode|undefined {
+	let subnodes = node.getChildrenByTagName(name);
 	if(!subnodes || subnodes.length == 0){
 		if(createIfNotExists){
-			let c = newNode(name);
-			addChild(node, c);
+			let c = new fxml.ElementNode(undefined, name, undefined, undefined, {}, []);;
+			node.appendChild(c);
 			return c;
 		}else{
 			return undefined;
@@ -1056,4 +1079,135 @@ function accessStruct(node:XMLNode, name:string, createIfNotExists:boolean = fal
 	}
 	
 	return subnodes[0];
+}
+
+interface FindReferenceResult {
+	field:CatalogField;
+	dataspace:Dataspace;
+	entryNode:fxml.ElementNode;
+	range:fxml.Range|undefined;
+}
+
+//FIXME: do this while loading the xml
+export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindReferenceResult[] {
+	let typeToCheck = `C${entry.catalog}Link`;
+	let valueToCheck = entry.id;
+	
+	type SearchSpace = CatalogFieldName[];
+	
+	let ret:FindReferenceResult[] = [];
+	
+	function iterate(out:SearchSpace, t:FieldType, nameSoFar:CatalogFieldName){
+		if(t.value !== undefined){
+			if(t.value.type === typeToCheck){
+				out.push(nameSoFar);
+			}
+		}
+		
+		if('struct' in t){
+			for(let fieldName in t.struct){
+				let fieldType = t.struct[fieldName];
+				iterate(out, fieldType, [...nameSoFar, fieldName]);
+			}
+		}
+		
+		if('array' in t){
+			assert(nameSoFar.length > 0);
+			const lastName = typeof nameSoFar[nameSoFar.length-1];
+			assert(lastName == "string");
+			
+			iterate(out, t.array, [...nameSoFar.slice(0,-1), [lastName, "*"]]);
+		}
+		
+		if('namedArray' in t){
+			assert(nameSoFar.length > 0);
+			const lastName = typeof nameSoFar[nameSoFar.length-1];
+			assert(lastName == "string");
+			
+			iterate(out, t.namedArray.value, [...nameSoFar.slice(0,-1), [lastName, "*"]]);
+		}
+	}
+	
+	let searchSpaceByTagname:Record<string, SearchSpace> = {};
+	
+	for(let catalogName of CatalogNameArray){
+		for(let tagname in CatalogTypesInstance[catalogName]){
+			
+			let searchSpace:SearchSpace = [];
+			
+			let meta = CatalogTypesInstance[catalogName][tagname];
+			for(;;){
+				iterate(searchSpace, meta.type, []);
+				
+				if(meta.parent == null) break;
+				meta = CatalogTypesInstance[catalogName][meta.parent];
+			}
+			
+			searchSpaceByTagname[tagname] = searchSpace;
+		}
+	}
+	
+	console.log(searchSpaceByTagname["CWeaponLegacy"]);
+	
+	
+	function searchField(dataspace:Dataspace, entry:fxml.ElementNode, fieldName:CatalogFieldName){
+		let fieldNames:CatalogFieldName[] = [fieldName];
+		//FIXME: handle arrays and expand field names to include the index of each element...
+		
+		let id = entry.getAttribute("id");
+		if(id === undefined) return;
+		
+		for(let fieldName of fieldNames){
+			let value = getFieldValueStartingFromEntry(index, fieldName, entry);
+			if(value === undefined) return;
+			if(value.value === "") return;
+			let resolvedValue = resolveTokens(value.value, value.tokens);
+			if(resolvedValue == valueToCheck){
+				let range = value.range;
+				if(range === undefined){
+					range = entry.range;
+				}else if(entry.range !== undefined){
+					if(!fxml.rangeIntersects(entry.range, range)){
+						range = entry.range;
+					}
+				}
+				
+				ret.push({
+					field: {
+						entry: {
+							id,
+							catalog: getCatalogNameByTagname(entry.tagname),
+						},
+						name: fieldName,
+					},
+					
+					dataspace,
+					entryNode: entry,
+					range: range,
+				});
+			}
+		}
+	}
+	
+	function searchEntry(dataspace:Dataspace, entry:fxml.ElementNode){
+		//FIXME: search tokens
+		
+		let searchSpaces = searchSpaceByTagname[entry.tagname];
+		if(searchSpaces){
+			for(let fieldName of searchSpaces){
+				searchField(dataspace, entry, fieldName);
+			}
+		}
+	}
+	
+	//FIXME: we assume dependencies can't refer to things in this index, this is likely incorrect but speeds things up
+	forEachDataspace(index, true, false, dataspace => {
+		for(let entry of dataspace.data_.root.children){
+			if(!(entry instanceof fxml.ElementNode)) continue;
+			if(entry.tagname == "const") continue;
+			searchEntry(dataspace, entry);
+		}
+	});
+	
+	return ret;
 }
