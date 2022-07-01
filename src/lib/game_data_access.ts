@@ -660,7 +660,7 @@ function getArrayFieldIndexesInternal(cur:fxml.ElementNode, arrName:string, next
 	return {ret, nextIndex};
 }
 
-function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,boolean>, mapping?:Record<string, number>){
+function test_getArrayFieldIndexesInternal(xml:string, expected:{ret:Record<string,boolean>,nextIndex:number}, mapping?:Record<string, number>){
 	let vv = getArrayFieldIndexesInternal(fxml.Document.fromString(`<A>${xml}</A>`).root, 'B', 0, mapping);
 	assert.deepStrictEqual(
 		vv,
@@ -670,10 +670,10 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 }
 
 {
-	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {'0':true, '1':true, '2':true, '3':true});
-	test_getArrayFieldIndexesInternal(`<B/><B/><B index="0"/><B/>`, {'0':true, '1':true, '2':true});
-	test_getArrayFieldIndexesInternal(`<B index="0"/><B/><B index="0"/><B/>`, {'0':true, '1':true, '2':true});
-	test_getArrayFieldIndexesInternal(`<B index="2"/><B/><B/><B/>`, {'2':true, '3':true, '4':true, '5':true});
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {ret:{'0':true, '1':true, '2':true, '3':true}, nextIndex: 4});
+	test_getArrayFieldIndexesInternal(`<B/><B/><B index="0"/><B/>`, {ret:{'0':true, '1':true, '2':true}, nextIndex: 3});
+	test_getArrayFieldIndexesInternal(`<B index="0"/><B/><B index="0"/><B/>`, {ret:{'0':true, '1':true, '2':true}, nextIndex: 3});
+	test_getArrayFieldIndexesInternal(`<B index="2"/><B/><B/><B/>`, {ret:{'2':true, '3':true, '4':true, '5':true}, nextIndex: 6});
 	
 	let mapping = {
 		Research1: 0,
@@ -682,8 +682,8 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 		Research4: 3,
 	};
 	
-	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {'0':true, '1':true, '2':true, '3':true}, mapping);
-	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {'Research1':true, '1':true, 'Research3':true, 'Research4':true}, mapping);
+	test_getArrayFieldIndexesInternal(`<B/><B/><B/><B/>`, {ret:{'0':true, '1':true, '2':true, '3':true},nextIndex:4}, mapping);
+	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {ret:{'Research1':true, '1':true, 'Research3':true, 'Research4':true},nextIndex:4}, mapping);
 }
 
 export function setEntryToken(index:GameDataIndex, entry:CatalogEntry, tokenName:string, newValue:string, dataspaceForNewEntries:Dataspace){

@@ -17,32 +17,6 @@
 		"compile": "tsc -b",
 		"watch": "tsc -b -w"
 	},
-	"contributes": {
-		"languages": [
-			{
-				"id": "sc2dataspace",
-				"extensions": [],
-				"aliases": [
-					"SC2 Catalog",
-					"Starcraft",
-					"sc"
-				],
-				"filenamePatterns": [
-					"**/GameData/**/*.xml"
-				],
-				"embeddedLanguages": {
-					"text.xml": "xml"
-				}
-			}
-		],
-		"grammars": [
-			{
-				"language": "sc2dataspace",
-				"scopeName": "text.xml.sc2dataspace",
-				"path": "./src/extension/sc2dataspace.tmLanguage.json"
-			}
-		]
-	},
 	"devDependencies": {
 		"@types/difflib": "^0.2.0",
 		"@types/node": "^18.0.0",

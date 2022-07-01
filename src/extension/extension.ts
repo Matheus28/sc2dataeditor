@@ -66,7 +66,7 @@ export function activate(context: ExtensionContext) {
 		
 		const clientOptions: LanguageClientOptions = {
 			documentSelector: [
-				{ language: 'sc2dataspace' }
+				{ language: 'xml', pattern: '**/GameData/**/*.xml' }
 			],
 			diagnosticCollectionName: 'sc2dataeditor',
 			outputChannel: outputChannel
@@ -111,7 +111,7 @@ export function activate(context: ExtensionContext) {
 	
 	function didOpenTextDocument(document:TextDocument): void {
 		// We are only interested in language mode text
-		if(document.languageId !== 'sc2dataspace' || (document.uri.scheme !== 'file' && document.uri.scheme !== 'untitled')) {
+		if(document.languageId !== 'xml' || (document.uri.scheme !== 'file' && document.uri.scheme !== 'untitled')) {
 			return;
 		}
 		
