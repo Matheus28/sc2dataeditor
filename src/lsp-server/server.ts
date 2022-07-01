@@ -1,5 +1,14 @@
 import {
-	createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, DiagnosticSeverity, SymbolInformation, SymbolKind, CodeLens
+	createConnection,
+	TextDocuments,
+	ProposedFeatures,
+	TextDocumentSyncKind,
+	DiagnosticSeverity,
+	SymbolInformation,
+	SymbolKind,
+	CodeLens,
+	WorkspaceSymbol,
+	DefinitionLink
 } from 'vscode-languageserver/node';
 
 import {
@@ -36,8 +45,6 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fxml from '../lib/fxml';
 import { CatalogField, findReferencesTo } from '../lib/game_data_access';
 
-//LinkedEditingRanges
-
 interface WorkspaceMap {
 	index:Promise<GameDataIndex>;
 	
@@ -64,9 +71,12 @@ documents.onDidOpen((e) => {
 });
 
 documents.onDidChangeContent((change) => {
-	validateDocument(change.document);
+	let text = change.document.getText();
+	let version = change.document.version;
+	
 	getDocumentDataspace(change.document).then((dataspace) => {
-		if(dataspace) reloadDataspaceFromString(dataspace, change.document.getText());
+		if(change.document.version != version) return;
+		if(dataspace) reloadDataspaceFromString(dataspace, text);
 	});
 });
 
@@ -84,11 +94,18 @@ connection.onInitialize((_params) => {
 			
 			//workspaceSymbolProvider: true,
 			documentSymbolProvider: true,
+			workspaceSymbolProvider: true,
 			//inlayHintProvider: {
 				//resolveProvider: true,
 			//}
 			
+			definitionProvider: true,
 			referencesProvider: true,
+			//renameProvider: {
+			//	prepareProvider: true,
+			//},
+			
+			linkedEditingRangeProvider: true,
 			
 			//codeLensProvider: {
 			//	
@@ -96,6 +113,8 @@ connection.onInitialize((_params) => {
 		},
 	};
 });
+
+
 
 connection.onCodeLens(async (e) => {
 	let document = documents.get(e.textDocument.uri);
@@ -117,8 +136,6 @@ connection.onCodeLens(async (e) => {
 		
 		let firstChildRange:Range|undefined = entry.children[0].range;
 		if(firstChildRange === undefined) continue;
-		
-		console.log("heh");
 		
 		ret.push({
 			range: {start: firstChildRange.start, end: firstChildRange.end},
@@ -167,6 +184,7 @@ connection.onReferences(async (e) => {
 	
 	let hoveredEntryID = hoveredEntry.getAttribute("id");
 	if(!hoveredEntryID) return null;
+	
 	let hoveredEntryCatalog = getCatalogNameByTagname(hoveredEntry.tagname);
 	
 	
@@ -187,6 +205,61 @@ connection.onReferences(async (e) => {
 	
 	return ret;
 });
+
+connection.onDefinition(async (e) => {
+	let id:string;
+	let originSelectionRange:Range;
+	
+	{ // First find out what we're hovering
+		let document = documents.get(e.textDocument.uri);
+		assert(document);
+		
+		let dataspace = await getDocumentDataspace(document);
+		if(!dataspace) return null;
+		
+		
+		let checkRange:Range = {start:e.position, end:e.position};
+		
+		let tmp = fxml.getAttributeValueFromRange(dataspace.data_.root, checkRange);
+		if(tmp === undefined) return null;
+		
+		id = tmp.value;
+		originSelectionRange = tmp.range;
+	}
+	
+	
+	let ret:DefinitionLink[] = [];
+	
+	for(let [_, map] of loadedMapByRootMapDir){
+		let index = await map.index;
+		
+		forEachDataspace(index, true, false, (dataspace:Dataspace) => {
+			for(let entry of dataspace.data_.root.children){
+				if(!(entry instanceof fxml.ElementNode)) continue;
+				if(entry.tagname == "const") continue;
+				if(entry.range === undefined) continue;
+				if(entry.getAttribute("id") !== id) continue;
+				
+				let targetSelectionRange = entry.getAttributeValueRange("id");
+				if(targetSelectionRange === undefined) continue;
+				
+				ret.push({
+					originSelectionRange,
+					targetUri: getDataspaceURI(dataspace),
+					targetRange: entry.range,
+					targetSelectionRange,
+				});
+			}
+		});
+	}
+	
+	return ret;
+});
+
+function getDataspaceURI(dataspace:Dataspace):string {
+	assert(dataspace.index);
+	return pathToFileURL(dataspaceNameToFilename(dataspace.index.rootMapDir, dataspace.name)).toString();
+}
 
 connection.onDocumentSymbol(async (e) => {
 	let document = documents.get(e.textDocument.uri);
@@ -248,6 +321,35 @@ connection.onDocumentSymbol(async (e) => {
 	return ret;
 });
 
+connection.onWorkspaceSymbol(async (e) => {
+	let ret:WorkspaceSymbol[] = [];
+	
+	for(let [_, map] of loadedMapByRootMapDir){
+		let index = await map.index;
+		
+		forEachDataspace(index, true, false, (dataspace:Dataspace) => {
+			for(let entry of dataspace.data_.root.children){
+				if(!(entry instanceof fxml.ElementNode)) continue;
+				if(entry.tagname == "const") continue;
+				if(entry.range === undefined) continue;
+				
+				let name = entry.getAttribute("id", entry.tagname);
+				if(name.toLowerCase().indexOf(e.query.toLowerCase()) == -1) continue;
+				
+				ret.push({
+					name,
+					kind: SymbolKind.Class,
+					location: {
+						uri: getDataspaceURI(dataspace),
+						range: entry.range,
+					},
+				});
+			}
+		});
+	}
+	
+	return ret;
+});
 
 function minPosition(a:Position, b:Position){
 	if(a.line != b.line) return a.line < b.line ? a : b;
@@ -258,6 +360,29 @@ function maxPosition(a:Position, b:Position){
 	if(a.line != b.line) return a.line > b.line ? a : b;
 	return a.character > b.character ? a : b;
 }
+
+connection.languages.onLinkedEditingRange(async (e) => {
+	let document = documents.get(e.textDocument.uri);
+	assert(document);
+	
+	let dataspace = await getDocumentDataspace(document);
+	if(!dataspace) return null;
+	
+	let checkRange:Range = {start:e.position, end:e.position};
+	
+	let vv = fxml.getTagnameFromRange(dataspace.data_.root, checkRange);
+	if(!vv) return null;
+	if(!vv.closeRange) return null;
+	
+	return {
+		ranges: [
+			vv.range,
+			vv.closeRange
+		],
+		
+		//wordPattern: "/^[a-z_:][a-z_:0-9\\.\\-]*$/"
+	}
+});
 
 connection.languages.inlayHint.on(async e => {
 	let document = documents.get(e.textDocument.uri);
@@ -290,21 +415,6 @@ connection.languages.inlayHint.on(async e => {
 });
 
 connection.listen();
-
-
-function validateDocument(document:MyTextDocument){
-	
-	connection.sendNotification(DecorationTypeDidChange.type, {
-		backgroundColor: '#FF0000',
-	});
-	
-	connection.sendNotification(DecorationsRangesDidChange.type, {
-		uri: document.uri.toString(),
-		options: [
-			
-		],
-	});
-}
 
 function getWorkspaceMap(document:MyTextDocument):WorkspaceMap|null {
 	if(document.map === undefined){

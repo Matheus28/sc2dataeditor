@@ -310,13 +310,12 @@ export class Document {
 			skipWhitespace();
 			
 			let children:Node[];
-			let closeRange:Range;
+			let closeRange:Range|undefined;
 			
 			// Self closing
 			if(acceptChar("/")){
 				expectChar(">");
 				children = [];
-				closeRange = tagname.range;
 			}else{
 				expectChar(">");
 				children = content();
@@ -635,6 +634,8 @@ abstract class AttributesNode extends Node {
 		return ret;
 	}
 	
+	getAttributesRaw():Readonly<Attributes> { return this._attrs; }
+	
 	getAttributes():Record<string, string> {
 		let attr:Record<string,string> = {};
 		for(let i in this._attrs){
@@ -920,6 +921,57 @@ export function positionLT(a:Position, b:Position){
 	return a.character < b.character;
 }
 
+export function getTagnameFromRange(e:ElementNode, range:Range):{tagname:string, range:Range, closeRange:Range|undefined}|undefined {
+	if(!e.range) return;
+	if(!rangeIntersects(range, e.range)) return;
+	
+	if(e.tagnameRange !== undefined){
+		if(rangeIntersects(range, e.tagnameRange)){
+			return {
+				tagname: e.tagname,
+				range: e.tagnameRange,
+				closeRange: e.tagnameCloseRange,
+			}
+		}
+	}
+	
+	if(e instanceof ElementNode){
+		for(let child of e.children){
+			if(!(child instanceof ElementNode)) continue;
+			
+			
+			let vv = getTagnameFromRange(child, range);
+			if(vv !== undefined) return vv;
+		}
+	}
+	
+	return undefined;
+}
+
+
+export function getAttributeValueFromRange(e:AttributesNode, range:Range):{value:string, range:Range}|undefined {
+	if(!e.range) return;
+	if(!rangeIntersects(range, e.range)) return;
+	
+	const attrs = e.getAttributesRaw();
+	for(let attrName in attrs){
+		let attr = attrs[attrName];
+		if(!attr.valueRange) continue;
+		if(!rangeIntersects(range, attr.valueRange)) continue;
+		return {value: attr.value, range: attr.valueRange };
+	}
+	
+	if(e instanceof ElementNode){
+		for(let child of e.children){
+			if(!(child instanceof AttributesNode)) continue;
+			
+			let vv = getAttributeValueFromRange(child, range);
+			if(vv !== undefined) return vv;
+		}
+	}
+	
+	return undefined;
+}
 
 type Position = {
 	readonly line:number;

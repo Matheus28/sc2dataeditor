@@ -4,7 +4,7 @@
 	"scopeName": "text.xml.sc2dataspace",
 	"patterns": [
 		{
-			"begin": ".",
+			"begin": "",
 			"name": "text.xml.sc2dataspace",
 			"contentName": "text.xml",
 			"patterns": [
