@@ -549,63 +549,84 @@ function getDefaultEntryForType(index:GameDataIndex, tagname:string):{node: XMLN
 	return index.catalogDefaults[catalogName][tagname];
 }
 
-//FIXME: this is wrong
 export function getArrayFieldIndexes(index:GameDataIndex, field:CatalogField):Record<string,{removed:boolean;source:ValueSource}>|undefined {
 	let vv = accessEntry(index, field.entry);
 	if(!vv) return undefined;
 	
-	let arrName2 = field.name[field.name.length - 1];
-	if(typeof arrName2 != 'string'){
+	let lastName_ = field.name[field.name.length - 1];
+	if(typeof lastName_ != 'string'){
 		throw new Error("You must refer to the array without an index");
 	}
 	
-	let arrName = arrName2;
+	let lastName = lastName_;
 	
-	let ret:Record<string,{removed:boolean;source:ValueSource}> = {}
+	let ret:Record<string, {removed:boolean;source:ValueSource}> = {};
 	
-	function addEntryIndexes(entry:XMLNodeEntry, source:ValueSource){
-		let container = getFieldContainer(index, field.name, entry, false);
-		if(!container) return;
+	let mapping:Record<string, number>|undefined;
+	
+	{
+		let metaf = getMetafieldFor(index, vv.node.tagname, field.name);
+		if(metaf === undefined) return undefined;
 		
-		let tmp = getArrayFieldIndexesInternal(container, arrName);
+		// Named arrays always have all their indexes by default
+		if("namedArray" in metaf){
+			mapping = metaf.namedArray.keys.values;
+			for(let i in mapping){
+				ret[i] = {removed:false, source:ValueSource.Default};
+			}
+		}else if("array" in metaf){
+			// k...
+		}else{
+			return undefined; // Not an array, don't waste time
+		}
+	}
+	
+	function iterate(entry:XMLNodeEntry, source:ValueSource):number {
+		let parent = getParentNodeFor(index, entry, true);
+		let nextIndex:number;
+		if(parent === undefined){
+			nextIndex = 0;
+		}else{
+			nextIndex = iterate(parent.node, parent.isDefault ? ValueSource.Default : ValueSource.Parent);
+		}
+		
+		
+		let container = getFieldContainer(index, field.name, entry, false);
+		if(!container) return nextIndex;
+		
+		let tmp = getArrayFieldIndexesInternal(container, lastName, nextIndex, mapping);
 		if(tmp){
-			for(let index in tmp){
+			for(let index in tmp.ret){
 				if(!(index in ret)){
-					let exists = tmp[index];
+					let exists = tmp.ret[index];
 					ret[index] = {
 						removed: !exists,
 						source,
 					};
 				}
 			}
+			
+			return tmp.nextIndex
+		}else{
+			return nextIndex;
 		}
 	}
 	
 	let entry = vv.node;
-	addEntryIndexes(entry, ValueSource.Self);
-	
-	for(;;){
-		let tmp = getParentNodeFor(index, entry);
-		if(tmp === undefined) break;
-		
-		let {node: parent, isDefault} = tmp;
-		
-		entry = parent;
-		addEntryIndexes(entry, isDefault ? ValueSource.Default : ValueSource.Parent);
-	}
+	iterate(entry, ValueSource.Self);
 	
 	return ret;
 }
 
-function getArrayFieldIndexesInternal(cur:fxml.ElementNode, arrName:string, mapping?:Record<string, number>):Record<string,boolean>|undefined {
+function getArrayFieldIndexesInternal(cur:fxml.ElementNode, arrName:string, nextIndex:number, mapping?:Record<string, number>):{ret: Record<string,boolean>, nextIndex:number }|undefined {
 	let subnodes = cur.getChildrenByTagName(arrName);
-	if(!subnodes || subnodes.length == 0){
-		return {};
-	}
 	
 	let ret:Record<string,boolean> = {};
 	
-	let lastIndex:number = -1;
+	if(!subnodes || subnodes.length == 0){
+		return undefined;
+	}
+	
 	for(let sub of subnodes){
 		let attrIndex = sub.getAttribute("index");
 		if(attrIndex !== undefined){
@@ -625,22 +646,22 @@ function getArrayFieldIndexesInternal(cur:fxml.ElementNode, arrName:string, mapp
 				num = mapping[attrIndex];
 			}
 			
-			lastIndex = Math.max(lastIndex, num);
+			nextIndex = Math.max(nextIndex, num+1);
 			continue;
 		}else{
 			// Can't remove without an index
 			assert(sub.getAttribute("removed") !== "1");
 			
-			ret[(lastIndex+1).toString()] = true;
-			++lastIndex;
+			ret[nextIndex.toString()] = true;
+			++nextIndex;
 		}
 	}
 	
-	return ret;
+	return {ret, nextIndex};
 }
 
 function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,boolean>, mapping?:Record<string, number>){
-	let vv = getArrayFieldIndexesInternal(fxml.Document.fromString(`<A>${xml}</A>`).root, 'B', mapping);
+	let vv = getArrayFieldIndexesInternal(fxml.Document.fromString(`<A>${xml}</A>`).root, 'B', 0, mapping);
 	assert.deepStrictEqual(
 		vv,
 		expected,
@@ -1086,12 +1107,23 @@ function accessStruct(node:fxml.ElementNode, name:string, createIfNotExists:bool
 	return subnodes[0];
 }
 
-function getTokenType(entry:XMLNodeEntry, tokenName:string):string|undefined {
+function getTokenType(index:GameDataIndex, entry:XMLNodeEntry, tokenName:string):string|undefined {
 	if(tokenName == "parent"){
 		return `C${getCatalogNameByTagname(entry.tagname)}Link`;
 	}
 	
+	if(entry.declaredTokens){
+		if(tokenName in entry.declaredTokens){
+			return entry.declaredTokens[tokenName].type || "CString";
+		}
+	}
 	
+	let parent = getParentNodeFor(index, entry, true);
+	if(parent !== undefined){
+		return getTokenType(index, parent.node, tokenName);
+	}
+	
+	return undefined;
 }
 
 type FindReferenceResult = {
@@ -1160,25 +1192,58 @@ export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindRe
 		}
 	}
 	
-	function searchField(dataspace:Dataspace, entry:fxml.ElementNode, fieldName:CatalogFieldName){
+	function searchField(dataspace:Dataspace, entryNode:fxml.ElementNode, fieldName:CatalogFieldName){
+		
+		let id = entryNode.getAttribute("id");
+		if(id === undefined) return;
+		
+		let entry:CatalogEntry = {
+			id,
+			catalog: getCatalogNameByTagname(entryNode.tagname),
+		}
+		
 		let fieldNames:CatalogFieldName[] = [fieldName];
 		//FIXME: handle arrays and expand field names to include the index of each element...
 		
-		let id = entry.getAttribute("id");
-		if(id === undefined) return;
+		outerLoop: for(let i = 0; i < fieldNames.length; ++i){
+			let fieldName = fieldNames[i];
+			for(let j = 0; j < fieldName.length; ++j){
+				let name = fieldName[j];
+				
+				// We found something to expand...
+				if(typeof name != "string" && name[1] == "*"){
+					let indexes = getArrayFieldIndexes(index, {
+						entry,
+						name: fieldName.slice(0, j).concat(name[0]),
+					});
+					
+					for(let index in indexes){
+						let data = indexes[index];
+						if(data.removed) continue;
+						
+						fieldNames.push(fieldName.slice(0, j).concat([name[0], index]).concat(fieldName.slice(j+1)));
+					}
+					
+					// Add the instances and delete the name with *
+					fieldNames.splice(i, 1);
+					--i;
+					continue outerLoop;
+				}
+			}
+		}
 		
 		for(let fieldName of fieldNames){
-			let value = getFieldValueStartingFromEntry(index, fieldName, entry);
+			let value = getFieldValueStartingFromEntry(index, fieldName, entryNode);
 			if(value === undefined) return;
 			if(value.value === "") return;
 			let resolvedValue = resolveTokens(value.value, value.tokens);
 			if(resolvedValue == valueToCheck){
 				let range = value.range;
 				if(range === undefined){
-					range = entry.range;
-				}else if(entry.range !== undefined){
-					if(!fxml.rangeIntersects(entry.range, range)){
-						range = entry.range;
+					range = entryNode.range;
+				}else if(entryNode.range !== undefined){
+					if(!fxml.rangeIntersects(entryNode.range, range)){
+						range = entryNode.range;
 					}
 				}
 				
@@ -1186,13 +1251,13 @@ export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindRe
 					field: {
 						entry: {
 							id,
-							catalog: getCatalogNameByTagname(entry.tagname),
+							catalog: getCatalogNameByTagname(entryNode.tagname),
 						},
 						name: fieldName,
 					},
 					
 					dataspace,
-					entryNode: entry,
+					entryNode: entryNode,
 					range: range,
 				});
 			}
@@ -1214,7 +1279,7 @@ export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindRe
 		for(let tokenName in tokens){
 			if(tokenName === "id") continue;
 			if(tokens[tokenName].value != valueToCheck) continue;
-			if(getTokenType(entry, tokenName) == typeToCheck){
+			if(getTokenType(index, entry, tokenName) == typeToCheck){
 				let range = tokens[tokenName].valueRange;
 				if(range === undefined) continue;
 				
