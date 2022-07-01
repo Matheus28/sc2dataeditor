@@ -60,7 +60,7 @@ export function activate(context: ExtensionContext) {
 	function createClient(workspaceFolder?:WorkspaceFolder):LanguageClient {
 		const debugOptions = { execArgv: ["--nolazy", "--inspect=" + (workspaceFolder ? 6011 + clients.size : 6010)] };
 		const serverOptions = {
-			run: { module: serverModule, transport: TransportKind.ipc },
+			run: { module: serverModule, transport: TransportKind.ipc, options: debugOptions },
 			debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions}
 		};
 		

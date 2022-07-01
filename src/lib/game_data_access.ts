@@ -1088,7 +1088,6 @@ interface FindReferenceResult {
 	range:fxml.Range|undefined;
 }
 
-//FIXME: do this while loading the xml
 export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindReferenceResult[] {
 	let typeToCheck = `C${entry.catalog}Link`;
 	let valueToCheck = entry.id;
@@ -1146,9 +1145,6 @@ export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindRe
 			searchSpaceByTagname[tagname] = searchSpace;
 		}
 	}
-	
-	console.log(searchSpaceByTagname["CWeaponLegacy"]);
-	
 	
 	function searchField(dataspace:Dataspace, entry:fxml.ElementNode, fieldName:CatalogFieldName){
 		let fieldNames:CatalogFieldName[] = [fieldName];

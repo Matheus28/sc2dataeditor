@@ -15918,6 +15918,7 @@
 	},
 	"CAccumulator": {
 		"parent": null,
+		"abstract": true,
 		"fields": {
 			"SourceEffect": "CEffectLink",
 			"MinAccumulation": "CFixed",

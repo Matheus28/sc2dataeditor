@@ -151,13 +151,13 @@ connection.onReferences(async (e) => {
 	let index = dataspace.index;
 	
 	let hoveredEntry:fxml.ElementNode|undefined;
+	let checkRange:Range = {start:e.position, end:e.position};
 	for(let entry of dataspace.data_.root.children){
 		if(!(entry instanceof fxml.ElementNode)) continue;
 		if(entry.tagname == "const") continue;
 		if(entry.range === undefined) continue;
 		
-		if(!fxml.positionLTE(e.position, entry.range.end)) continue;
-		if(fxml.positionLT(entry.range.start, e.position)) continue;
+		if(!fxml.rangeIntersects(entry.range, checkRange)) continue;
 		
 		hoveredEntry = entry;
 		break;
