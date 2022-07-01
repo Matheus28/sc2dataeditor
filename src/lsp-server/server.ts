@@ -41,6 +41,8 @@ import {
 	DecorationsRangesDidChange,
 } from "./decoration_protocol";
 
+import difflib from "difflib";
+
 import assert from 'assert';
 import path from 'path';
 import { CatalogNameArray } from '../lib/game_data';
@@ -165,7 +167,7 @@ connection.onRenameRequest(async e => {
 	if(rename == null) return null;
 	
 	let ret:WorkspaceEdit = {
-		changes: {},
+		documentChanges: [],
 	};
 	
 	if(e.newName == rename.attr.value) return ret;
@@ -175,45 +177,98 @@ connection.onRenameRequest(async e => {
 		catalog: getCatalogNameByTagname(rename.entry.tagname),
 	});
 	
-	let changedDataspaces = new Set<Dataspace>();
+	let changedDataspaces = new Map<Dataspace, string>();
 	
+	changedDataspaces.set(dataspace, dataspaceToString(dataspace));
 	rename.entry.setAttribute("id", e.newName);
-	changedDataspaces.add(dataspace);
 	
 	for(let ref of refs){
+		if(changedDataspaces.has(ref.dataspace)){
+			changedDataspaces.set(ref.dataspace, dataspaceToString(ref.dataspace));
+		}
+		
 		if("tokenName" in ref){
 			setEntryToken(dataspace.index, ref.entry, ref.tokenName, e.newName, dataspace);
 			let vv = accessEntry(dataspace.index, ref.entry);
 			assert(vv);
-			changedDataspaces.add(vv.dataspace);
 		}else{
 			setFieldValue(dataspace.index, ref.field, e.newName, dataspace);
 			let vv = accessEntry(dataspace.index, ref.field.entry);
 			assert(vv);
-			changedDataspaces.add(vv.dataspace);
 		}
 	}
 	
-	for(let dataspace of changedDataspaces){
-		assert(ret.changes);
-		ret.changes[getDataspaceURI(dataspace)] = makeReplaceFileOperation(dataspaceToString(dataspace));
+	for(let [dataspace, oldString] of changedDataspaces){
+		assert(ret.documentChanges);
+		
+		let uri = getDataspaceURI(dataspace);
+		let document = documents.get(uri);
+		
+		console.log("generating diffs...");
+		let edits = makeEditOperations(oldString, dataspaceToString(dataspace));
+		if(edits.length == 0) continue;
+		
+		console.log(edits);
+		
+		ret.documentChanges.push({
+			textDocument: {
+				uri,
+				version: document === undefined ? null : document.version,
+			},
+			
+			edits
+		});
 	}
 	
 	return ret;
 });
 
-function makeReplaceFileOperation(newString:string):TextEdit[] {
-	// Just replace everything
-	return [
-		{
-			range: {
-				start: {line: 0, character: 0},
-				end: {line: 1<<30, character: 0},
-			},
+function makeEditOperations(oldString:string, newString:string):TextEdit[] {
+	if(oldString == newString) return [];
+	
+	let oldLines = oldString.split("\n");
+	let newLines = newString.split("\n");
+	
+	let s = new difflib.SequenceMatcher(null, oldLines, newLines);
+	let ops = s.getOpcodes();
+	
+	let ret:TextEdit[] = [];
+	for(let op of ops){
+		if(op[0] == "equal") continue;
+		
+		let oldRangeStart = op[1];
+		let oldRangeEnd = op[2];
+		let newRangeStart = op[3];
+		let newRangeEnd = op[4];
+		
+		let range:Range = {
+			start: { line: oldRangeStart, character: 0 },
+			end: { line: oldRangeEnd, character: 0 },
+		};
+		
+		if(op[0] == "delete"){
+			assert(newRangeStart == newRangeEnd);
 			
-			newText: newString,
+			ret.push({
+				range,
+				newText: "",
+			});
+		}else if(op[0] == "insert"){
+			assert(oldRangeStart == oldRangeEnd);
+			
+			ret.push({
+				range,
+				newText: newLines.slice(newRangeStart, newRangeEnd).join("\n"),
+			});
+		}else if(op[0] == "replace"){
+			ret.push({
+				range,
+				newText: newLines.slice(newRangeStart, newRangeEnd).join("\n"),
+			});
 		}
-	];
+	}
+	
+	return ret;
 }
 
 connection.onCodeLens(async (e) => {
