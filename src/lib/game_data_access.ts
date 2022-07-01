@@ -665,6 +665,11 @@ function test_getArrayFieldIndexesInternal(xml:string, expected:Record<string,bo
 	test_getArrayFieldIndexesInternal(`<B index="Research1"/><B index="1"/><B index="Research3"/><B index="Research4"/>`, {'Research1':true, '1':true, 'Research3':true, 'Research4':true}, mapping);
 }
 
+export function setEntryToken(index:GameDataIndex, entry:CatalogEntry, tokenName:string, newValue:string, dataspaceForNewEntries:Dataspace){
+	let vv = accessEntryForModification(index, entry, dataspaceForNewEntries);
+	vv.node.setAttribute(tokenName, newValue);
+}
+
 export function setFieldValue(index:GameDataIndex, field:CatalogField, newValue:string, dataspaceForNewEntries:Dataspace):{
 	source:ValueSource;
 	tokens:Record<string,string>;
@@ -1081,12 +1086,21 @@ function accessStruct(node:fxml.ElementNode, name:string, createIfNotExists:bool
 	return subnodes[0];
 }
 
-interface FindReferenceResult {
-	field:CatalogField;
+function getTokenType(entry:XMLNodeEntry, tokenName:string):string|undefined {
+	if(tokenName == "parent"){
+		return `C${getCatalogNameByTagname(entry.tagname)}Link`;
+	}
+	
+	
+}
+
+type FindReferenceResult = {
 	dataspace:Dataspace;
 	entryNode:fxml.ElementNode;
 	range:fxml.Range|undefined;
-}
+} & (
+	{field:CatalogField} | {entry:CatalogEntry; tokenName:string}
+)
 
 export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindReferenceResult[] {
 	let typeToCheck = `C${entry.catalog}Link`;
@@ -1185,13 +1199,36 @@ export function findReferencesTo(index:GameDataIndex, entry:CatalogEntry):FindRe
 		}
 	}
 	
-	function searchEntry(dataspace:Dataspace, entry:fxml.ElementNode){
-		//FIXME: search tokens
+	function searchEntry(dataspace:Dataspace, entry:XMLNodeEntry){
+		let id = entry.getAttribute("id");
+		if(id === undefined) return;
 		
 		let searchSpaces = searchSpaceByTagname[entry.tagname];
 		if(searchSpaces){
 			for(let fieldName of searchSpaces){
 				searchField(dataspace, entry, fieldName);
+			}
+		}
+		
+		let tokens = entry.getAttributesRaw();
+		for(let tokenName in tokens){
+			if(tokenName === "id") continue;
+			if(tokens[tokenName].value != valueToCheck) continue;
+			if(getTokenType(entry, tokenName) == typeToCheck){
+				let range = tokens[tokenName].valueRange;
+				if(range === undefined) continue;
+				
+				ret.push({
+					tokenName,
+					entry: {
+						id,
+						catalog: getCatalogNameByTagname(entry.tagname),
+					},
+					
+					dataspace,
+					entryNode: entry,
+					range,
+				})
 			}
 		}
 	}

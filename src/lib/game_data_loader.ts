@@ -782,24 +782,38 @@ export function reloadDataspaceFromString(dataspace:Dataspace, str:string){
 	Object.assign(dataspace, loadDataspaceFromString(rootMapDir, dataspaceNameToFilename(rootMapDir, dataspace.name), str, !dataspace.index.dataspaces.includes(dataspace), dataspace.index));
 }
 
+export function dataspaceToString(dataspace:Dataspace):string {
+	assert(dataspace.data_ != null);
+	let nodes = dataspace.data_.root.children;
+	
+	let fakeNodes:fxml.Node[] = [];
+	
+	// We need to make some changes to pull editorComment out to an actual xml comment
+	for(let i = 0; i < nodes.length; ++i){
+		let v = nodes[i] as unknown as XMLNodeEntry;
+		if(!v.editorComment) continue;
+		
+		let comments = createCommentNodesForEntry(v);
+		
+		// Insert comment nodes
+		fakeNodes = fakeNodes.concat(comments);
+		dataspace.data_.root.addChildren(comments, i);
+		i += comments.length;
+	}
+	
+	fakeNodes.reverse();
+	for(let v of fakeNodes){
+		dataspace.data_.root.removeChild(v);
+	}
+	
+	return encodeXML(dataspace.data_);
+}
+
 export async function saveDataspaces(index:GameDataIndex, datas:Dataspace[]){
-	await Promise.all(datas.map(async function(data){
-		assert(data.data_ != null);
-		let nodes:fxml.Node[] = data.data_.root.children.concat();
+	await Promise.all(datas.map(async function(dataspace){
+		let str = dataspaceToString(dataspace);
 		
-		// We need to make some changes to pull editorComment out to an actual xml comment
-		for(let i = 0; i < nodes.length; ++i){
-			let v = nodes[i] as unknown as XMLNodeEntry;
-			if(!v.editorComment) continue;
-			
-			let comments = createCommentNodesForEntry(v);
-			
-			// Insert comment nodes
-			nodes.splice(i, 0, ...comments);
-			i += comments.length;
-		}
-		
-		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, data.name), encodeXML(nodes), "utf8");
+		await fs.writeFile(dataspaceNameToFilename(index.rootMapDir, dataspace.name), str, "utf8");
 	}));
 }
 

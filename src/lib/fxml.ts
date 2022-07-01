@@ -475,6 +475,7 @@ export abstract class Node {
 		
 	}
 	
+	get parent(){ return this._parent; }
 	get range(){ return this._range; }
 	
 	/** @internal */
@@ -783,6 +784,32 @@ export class ElementNode extends AttributesNode {
 		this._tagnameCloseRange = undefined;
 	}
 	
+	addChild(child:Node, index:number){
+		child.orphanate();
+		child._setParent(this);
+		
+		this._children.splice(index, 0, child);
+		
+		if(child instanceof ElementNode){
+			this._childrenByTagName[child._tagname] = this._childrenByTagName[child._tagname] || [];
+			this._childrenByTagName[child._tagname].push(child);
+		}
+	}
+	
+	addChildren(children:Node[], index:number){
+		for(let child of children){
+			child.orphanate();
+			child._setParent(this);
+			
+			if(child instanceof ElementNode){
+				this._childrenByTagName[child._tagname] = this._childrenByTagName[child._tagname] || [];
+				this._childrenByTagName[child._tagname].push(child);
+			}
+		}
+		
+		this._children.splice(index, 0, ...children);
+	}
+	
 	removeChild(child:Node, hintIndex?:number):boolean {
 		let i:number;
 		
@@ -949,7 +976,7 @@ export function getTagnameFromRange(e:ElementNode, range:Range):{tagname:string,
 }
 
 
-export function getAttributeValueFromRange(e:AttributesNode, range:Range):{value:string, range:Range}|undefined {
+export function getAttributeValueFromRange(e:AttributesNode, range:Range):{value:string, range:Range, elem:AttributesNode, name:string}|undefined {
 	if(!e.range) return;
 	if(!rangeIntersects(range, e.range)) return;
 	
@@ -958,7 +985,7 @@ export function getAttributeValueFromRange(e:AttributesNode, range:Range):{value
 		let attr = attrs[attrName];
 		if(!attr.valueRange) continue;
 		if(!rangeIntersects(range, attr.valueRange)) continue;
-		return {value: attr.value, range: attr.valueRange };
+		return {name: attrName, value: attr.value, range: attr.valueRange, elem: e };
 	}
 	
 	if(e instanceof ElementNode){

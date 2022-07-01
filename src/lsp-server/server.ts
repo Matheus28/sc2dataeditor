@@ -8,7 +8,8 @@ import {
 	SymbolKind,
 	CodeLens,
 	WorkspaceSymbol,
-	DefinitionLink
+	DefinitionLink,
+	WorkspaceEdit
 } from 'vscode-languageserver/node';
 
 import {
@@ -21,6 +22,7 @@ import {
 	Dataspace,
 	dataspaceFilenameToName,
 	dataspaceNameToFilename,
+	dataspaceToString,
 	forEachDataspace,
 	GameDataIndex,
 	getCatalogNameByTagname,
@@ -31,6 +33,7 @@ import {
 import {
 	InlayHint,
 	Location,
+	TextEdit,
 } from 'vscode-languageserver-protocol';
 
 import {
@@ -43,7 +46,7 @@ import path from 'path';
 import { CatalogNameArray } from '../lib/game_data';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fxml from '../lib/fxml';
-import { CatalogField, findReferencesTo } from '../lib/game_data_access';
+import { accessEntry, CatalogField, findReferencesTo, setEntryToken, setFieldValue } from '../lib/game_data_access';
 
 interface WorkspaceMap {
 	index:Promise<GameDataIndex>;
@@ -101,9 +104,9 @@ connection.onInitialize((_params) => {
 			
 			definitionProvider: true,
 			referencesProvider: true,
-			//renameProvider: {
-			//	prepareProvider: true,
-			//},
+			renameProvider: {
+				prepareProvider: true,
+			},
 			
 			linkedEditingRangeProvider: true,
 			
@@ -114,7 +117,104 @@ connection.onInitialize((_params) => {
 	};
 });
 
+function renameCommon(dataspace:Dataspace, position:Position){
+	let checkRange:Range = {start:position, end:position};
+	let attr = fxml.getAttributeValueFromRange(dataspace.data_.root, checkRange);
+	if(attr === undefined) return null;
+	if(attr.name != "id") return null;
+	
+	let entry = attr.elem;
+	
+	if(!(entry instanceof fxml.ElementNode)) return null;
+	
+	// Make sure this is an actual entry
+	let catalog = entry.parent;
+	if(catalog == null) return null;
+	if(catalog.tagname != "Catalog") return null;
+	
+	// Okay we know we can rename it
+	
+	return {
+		attr,
+		entry,
+	};
+}
 
+connection.onPrepareRename(async e => {
+	let document = documents.get(e.textDocument.uri);
+	assert(document);
+	
+	let dataspace = await getDocumentDataspace(document);
+	if(!dataspace) return null;
+	
+	let rename = renameCommon(dataspace, e.position);
+	if(rename == null) return null;
+	
+	return { range: rename.attr.range, placeholder: rename.attr.value }
+});
+
+connection.onRenameRequest(async e => {
+	let document = documents.get(e.textDocument.uri);
+	assert(document);
+	
+	let dataspace = await getDocumentDataspace(document);
+	if(!dataspace) return null;
+	if(!dataspace.index) return null;
+	
+	let rename = renameCommon(dataspace, e.position);
+	if(rename == null) return null;
+	
+	let ret:WorkspaceEdit = {
+		changes: {},
+	};
+	
+	if(e.newName == rename.attr.value) return ret;
+	
+	let refs = findReferencesTo(dataspace.index, {
+		id: rename.attr.value,
+		catalog: getCatalogNameByTagname(rename.entry.tagname),
+	});
+	
+	let changedDataspaces = new Set<Dataspace>();
+	
+	rename.entry.setAttribute("id", e.newName);
+	changedDataspaces.add(dataspace);
+	
+	for(let ref of refs){
+		if("tokenName" in ref){
+			setEntryToken(dataspace.index, ref.entry, ref.tokenName, e.newName, dataspace);
+			let vv = accessEntry(dataspace.index, ref.entry);
+			assert(vv);
+			changedDataspaces.add(vv.dataspace);
+		}else{
+			setFieldValue(dataspace.index, ref.field, e.newName, dataspace);
+			let vv = accessEntry(dataspace.index, ref.field.entry);
+			assert(vv);
+			changedDataspaces.add(vv.dataspace);
+		}
+	}
+	
+	for(let dataspace of changedDataspaces){
+		assert(ret.changes);
+		ret.changes[getDataspaceURI(dataspace)] = makeReplaceFileOperation(dataspaceToString(dataspace));
+	}
+	
+	return ret;
+});
+
+function makeReplaceFileOperation(newString:string):TextEdit[] {
+	// Just replace everything
+	return [
+		{
+			range: {
+				start: {line: 0, character: 0},
+				end: {line: 1<<30, character: 0},
+			},
+			
+			newText: newString,
+		}
+	];
+}
 
 connection.onCodeLens(async (e) => {
 	let document = documents.get(e.textDocument.uri);
