@@ -40,15 +40,12 @@ const addToEnum:Record<string, string[]> = {
 		"RoachBurrow",
 		"Phased",
 		"Larva",
-		"Flying0",
-		"Flying1",
-		"Flying2",
-		"Flying3",
-		"Flying4",
-		"Flying5",
-		"Flying6",
 	]
 };
+
+for (let i = 0; i < 100; i++) {
+    addToEnum.EUnitCollide.push(`Flying${i}`); // if another EUnitCollide is added until it hits 99, this will ensure it works.
+}
 
 function getStructFieldsWithParents(name:string){
 	let cur = unparsedGameData.classes[name];
